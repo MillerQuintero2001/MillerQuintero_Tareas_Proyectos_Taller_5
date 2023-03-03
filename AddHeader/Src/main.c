@@ -10,7 +10,6 @@
  */
 
 #include <stdint.h>
-int16_t var1 = 0
 /**
  * Funcion principal del programa
  * Esta funcion es el corazon del programa

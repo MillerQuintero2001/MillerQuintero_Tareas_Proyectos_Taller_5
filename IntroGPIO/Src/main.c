@@ -43,3 +43,5 @@ int main(void)
 
 	return 0;
 }
+
+//Este proyecto de IntroGPIO hace lo mismo que se hace en el del Add Header, que es configurar el PIN 5 del A como salida en alto.

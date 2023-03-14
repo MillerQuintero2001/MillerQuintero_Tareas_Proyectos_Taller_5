@@ -68,7 +68,7 @@ void GPIO_Config (GPIO_Handler_t *pGPIOHandler){
 	// para lo cual aplicamos una máscara y una operacion bitwise AND
 	pGPIOHandler->pGPIOx->MODER &= ~(0b11 << 2 * pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber);
 
-	// Cargamos a auxConfig en el registro MODER
+	// Cargamos a auxConfig en +el registro MODER
 	pGPIOHandler->pGPIOx->MODER |= auxConfig;
 
 	// 3) Configurando el registro GPIOx_OTYPER

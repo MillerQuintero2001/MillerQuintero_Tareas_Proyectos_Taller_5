@@ -46,7 +46,7 @@
 int main(void){
 
     // ***********
-	// Definimos el obejto tipo handler para el PIN que deseamos configurar
+	// Definimos el objeto tipo handler para el PIN que deseamos configurar
 	GPIO_Handler_t handlerUserLedPin = {0}; //Se inicializa con valor 0 en todos sus elementos
 
 	// Deseamos trabajar con el puerto GPIOA
@@ -70,3 +70,4 @@ int main(void){
 	}
 
 }
+// Este hace lo mismo que el de IntroGPIO pero usando los drivers configurados, haciendo todo más directo y entendible

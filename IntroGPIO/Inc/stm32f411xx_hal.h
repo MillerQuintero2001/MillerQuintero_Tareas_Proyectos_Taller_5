@@ -33,7 +33,7 @@
  * Datasheet, Memory Mpa, Figure 14
  * (Remember, 1KByte = 1024 bytes
  */
-#define FLASH_BASE_ADDR			0x8000000U		// Esta es la memoria del programa, 512KB
+#define FLASH_BASE_ADDR			0x0800000U		// Esta es la memoria del programa, 512KB
 #define SRAM_BASE_ADDR			0x2000000U		// Esta es la memoria RAM, 128KB.
 
 /* NOTA: Observar que existen unos registros específicos del Cortex M4 en la region 0xE0000000U
@@ -71,7 +71,7 @@
  */
 
 /* Posiciones de memoria para periféricos del AHB2 */
-#define SUB_OTG_FS_BASE_ADRR	{AHB2_BASE_ADDR + 0x0000U)
+#define USB_OTG_FS_BASE_ADRR	{AHB2_BASE_ADDR + 0x0000U)
 
 /* Posiciones de memoria para periféricos del AHB1
  * Observar que NO esta completa*/
@@ -93,7 +93,7 @@
 #define SYSCFG_BASE_ADDR		(APB2_BASE_ADDR + 0x3800U)
 #define SPI4_BASE_ADDR			(APB2_BASE_ADDR + 0x3400U)
 #define SPI1_BASE_ADDR			(APB2_BASE_ADDR + 0x3000U)
-#define SPI0_BASE_ADDR			(APB2_BASE_ADDR + 0x2C00U)
+#define SDIO_BASE_ADDR			(APB2_BASE_ADDR + 0x2C00U)
 #define ADC1_BASE_ADDR			(APB2_BASE_ADDR + 0x2000U)
 #define USART6_BASE_ADDR		(APB2_BASE_ADDR + 0x1400U)
 #define USART1_BASE_ADDR		(APB2_BASE_ADDR + 0x1000U)
@@ -117,7 +117,7 @@
 #define TIM5_BASE_ADDR			(APB1_BASE_ADDR + 0x0C00U)
 #define TIM4_BASE_ADDR			(APB1_BASE_ADDR + 0x0800U)
 #define TIM3_BASE_ADDR			(APB1_BASE_ADDR + 0x0400U)
-#define TIM4_BASE_ADDR			(APB1_BASE_ADDR + 0x0000U)
+#define TIM2_BASE_ADDR			(APB1_BASE_ADDR + 0x0000U)
  */
 
 /**
@@ -142,7 +142,7 @@
  * periférico RCC.
  *
  * Debido a los temas que se van a manejar en el curso, solo se deben definir los bits de los registros:
- * 6.3.1 (RCC_CR) hasta el 6.3.12 (RCC_APB2ENR), 6.3.17 (RCC BDCR) y 6.3.18 (RCC CSR)
+ * 6.3.1 (RCC_CR) hasta el 6.3.12 (RCC_APB2ENR), 6.3.17 (RCC_BDCR) y 6.3.18 (RCC_CSR)
  *
  * NOTA: La posición de memoria (offset) debe encajar perfectamente con la posición de memoria indicada
  * en la hoja de datos del equipo. Observe que los elementos "reservedx" también están presentes allí.
@@ -239,7 +239,7 @@ typedef struct
 {
 	volatile uint32_t MODER;	// port mode register 					ADDR_OFFSET:	0x00
 	volatile uint32_t OTYPER;	// port output type register 			ADDR_OFFSET:	0x04
-	volatile uint32_t OSPEEDR;	// port speed register 					ADDR_OFFSET:	0x08
+	volatile uint32_t OSPEEDR;	// port output speed register 			ADDR_OFFSET:	0x08
 	volatile uint32_t PUPDR;	// port pull-up/pull-down register 		ADDR_OFFSET:	0x0C
 	volatile uint32_t IDR;		// port input data register				ADDR_OFFSET:	0x10
 	volatile uint32_t ODR;		// port output data register			ADDR_OFFSET:	0x14
@@ -271,7 +271,7 @@ typedef struct
 
 /* 8.4.2 GPIOx_OTYPER (un bit por PIN) */
 #define GPIO_OTYPE_PUSHPULL		0
-#define GPIO_MODE_OPENDRAIN 	1
+#define GPIO_OTYPE_OPENDRAIN 	1
 
 /* 8.4.3 GPIOx_OSPEEDR (dos bit por cada PIN) */
 #define GPIO_OSPEED_LOW		0
@@ -285,11 +285,11 @@ typedef struct
 #define GPIO_PUPDR_PULLDOWN		2
 #define GPIO_PUPDR_RESERVED		3
 
-/* 8.4.5 GPIOx IDR (un bit por PIN) - este es el registro para leeer el estado de un PIN */
+/* 8.4.5 GPIOx IDR (un bit por PIN) - este es el registro para leer el estado de un PIN */
 
 /* 8.4.6 GPIOx_ODR (un bit por PIN) - este es el registro para escribir el estado de un
  * PIN (1 o 0). Este registro puede ser escrito y leído desde el software, pero no garantiza
- * una escritura "atoḿica", por lo cual es preferible utilizar el registro BSRR */
+ * una escritura "atómica", por lo cual es preferible utilizar el registro BSRR */
 
 /* Definición de los nombres de los pines */
 #define PIN_0			0

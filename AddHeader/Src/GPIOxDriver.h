@@ -38,7 +38,7 @@ typedef struct
 }GPIO_Handler_t;
 
 /* Definición de las cabeceras de las funciones del GPIOxDriver
- * 1) COnfigurar el pin
+ * 1) Configurar el pin
  * 2) Escribir sobre el pin
  * 3) Leer un pin específico
  * */
@@ -46,3 +46,4 @@ void GPIO_Config (GPIO_Handler_t *pGPIOHandler);
 void GPIO_WritePin(GPIO_Handler_t *pPinHandler, uint8_t newState);
 uint32_t GPIO_ReadPin(GPIO_Handler_t *pPinHandler);
 
+#endif /* INC_GPIOXDRIVER_H_ */

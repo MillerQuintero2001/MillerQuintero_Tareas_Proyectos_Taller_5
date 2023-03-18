@@ -29,32 +29,32 @@ void GPIO_Config (GPIO_Handler_t *pGPIOHandler){
 	// Verificamos para GPIOA
 	if(pGPIOHandler->pGPIOx == GPIOA){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOA
-		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOAEN);
+		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOA_EN);
 	}
 	// Verificamos para GPIOB
 	else if(pGPIOHandler->pGPIOx == GPIOB){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOB
-		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOBEN);
+		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOB_EN);
 	}
 	// Verificamos para GPIOC
 	else if(pGPIOHandler->pGPIOx == GPIOC){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOC
-		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOCEN);
+		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOC_EN);
 	}
 	// Verificamos para GPIOD
 	else if(pGPIOHandler->pGPIOx == GPIOD){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOD
-		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIODEN);
+		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOD_EN);
 	}
 	// Verificamos para GPIOE
 	else if(pGPIOHandler->pGPIOx == GPIOE){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOE
-		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOEEN);
+		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOE_EN);
 	}
 	// Verificamos para GPIOH
 	else if(pGPIOHandler->pGPIOx == GPIOH){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOH
-		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOHEN);
+		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOH_EN);
 	}
 
 	// Después de activado, podemos comenzar a configurar.
@@ -108,20 +108,20 @@ void GPIO_Config (GPIO_Handler_t *pGPIOHandler){
 			auxPosition = 4 * pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber;
 
 			// Limpiamos primero la posición del registro que deseamos escribir a continuación
-			pGPIOHandler->pGPIOx->AFR[0] &= ~(0b1111 << auxPosition);
+			pGPIOHandler->pGPIOx->AFRL &= ~(0b1111 << auxPosition);
 
 			// Y escribimos el valor configurado en la posición seleccionada
-			pGPIOHandler->pGPIOx->AFR[0] |= (pGPIOHandler->GPIO_PinConfig.GPIO_PinAltFunMode << auxPosition);
+			pGPIOHandler->pGPIOx->AFRL |= (pGPIOHandler->GPIO_PinConfig.GPIO_PinAltFunMode << auxPosition);
 		}
 		else{
 			// Estamos en el registro AFRH, que controla los pines del PIN_8 al PIN_15
 			auxPosition = 4 * (pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber -8);
 
 			//Limpiamos primero la posición del registro que deseamos escribir a continuación
-			pGPIOHandler->pGPIOx->AFR[1] &= ~(0b1111 << auxPosition);
+			pGPIOHandler->pGPIOx->AFRH &= ~(0b1111 << auxPosition);
 
 			// Y escribimos el valor configurado en la posición seleccionada
-			pGPIOHandler->pGPIOx->AFR[1] |= (pGPIOHandler->GPIO_PinConfig.GPIO_PinAltFunMode << auxPosition);
+			pGPIOHandler->pGPIOx->AFRH |= (pGPIOHandler->GPIO_PinConfig.GPIO_PinAltFunMode << auxPosition);
 
 		}
 	}

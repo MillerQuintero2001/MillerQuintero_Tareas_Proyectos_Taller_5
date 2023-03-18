@@ -24,7 +24,7 @@ int main(void)
 	//Para colocar un 1 en el primer bit del advance high performance bus 1 enable, esto se hace con una máscara para no borrar la info de los otros bits
 
 	// Configurar MODER
-	GPIOA->MODER &= ~(0b11 < 10); //Limpiando la posición correspondiente al pinA5
+	GPIOA->MODER &= ~(0b11 << 10); //Limpiando la posición correspondiente al pinA5
 	GPIOA->MODER |= (0b01 << 10); //Configurando el pinA5 como salida general
 
 	//COnfigurar OTYPE
@@ -32,7 +32,7 @@ int main(void)
 
 	//Configurar el OSPEED
 	GPIOA->OSPEEDR &= ~(0b11 << 10); //Limpiando las posiciones correspondientes al pinA5
-	GPIOA->OSPEEDR |= (0b01 << 10); //Configurando la velocidad como Fast
+	GPIOA->OSPEEDR |= (0b10 << 10); //Configurando la velocidad como Fast
 
 	GPIOA->ODR &= ~(0b1 << 5); //Limpiando posición 5 -LED apagado
 	GPIOA->ODR |= (0b01 << 5); //Escribiendo 1 en posición 5, el LED debe encender

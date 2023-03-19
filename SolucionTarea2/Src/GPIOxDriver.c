@@ -164,7 +164,10 @@ uint32_t GPIO_ReadPin(GPIO_Handler_t *pPinHandler){
  * Función para cambiar el estado de un pin.
  */
 void GPIOxTooglePin(GPIO_Handler_t *pPinHandler){
-		pPinHandler->pGPIOx->ODR ^= (0b1 << pPinHandler->GPIO_PinConfig.GPIO_PinNumber);
+	/* En el Output Data Register (ODR) se almacena el estado de un pin de salida,
+	 * aplicando una máscara con un XOR se puede obtener el complemento de dicho
+	 * valor, si está en 0, pasa a 1; si está en 1 pasa a 0*/
+	pPinHandler->pGPIOx->ODR ^= (0b1 << pPinHandler->GPIO_PinConfig.GPIO_PinNumber);
 }
 
 

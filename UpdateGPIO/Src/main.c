@@ -38,7 +38,7 @@ int main(void)
 	while(1){
 		GPIOxTooglePin(&handlerLed2);
 
-		for(int i = 0; i < 2000000 ; i++){
+		for(int i=0; i < 1250000; i++){
 			__NOP();
 		}
 	}

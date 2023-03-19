@@ -44,7 +44,7 @@ int main(void)
    while(1){
 
 	   if(TIM2->SR & TIM_SR_UIF){
-		   GPIO_TooglePin(&handlerOnBoardLed);
+		   GPIOxTooglePin(&handlerOnBoardLed);
 		   TIM2->SR &= ~TIM_SR_UIF; //Bajando la bandera
 	   }
 

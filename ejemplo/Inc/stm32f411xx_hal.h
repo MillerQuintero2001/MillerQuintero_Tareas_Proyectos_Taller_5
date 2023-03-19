@@ -33,8 +33,8 @@
  * Datasheet, Memory Mpa, Figure 14
  * (Remember, 1KByte = 1024 bytes
  */
-#define FLASH_BASE_ADDR			0x0800000U		// Esta es la memoria del programa, 512KB
-#define SRAM_BASE_ADDR			0x2000000U		// Esta es la memoria RAM, 128KB.
+#define FLASH_BASE_ADDR			0x08000000U		// Esta es la memoria del programa, 512KB
+#define SRAM_BASE_ADDR			0x20000000U		// Esta es la memoria RAM, 128KB.
 
 /* NOTA: Observar que existen unos registros específicos del Cortex M4 en la region 0xE0000000U
  * Los controladores de las interrupciones se encuentran allí, por ejemplo.
@@ -104,7 +104,7 @@
  * NOTA: NO los necesitamos en este ejercicio, NO copiar
 #define PWR_BASE_ADDR			(APB1_BASE_ADDR + 0x7000U)
 #define I2C3_BASE_ADDR			(APB1_BASE_ADDR + 0x5C00U)
-#define I2C3_BASE_ADDR			(APB1_BASE_ADDR + 0x5800U)
+#define I2C2_BASE_ADDR			(APB1_BASE_ADDR + 0x5800U)
 #define I2C1_BASE_ADDR			(APB1_BASE_ADDR + 0x5400U)
 #define USART2_BASE_ADDR		(APB1_BASE_ADDR + 0x4400U)
 #define I2Sext_BASE_ADDR		(APB1_BASE_ADDR + 0x4000U)
@@ -193,7 +193,7 @@ typedef struct
  * con cada uno de los SFR en la memoria del MCU. Esta acción la estamos haciendo en un MACRO, de forma
  * que el nuevo elemento "RCC" queda disponible para cada clase .c (archivo .c) que incluya este archivo
  */
-#define RCC			((RCC_RegDef_t *) RCC_BASE_ADDR)
+#define RCC		((RCC_RegDef_t *) RCC_BASE_ADDR)
 
 
 /* Descripción bit a bit de cada uno de los registros del que componen al periférico RCC
@@ -256,11 +256,11 @@ typedef struct
  * NOTA: Tener cuidado que cada elemento coincida con su respectiva dirección base.
  * */
 #define GPIOA			((GPIOx_RegDef_t *) GPIOA_BASE_ADDR)
-#define GPIOB			((GPIOx_RegDef_t *) GPIOA_BASE_ADDR)
-#define GPIOC			((GPIOx_RegDef_t *) GPIOA_BASE_ADDR)
-#define GPIOD			((GPIOx_RegDef_t *) GPIOA_BASE_ADDR)
-#define GPIOE			((GPIOx_RegDef_t *) GPIOA_BASE_ADDR)
-#define GPIOH			((GPIOx_RegDef_t *) GPIOA_BASE_ADDR)
+#define GPIOB			((GPIOx_RegDef_t *) GPIOB_BASE_ADDR)
+#define GPIOC			((GPIOx_RegDef_t *) GPIOC_BASE_ADDR)
+#define GPIOD			((GPIOx_RegDef_t *) GPIOD_BASE_ADDR)
+#define GPIOE			((GPIOx_RegDef_t *) GPIOE_BASE_ADDR)
+#define GPIOH			((GPIOx_RegDef_t *) GPIOH_BASE_ADDR)
 
 /* Valores estándar para las configuraciones */
 /* 8.4.1 GPIOx_MODER (dos bit por cada PIN) */

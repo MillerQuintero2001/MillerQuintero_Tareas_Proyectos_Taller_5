@@ -35,11 +35,11 @@ int main(void)
 	GPIO_Config(&handlerLed2);
 
 	GPIO_WritePin(&handlerLed2, SET);
-//	while(1){
-//		GPIO_TooglePin(&handlerLed2);
-//
-//		for(int i = 0; i < 2000000 ; i++){
-//			__NOP();
-//		}
-//	}
+	while(1){
+		GPIOxTooglePin(&handlerLed2);
+
+		for(int i = 0; i < 2000000 ; i++){
+			__NOP();
+		}
+	}
 }

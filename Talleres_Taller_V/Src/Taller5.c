@@ -78,7 +78,7 @@ void miPrimeraFuncion(void){
 
 uint8_t getMaxChar(void){
 
-	uint8_t charBits = 8;
+	//uint8_t charBits = 8;
 	uint8_t maxChar = (2*2*2*2*2*2*2*2)-1;
 
 	return maxChar;

@@ -13,6 +13,7 @@
 
 //  Incluyendo este archivo estamos incluyendo también el correspondiente al GPIOx
 #include "stm32f4xx.h"
+
 /* Valores estándar para las configuraciones */
 /* 8.4.1 GPIOx_MODER (dos bit por cada PIN) */
 #define GPIO_MODE_IN		0

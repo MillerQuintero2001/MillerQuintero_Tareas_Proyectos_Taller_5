@@ -10,7 +10,7 @@
  *
  */
 
-#include "GPIOxDriver.h" //Inclusión del archivo .h
+#include "GPIOxDriver.h"
 
 /**
  * Para cualquier periférico, hay varios pasos que siempre se deben seguir en un

@@ -61,27 +61,29 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 		/* 3a. Estamos en UP_Mode, el limite se carga en ARR y se comienza en 0 */
 		// Configurar el registro que nos controla el modo up or down
 		/* Escriba codigo aca */
-		ptrBTimerHandler->prtTIMx->CR1 &= ~TIM_CR1_DIR;
+		ptrBTimerHandler->ptrTIMx->CR1 &= ~TIM_CR1_DIR;
 
 		/* 3b. Configuramos el Auto-reload. Este es el "limite" hasta donde el CNT va a contar */
-		ptrBTimerHandler->ptrTIMx->ARR = ptrBTimerHandler->TIMx_Config.TIMx_period - 1;
+		ptrBTimerHandler->ptrTIMx->ARR |= TIM_ARR_ARR;
 
 		/* 3c. Reiniciamos el registro counter*/
 		/* Escriba codigo aca */
-		ptrBTimerHandler->ptrTIMx->CNT =
+		ptrBTimerHandler->ptrTIMx->CNT &= ~TIM_CNT_CNT;
 
 	}else{
 		/* 3a. Estamos en DOWN_Mode, el limite se carga en ARR (0) y se comienza en un valor alto
 		 * Trabaja contando en direccion descendente*/
 		/* Escriba codigo aca */
+		ptrBTimerHandler->ptrTIMx->CR1 |= TIM_CR1_DIR;
 
 		/* 3b. Configuramos el Auto-reload. Este es el "limite" hasta donde el CNT va a contar
-		 * En modo descendente, con numero positivos, cual es el minimi valor al que ARR puede llegar*/
+		 * En modo descendente, con numero positivos, cual es el minimo valor al que ARR puede llegar*/
 		/* Escriba codigo aca */
+		ptrBTimerHandler->ptrTIMx->ARR &= ~TIM_ARR_ARR;
 
 		/* 3c. Reiniciamos el registro counter
 		 * Este es el valor con el que el counter comienza */
-		ptrBTimerHandler->ptrTIMx->CNT = ptrBTimerHandler->TIMx_Config.TIMx_period - 1;
+		ptrBTimerHandler->ptrTIMx->CNT = TIM_CNT_CNT;
 	}
 
 	/* 4. Activamos el Timer (el CNT debe comenzar a contar*/
@@ -90,7 +92,7 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 	/* 5. Activamos la interrupción debida al Timerx Utilizado
 	 * Modificar el registro encargado de activar la interrupcion generada por el TIMx*/
 	/* Escriba codigo aca */
-
+	ptrBTimerHandler->ptrTIMx->DIER |= TIM_DIER_UIE;
 	/* 6. Activamos el canal del sistema NVIC para que lea la interrupción*/
 	if(ptrBTimerHandler->ptrTIMx == TIM2){
 		// Activando en NVIC para la interrupción del TIM2
@@ -99,6 +101,7 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 	else if(ptrBTimerHandler->ptrTIMx == TIM3){
 		// Activando en NVIC para la interrupción del TIM3
 		/* Escriba codigo aca */
+		NVIC_EnableIRQ(TIM3_IRQn);
 	}
 	else{
 		__NOP();

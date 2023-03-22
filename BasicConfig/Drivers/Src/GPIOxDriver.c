@@ -10,7 +10,7 @@
  *
  */
 
-#include "GPIOxDriver.h" //Inclusión del archivo .h
+#include "GPIOxDriver.h"
 
 /**
  * Para cualquier periférico, hay varios pasos que siempre se deben seguir en un
@@ -29,32 +29,32 @@ void GPIO_Config (GPIO_Handler_t *pGPIOHandler){
 	// Verificamos para GPIOA
 	if(pGPIOHandler->pGPIOx == GPIOA){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOA
-		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOA_EN);
+		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOAEN);
 	}
 	// Verificamos para GPIOB
 	else if(pGPIOHandler->pGPIOx == GPIOB){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOB
-		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOB_EN);
+		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOBEN);
 	}
 	// Verificamos para GPIOC
 	else if(pGPIOHandler->pGPIOx == GPIOC){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOC
-		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOC_EN);
+		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOCEN);
 	}
 	// Verificamos para GPIOD
 	else if(pGPIOHandler->pGPIOx == GPIOD){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOD
-		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOD_EN);
+		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIODEN);
 	}
 	// Verificamos para GPIOE
 	else if(pGPIOHandler->pGPIOx == GPIOE){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOE
-		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOE_EN);
+		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOEEN);
 	}
 	// Verificamos para GPIOH
 	else if(pGPIOHandler->pGPIOx == GPIOH){
 		// Escribimos 1 (SET) en la posición correspondiente al GPIOH
-		RCC->AHB1ENR |= (SET << RCC_AHB1ENR_GPIOH_EN);
+		RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOHEN);
 	}
 
 	// Después de activado, podemos comenzar a configurar.
@@ -108,20 +108,20 @@ void GPIO_Config (GPIO_Handler_t *pGPIOHandler){
 			auxPosition = 4 * pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber;
 
 			// Limpiamos primero la posición del registro que deseamos escribir a continuación
-			pGPIOHandler->pGPIOx->AFRL &= ~(0b1111 << auxPosition);
+			pGPIOHandler->pGPIOx->AFR[0] &= ~(0b1111 << auxPosition);
 
 			// Y escribimos el valor configurado en la posición seleccionada
-			pGPIOHandler->pGPIOx->AFRL |= (pGPIOHandler->GPIO_PinConfig.GPIO_PinAltFunMode << auxPosition);
+			pGPIOHandler->pGPIOx->AFR[0] |= (pGPIOHandler->GPIO_PinConfig.GPIO_PinAltFunMode << auxPosition);
 		}
 		else{
 			// Estamos en el registro AFRH, que controla los pines del PIN_8 al PIN_15
 			auxPosition = 4 * (pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber -8);
 
 			//Limpiamos primero la posición del registro que deseamos escribir a continuación
-			pGPIOHandler->pGPIOx->AFRH &= ~(0b1111 << auxPosition);
+			pGPIOHandler->pGPIOx->AFR[1] &= ~(0b1111 << auxPosition);
 
 			// Y escribimos el valor configurado en la posición seleccionada
-			pGPIOHandler->pGPIOx->AFRH |= (pGPIOHandler->GPIO_PinConfig.GPIO_PinAltFunMode << auxPosition);
+			pGPIOHandler->pGPIOx->AFR[1] |= (pGPIOHandler->GPIO_PinConfig.GPIO_PinAltFunMode << auxPosition);
 
 		}
 	}
@@ -158,6 +158,16 @@ uint32_t GPIO_ReadPin(GPIO_Handler_t *pPinHandler){
 
 	return pinValue;
 
+}
+
+/**
+ * Función para cambiar el estado de un pin.
+ */
+void GPIOxTooglePin(GPIO_Handler_t *pPinHandler){
+	/* En el Output Data Register (ODR) se almacena el estado de un pin de salida,
+	 * aplicando una máscara con un XOR se puede obtener el complemento de dicho
+	 * valor, si está en 0, pasa a 1; si está en 1 pasa a 0*/
+	pPinHandler->pGPIOx->ODR ^= (0b1 << pPinHandler->GPIO_PinConfig.GPIO_PinNumber);
 }
 
 

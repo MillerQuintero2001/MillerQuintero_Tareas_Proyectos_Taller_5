@@ -19,9 +19,9 @@ GPIO_Handler_t handlerOnBoardLed = {0};
 int main(void)
 {
     handlerOnBoardLed.pGPIOx = GPIOA;
-    handlerOnBoardLed.GPIO_PinConfig.GPIO_PinNumber = PIN_5;
-    handlerOnBoardLed.GPIO_PinConfig.GPIO_PinMode 	= GPIO_MODE_OUT;
-    handlerOnBoardLed.GPIO_PinConfig.GPIO_PinSpeed 	= GPIO_OSPEED_FAST;
+    handlerOnBoardLed.GPIO_PinConfig.GPIO_PinNumber  = PIN_5;
+    handlerOnBoardLed.GPIO_PinConfig.GPIO_PinMode 	 = GPIO_MODE_OUT;
+    handlerOnBoardLed.GPIO_PinConfig.GPIO_PinSpeed 	 = GPIO_OSPEED_FAST;
     handlerOnBoardLed.GPIO_PinConfig.GPIO_PinOPType  = GPIO_OTYPE_PUSHPULL;
 
     GPIO_Config(&handlerOnBoardLed);

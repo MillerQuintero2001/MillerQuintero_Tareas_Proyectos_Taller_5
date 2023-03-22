@@ -9,8 +9,10 @@
  ******************************************************************************
  */
 
-#include "stm32f411xx_hal.h"
+#include <stm32f4xx.h>
 #include <stdint.h>
+#include "GPIOxDriver.h"
+#include "BasicTimer.h"
 
 /**
  * Funcion principal del programa

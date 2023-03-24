@@ -107,6 +107,7 @@ typedef struct
  * 1) Configurar el pin
  * 2) Escribir sobre el pin
  * 3) Leer un pin específico
+ * 4) Cambiar el estado de un pin
  * */
 void GPIO_Config (GPIO_Handler_t *pGPIOHandler);
 void GPIO_WritePin(GPIO_Handler_t *pPinHandler, uint8_t newState);

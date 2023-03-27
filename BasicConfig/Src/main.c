@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include "GPIOxDriver.h"
 #include "BasicTimer.h"
+#include "ExtiDriver.h"
 
 /**
  * Funcion principal del programa

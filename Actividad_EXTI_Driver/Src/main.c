@@ -17,11 +17,14 @@
 
 //Definición de los elementos del programa
 GPIO_Handler_t handler_Led = {0}; //PA5
-BasicTimer_Handler_t handlerBlinkyTimer = {0};
+BasicTimer_Handler_t handlerBlinkyTimer = {0}; //Timer PA5
 
-EXTI_Config_t handlerExtiPC13 = {0};
+GPIO_Handler_t handler_UserButton = {0}; // GPIO Handler para el User Button PC13
+EXTI_Config_t handlerExtiPC13 = {0}; // Handler el EXTI que llevara también el handler del PC13
 
-uint32_t counterExti13 = 0;
+uint32_t counterExtiMain13 = 0;
+uint8_t flag = 0;
+
 // Definición de prototipo de función
 void init_Hardware(void);
 
@@ -30,16 +33,23 @@ int main(void)
 {
 	init_Hardware();
 
+	//Atributos para el GPIO Handler del User Button
+	handler_UserButton.pGPIOx								= GPIOC;
+	handler_UserButton.GPIO_PinConfig.GPIO_PinNumber		= PIN_13;
+	handler_UserButton.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_IN;
+
 	//Defino plantilla de configuración para interrupciones con el NVIC usando el EXTI para el PC13 (User_Button)
-	handlerExtiPC13.edgeType										= EXTERNAL_INTERRUPT_RISING_EDGE;
-	handlerExtiPC13.pGPIOHandler->pGPIOx							= GPIOC;
-	handlerExtiPC13.pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber		= PIN_13;
-	handlerExtiPC13.pGPIOHandler->GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_IN;
+	handlerExtiPC13.pGPIOHandler		= &handler_UserButton;
+	handlerExtiPC13.edgeType			= EXTERNAL_INTERRUPT_RISING_EDGE;
+
 
 	//Cargo la información en la función que configura la interrupción
 	extInt_Config(&handlerExtiPC13);
 	while(1){
-
+		if(flag == 1){
+			GPIOxTooglePin(&handler_Led);
+			flag = 0;
+		}
 	}
 	return 0;
 }
@@ -68,10 +78,10 @@ void init_Hardware(void){
 }
 
 void callback_extInt13(void){
-	counterExti13++;
+	counterExtiMain13++;
 }
 
 
 void BasicTimer2_Callback(void){
-	GPIOxTooglePin(&handler_Led);
+	flag = 1;
 }

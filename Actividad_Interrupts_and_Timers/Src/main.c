@@ -61,7 +61,7 @@ int main(void)
 	return 0;
 }
 
-void BasicTimer2_Callback(){
+void BasicTimer2_Callback(void){
 	flag=1;
 }
 

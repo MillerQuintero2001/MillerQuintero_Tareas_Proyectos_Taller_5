@@ -23,7 +23,7 @@
 
 // Función Switch Case
 //uint16_t resultadoOperacion(uint8_t tipoDeOperacion, uint8_t numeroA, uint8_t numeroB);
-uint32_t resultadoFibonacciFactorial(uint8_t tipoDeOperacion2, uint8_t numero);
+uint32_t resultadoFibonacciFactorial(uint32_t tipoDeOperacion2, uint8_t numero);
 
 
 int main(void)
@@ -36,41 +36,42 @@ int main(void)
 
 }
 
-//uint16_t resultadoOperacion(uint8_t tipoDeOperacion, uint8_t numeroA, uint8_t numeroB){
-//	uint16_t resultado = 0;
-//
-//	switch(tipoDeOperacion){
-//
-//	case SUMA:
-//	{
-//		resultado = numeroA + numeroB;
-//		break;
-//	}
-//	case RESTA:
-//	{
-//		resultado = numeroA - numeroB;
-//		break;
-//	}
-//	case MULTIPLICACION:
-//	{
-//			resultado = numeroA * numeroB;
-//			break;
-//	}
-//	case DIVISION:
-//	{
-//			resultado = numeroA * numeroB;
-//			break;
-//	}
-//	default:
-//	{
-//			resultado = 0;
-//			break;
-//	}
-//	return resultado;
-//	}
-//}
+uint16_t resultadoOperacion(uint8_t tipoDeOperacion, uint8_t numeroA, uint8_t numeroB){
+	uint16_t resultado = 0;
 
-uint32_t resultadoFibonacciFactorial(uint8_t tipoDeOperacion2, uint8_t numero){
+	switch(tipoDeOperacion){
+
+	case SUMA:
+	{
+		resultado = numeroA + numeroB;
+		break;
+	}
+	case RESTA:
+	{
+		resultado = numeroA - numeroB;
+		break;
+	}
+	case MULTIPLICACION:
+	{
+			resultado = numeroA * numeroB;
+			break;
+	}
+	case DIVISION:
+	{
+			resultado = numeroA * numeroB;
+			break;
+	}
+	default:
+	{
+			resultado = 0;
+			break;
+	}
+	}
+	return resultado;
+}
+
+uint32_t resultadoFibonacciFactorial(uint32_t tipoDeOperacion2, uint8_t numero){
+
 	uint32_t resultado = 0;
 	uint32_t auxvar = 0;
 
@@ -108,7 +109,8 @@ uint32_t resultadoFibonacciFactorial(uint8_t tipoDeOperacion2, uint8_t numero){
 		resultado = 0;
 		break;
 	}
-}
+	}
+	return resultado;
 }
 
 

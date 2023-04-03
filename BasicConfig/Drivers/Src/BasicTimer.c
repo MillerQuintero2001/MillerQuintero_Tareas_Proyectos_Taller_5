@@ -5,7 +5,7 @@
  *      Author: MillerQUintero2001
  */
 
-#include "BasicTimer.h"
+#include <BasicTimer.h>
 
 /* Variable que guarda la referencia del periférico que se esta utilizando*/
 TIM_TypeDef	*ptrTimerUsed;
@@ -169,7 +169,7 @@ __attribute__((weak)) void BasicTimer5_Callback(void){
  * el sistema inmediatamente salta a este lugar en la memoria*/
 void TIM2_IRQHandler(void){
 	/* Limpiamos la bandera que indica que la interrupción se ha generado */
-	ptrTimerUsed->SR &= ~TIM_SR_UIF;
+	TIM2->SR &= ~TIM_SR_UIF;
 
 	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
 	BasicTimer2_Callback();
@@ -178,7 +178,7 @@ void TIM2_IRQHandler(void){
 
 void TIM3_IRQHandler(void){
 	/* Limpiamos la bandera que indica que la interrupción se ha generado */
-	ptrTimerUsed->SR &= ~TIM_SR_UIF;
+	TIM3->SR &= ~TIM_SR_UIF;
 
 	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
 	BasicTimer3_Callback();
@@ -187,7 +187,7 @@ void TIM3_IRQHandler(void){
 
 void TIM4_IRQHandler(void){
 	/* Limpiamos la bandera que indica que la interrupción se ha generado */
-	ptrTimerUsed->SR &= ~TIM_SR_UIF;
+	TIM4->SR &= ~TIM_SR_UIF;
 
 	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
 	BasicTimer4_Callback();
@@ -196,7 +196,7 @@ void TIM4_IRQHandler(void){
 
 void TIM5_IRQHandler(void){
 	/* Limpiamos la bandera que indica que la interrupción se ha generado */
-	ptrTimerUsed->SR &= ~TIM_SR_UIF;
+	TIM5->SR &= ~TIM_SR_UIF;
 
 	/* LLamamos a la función que se debe encargar de hacer algo con esta interrupción*/
 	BasicTimer5_Callback();

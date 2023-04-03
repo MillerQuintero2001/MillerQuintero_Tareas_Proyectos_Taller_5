@@ -5,7 +5,7 @@
  *      Author: namontoy
  */
 
-#include "ExtiDriver.h"
+#include <ExtiDriver.h>
 #include "GPIOxDriver.h"
 
 // Haciendo prueba con PC15
@@ -538,7 +538,7 @@ void extInt_Config(EXTI_Config_t *extiConfig){
 		switch(extiConfig->pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber){
 		case 0: {
 			EXTI->RTSR &= ~EXTI_RTSR_TR0; //Limpio el rising ya que no me interesa en esta posición
-			EXTI->FTSR &= ~EXTI_FTSR_TR0; //Limpio posición de
+			EXTI->FTSR &= ~EXTI_FTSR_TR0; //Limpio posición de falling antes de escribir sobre ella
 			EXTI->FTSR |= EXTI_FTSR_TR0;
 			break;
 		}

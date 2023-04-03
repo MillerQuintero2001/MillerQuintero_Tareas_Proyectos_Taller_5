@@ -5,8 +5,8 @@
  *      Author: namontoy
  */
 
-#ifndef EXTIDRIVER_H_
-#define EXTIDRIVER_H_
+#ifndef INC_EXTIDRIVER_H_
+#define INC_EXTIDRIVER_H_
 
 #include "stm32f4xx.h"
 #include "GPIOxDriver.h"
@@ -48,4 +48,4 @@ void EXTI4_IRQHandler(void);
 void EXTI9_5_IRQHandler(void);
 void EXTI15_10_IRQHandler(void);
 
-#endif /* EXTIDRIVER_H_ */
+#endif /* INC_EXTIDRIVER_H_ */

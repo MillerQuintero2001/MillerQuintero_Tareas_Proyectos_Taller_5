@@ -152,9 +152,16 @@ uint32_t GPIO_ReadPin(GPIO_Handler_t *pPinHandler){
 	// Creamos una variable auxiliar la cual luego retornaremos
 	uint32_t pinValue = 0;
 
-	// Cargamos el valor del registro IDR, desplazado a derecha tantas veces como la ubicación
-	// del pin especifico
-	pinValue = (pPinHandler->pGPIOx->IDR >> pPinHandler->GPIO_PinConfig.GPIO_PinNumber);
+	if(pPinHandler->GPIO_PinConfig.GPIO_PinMode == GPIO_MODE_IN){
+		// Cargamos el valor del registro IDR, desplazado a derecha tantas veces como la ubicación
+		// del pin especifico
+		pinValue = (pPinHandler->pGPIOx->IDR >> pPinHandler->GPIO_PinConfig.GPIO_PinNumber);
+	}
+	else{
+		// Cargamos el valor del registro ODR, desplazado a derecha tantas veces como la ubicación
+		// del pin especifico
+		pinValue = (pPinHandler->pGPIOx->ODR >> pPinHandler->GPIO_PinConfig.GPIO_PinNumber);
+	}
 
 	return pinValue;
 

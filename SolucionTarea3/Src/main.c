@@ -37,23 +37,22 @@ GPIO_Handler_t handlerSegmentF = {0}; // Handler para el segmento 'f' del displa
 GPIO_Handler_t handlerSegmentG = {0}; // Handler para el segmento 'g' del display con el Pin B8
 
 // GPIO's del Encoder
-GPIO_Handler_t handlerClock = {0};	// Handler para el Clock del encoder con el Pin A2
-GPIO_Handler_t handlerData = {0};	// Handler para el Data del encoder con el Pin C4
+GPIO_Handler_t handlerClock = {0};	// Handler para el Clock del encoder con el Pin B2
+GPIO_Handler_t handlerData = {0};	// Handler para el Data del encoder con el Pin D2
 GPIO_Handler_t handlerSwitch = {0};	// Handler para el Switch del encoder con el Pin A3
 // EXTI's del Clock y Switch del encoder
 EXTI_Config_t handlerExtiClock = {0}; 	// EXTI 2 handler para la interrupción del Clock
-EXTI_Config_t handlerExtiSwitch = {0};	// EXTI 3 handler para la interrupción del Switch
+EXTI_Config_t handlerExtiSwitch = {0};	// EXTI 4 handler para la interrupción del Switch
 
 
 /* Inicializo variables a emplear */
 uint8_t flagLedState = 0;		// Variable bandera timer del LED de estado
 uint8_t flagSwitch = 0;			// Variable bandera suicheo de transistores
-uint8_t contador = 50;			// Variable contador para el display
+uint8_t contador = 10;			// Variable contador para el display
 uint8_t signo_culebrita = 1;	// Variable que indica que segmento encender en modo culebrita
 uint8_t modo = 0b1;				// Binario que indica modo, en 0 es culebrita, en 1 es contador
 uint8_t estado_Transistor1 = 0;	// Variable que guarda el estado del transistor de unidades
 uint8_t estado_Transistor2 = 0;	// Variable que guarda el estado del transistor de decenas
-uint8_t estadoData = 0;
 
 /* Definición de prototipos de función */
 void init_Hardware(void); 							// Función que inicializa los periféricos
@@ -69,16 +68,15 @@ int main(void){
 	while(1){
 
 
-		estadoData = GPIO_ReadPin(&handlerData);
-
 		// Blinky Led de Estado
 		if(flagLedState == 1){
-			GPIOxTooglePin(&handlerLedState);
+			GPIOxTooglePin(&handlerLedState); //Cambio el estado del LED PA5 cada que se lanza interrup. del Timer 2
 			flagLedState = 0;
 		}
 
 		// Suicheo transistores
 		if(flagSwitch == 1){
+			//Alterno el estado de los transistores y guardo el valor
 			GPIOxTooglePin(&handlerTransistorUnd);
 			estado_Transistor1 = GPIO_ReadPin(&handlerTransistorUnd);
 			GPIOxTooglePin(&handlerTransistorDec);
@@ -88,28 +86,28 @@ int main(void){
 
 		/* Control Segmentos del Display */
 		if(modo){ //Si está en modo contador
-			if (contador == 99){
+			if (contador == 100){ //Limite para que solo llegue hasta 99
 				contador --;
 			}
-			else if (contador > 99){
-				contador = 0;
+			else if (contador > 100){
+				contador = 0; // Limite para que solo llegue hasta 00
 			}
 			else{
 				__NOP();
 			}
 			if(estado_Transistor1 == 0){
-				display_Segun_Digito(contador%10);
+				display_Segun_Digito(contador%10); // Mostrar digito unidades
 			}
 			else{
-				display_Segun_Digito(contador/10);
+				display_Segun_Digito(contador/10); // Mostrar digito decenas
 			}
 		}
 		else{ // Sino está en modo culebrita
 			if(signo_culebrita == 13){
-				signo_culebrita = 1;
+				signo_culebrita = 1; // Para limitar hasta los 12 estados del culebrita y que sea ciclica
 			}
 			else if(signo_culebrita == 0){
-				signo_culebrita = 12;
+				signo_culebrita = 12; // 12 estados y garantizar culebrita ciclica
 			}
 			else{
 				__NOP();
@@ -170,7 +168,7 @@ void init_Hardware(void){
 	handlerSwitching.ptrTIMx							= TIM3;
 	handlerSwitching.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerSwitching.TIMx_Config.TIMx_speed				= BTIMER_SPEED_1ms;
-	handlerSwitching.TIMx_Config.TIMx_period			= 16;
+	handlerSwitching.TIMx_Config.TIMx_period			= 10; // Con este periodo tenemos una frecuencia de 100 Hz
 	handlerSwitching.TIMx_Config.TIMx_interruptEnable 	= 1;
 	BasicTimer_Config(&handlerSwitching);
 	/* Fin del GPIO's Transistores y Timer del suicheo
@@ -240,38 +238,38 @@ void init_Hardware(void){
 	// Clock del encoder, con su GPIO y EXTI
 	handlerClock.pGPIOx							= GPIOB;
 	handlerClock.GPIO_PinConfig.GPIO_PinNumber 	= PIN_2;
-	handlerClock.GPIO_PinConfig.GPIO_PinMode	= GPIO_MODE_IN;
+	handlerClock.GPIO_PinConfig.GPIO_PinMode	= GPIO_MODE_IN; // Entrada
 	handlerExtiClock.pGPIOHandler				= &handlerClock;
-	handlerExtiClock.edgeType					= EXTERNAL_INTERRUPT_RISING_EDGE;
+	handlerExtiClock.edgeType					= EXTERNAL_INTERRUPT_RISING_EDGE; // Detecto flanco de subida en el clock
 	extInt_Config(&handlerExtiClock);
 
 	// Data del encoder solo GPIO, no usa interrupciones externas
-	handlerData.pGPIOx							= GPIOA;
-	handlerData.GPIO_PinConfig.GPIO_PinNumber 	= PIN_1;
-	handlerData.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_IN;
+	handlerData.pGPIOx							= GPIOD;
+	handlerData.GPIO_PinConfig.GPIO_PinNumber 	= PIN_2;
+	handlerData.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_IN; // Entrada
 	GPIO_Config(&handlerData);
 
 	// Switch del encoder, con su GPIO y EXTI
 	handlerSwitch.pGPIOx						= GPIOC;
 	handlerSwitch.GPIO_PinConfig.GPIO_PinNumber	= PIN_4;
-	handlerSwitch.GPIO_PinConfig.GPIO_PinMode	= GPIO_MODE_IN;
+	handlerSwitch.GPIO_PinConfig.GPIO_PinMode	= GPIO_MODE_IN; // Entrada
 	handlerExtiSwitch.pGPIOHandler				= &handlerSwitch;
-	handlerExtiSwitch.edgeType					= EXTERNAL_INTERRUPT_FALLING_EDGE;
+	handlerExtiSwitch.edgeType					= EXTERNAL_INTERRUPT_FALLING_EDGE; // Detecto flanco de bajada en el switch
 	extInt_Config(&handlerExtiSwitch);
 }
 
 void BasicTimer2_Callback(void){
-	flagLedState = 1;
+	flagLedState = 1; // Pongo en alto la variable bandera del timer 2 para el main
 }
 
 void BasicTimer3_Callback(void){
-	flagSwitch = 1;
+	flagSwitch = 1; // Pongo en alto la variable bandera del timer 3 para el main
 }
 
 /** Interrupción clock del encoder */
 void callback_extInt2(void){
 	// Con flanco de subida en Clock, si Data es diferente de 0, va en sentido anti-horario
-	if(GPIO_ReadPin(&handlerData)){
+	if(GPIO_ReadPin(&handlerData) != 0){
 		if(modo){ //Verifico si estoy em modo contador
 			contador--;
 		}else{ // Sino en culebrita
@@ -296,6 +294,7 @@ void callback_extInt4(void){
 	modo ^= 0b1; //Con esto obtenemos el complemento, si estaba en culebrita (0) pasa a contador (1), y viceversa
 }
 
+/** Funcion encargda de activar segmentos según el digito ingresado */
 void display_Segun_Digito(uint8_t digito){
 	switch(digito){
 	case 0: {
@@ -405,6 +404,7 @@ void display_Segun_Digito(uint8_t digito){
 	}
 }
 
+/** Función encargada de activar y desactivar transistores según el display de culebrita a mostrar*/
 void display_Culebrita(uint8_t contador_culebrita){
 	switch(contador_culebrita){
 	case 1: {

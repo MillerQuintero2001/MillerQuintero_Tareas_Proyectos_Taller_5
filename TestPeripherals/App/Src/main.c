@@ -9,11 +9,11 @@
  ******************************************************************************
  */
 
+#include "GPIOxDriver.h"
 #include <BasicTimer.h>
 #include <ExtiDriver.h>
 #include <stm32f4xx.h>
 #include <stdint.h>
-#include "GPIOxDriver.h"
 
 /* Inicializo handler de los periféricos a utilizar */
 

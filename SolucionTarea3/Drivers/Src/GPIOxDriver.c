@@ -162,6 +162,7 @@ uint32_t GPIO_ReadPin(GPIO_Handler_t *pPinHandler){
 		// del pin especifico
 		pinValue = (pPinHandler->pGPIOx->ODR >> pPinHandler->GPIO_PinConfig.GPIO_PinNumber);
 	}
+	pinValue &= 0b0001;
 
 	return pinValue;
 

@@ -57,6 +57,8 @@ int main(void){
 			writeChar(&usart2Comm, 'N');
 			writeChar(&usart2Comm, 'D');
 			writeChar(&usart2Comm, 'O');
+			writeChar(&usart2Comm, ' ');
+			writeMsg(&usart2Comm, "Todo en orden :)");
 			printMsg = 0;
 		}
 	}

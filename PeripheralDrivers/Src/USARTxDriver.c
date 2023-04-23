@@ -209,15 +209,24 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 	}
 }
 
-/* funcion para escribir un solo char */
-int writeChar(USART_Handler_t *ptrUsartHandler, int dataToSend ){
+/** Funcion para escribir un solo char */
+char writeChar(USART_Handler_t *ptrUsartHandler, char dataToSend ){
 	while( !(ptrUsartHandler->ptrUSARTx->SR & USART_SR_TXE)){
 		__NOP();
 	}
 
-	dataToSend = ptrUsartHandler->ptrUSARTx->DR;
+	ptrUsartHandler->ptrUSARTx->DR = dataToSend;
 
 	return dataToSend;
+}
+
+/** Funcion para escribir todo un string */
+void writeMsg(USART_Handler_t *ptrUsartHandler, char* messageToSend){
+	int i = 0;
+	while(messageToSend[i] != '\0'){
+		writeChar(ptrUsartHandler, messageToSend[i]);
+		i++;
+	}
 }
 
 

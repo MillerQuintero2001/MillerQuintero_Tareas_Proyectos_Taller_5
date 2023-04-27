@@ -1,8 +1,8 @@
 /**
  ******************************************************************************
- * @file           : USART_Test_Main.c
+ * @file           : ejemploUSART.c
  * @author         : Miller Quintero - miquinterog@unal.edu.co
- * @brief          : Solucion basica de un proyecto con librerias externas
+ * @brief          : Solución básica para probar el driver del USART
  ******************************************************************************
  * Generacion del archivo de configuracion por defecto
  * como plantilla para los proyectos funcionales
@@ -12,6 +12,7 @@
 #include <stm32f4xx.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <math.h>
 #include "GPIOxDriver.h"
 #include <BasicTimer.h>
 #include <ExtiDriver.h>
@@ -29,11 +30,12 @@ USART_Handler_t usart2Comm = 	{0};	// Elemento para hacer comunicación serial
 // Handler de los pines empleados para la comunicación serial del USART2
 GPIO_Handler_t handlerPinTX	= 	{0}; // Transmisión
 GPIO_Handler_t handlerPinRX	= 	{0}; // Recepción
-
+uint8_t printMsg = 0;
+char mensaje[] = "\nPrueba de sonido!!\n";
+char bufferMsg[64] = {0}; // Buffer que funcionará como un string de 64 posiciones
 
 /* Inicializo variables a emplear */
 uint8_t flagUserButton = 	0;		// Variable bandera de la interrupción del User Button
-uint8_t printMsg = 0;
 
 /* Definición de prototipos de función */
 void initSystem(void); 			// Función que inicializa los periféricos básicos
@@ -46,20 +48,27 @@ int main(void){
     /* Loop forever */
 	while(1){
 
-		if(printMsg > 4){
-			writeChar(&usart2Comm, 'H');
-			writeChar(&usart2Comm, 'O');
-			writeChar(&usart2Comm, 'L');
-			writeChar(&usart2Comm, 'A');
-			writeChar(&usart2Comm, ' ');
-			writeChar(&usart2Comm, 'M');
-			writeChar(&usart2Comm, 'U');
-			writeChar(&usart2Comm, 'N');
-			writeChar(&usart2Comm, 'D');
-			writeChar(&usart2Comm, 'O');
-			writeChar(&usart2Comm, ' ');
-			writeMsg(&usart2Comm, "Todo en orden :)");
+		if(printMsg > 14){
+//			writeChar(&usart2Comm, 'H');
+//			writeChar(&usart2Comm, 'O');
+//			writeChar(&usart2Comm, 'L');
+//			writeChar(&usart2Comm, 'A');
+//			writeChar(&usart2Comm, ' ');
+//			writeChar(&usart2Comm, 'M');
+//			writeChar(&usart2Comm, 'U');
+//			writeChar(&usart2Comm, 'N');
+//			writeChar(&usart2Comm, 'D');
+//			writeChar(&usart2Comm, 'O');
+//			writeChar(&usart2Comm, ' ');
+			writeMsg(&usart2Comm, mensaje);
+
+			// Crea el string y lo almacena en el arreglo bufferMsg
+			sprintf(bufferMsg, "valor de printMsg = %d, valor de PI = %#.8f \n", printMsg, M_PI);
+
+			// Enviando el arreglo almacenado en bufferMsg
+			writeMsg(&usart2Comm, bufferMsg);
 			printMsg = 0;
+
 		}
 	}
 	return 0;

@@ -13,6 +13,8 @@
  * Recordar que siempre se debe comenzar con activar la señal de reloj
  * del periferico que se está utilizando.
  */
+
+uint8_t auxRxData = 0;
 void USART_Config(USART_Handler_t *ptrUsartHandler){
 	/* 1. Activamos la señal de reloj que viene desde el BUS al que pertenece el periferico */
 	/* Lo debemos hacer para cada uno de las pisbles opciones que tengamos (USART1, USART2, USART6) */
@@ -210,18 +212,16 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 }
 
 /** Funcion para escribir un solo char */
-char writeChar(USART_Handler_t *ptrUsartHandler, char dataToSend ){
+int writeChar(USART_Handler_t *ptrUsartHandler, char dataToSend ){
 	while( !(ptrUsartHandler->ptrUSARTx->SR & USART_SR_TXE)){
 		__NOP();
 	}
-
 	ptrUsartHandler->ptrUSARTx->DR = dataToSend;
-
 	return dataToSend;
 }
 
 /** Funcion para escribir todo un string */
-void writeMsg(USART_Handler_t *ptrUsartHandler, char* messageToSend){
+void writeMsg(USART_Handler_t *ptrUsartHandler, char *messageToSend){
 	int i = 0;
 	while(messageToSend[i] != '\0'){
 		writeChar(ptrUsartHandler, messageToSend[i]);
@@ -229,4 +229,56 @@ void writeMsg(USART_Handler_t *ptrUsartHandler, char* messageToSend){
 	}
 }
 
+/** Función para recibir datos */
+uint8_t getRxData(void){
+
+	return auxRxData;
+}
+
+/** ISR de la interrupción del USART1 */
+void USART1_IRQHandler(void){
+	// Evaluamos si la interrupción que se dio es por RX
+	if(USART1->SR & USART_SR_RXNE){
+		auxRxData = (uint8_t) USART1->DR;
+		usart1Rx_Callback();
+	}
+}
+
+/** ISR de la interrupción del USART2 */
+void USART2_IRQHandler(void){
+	// Evaluamos si la interrupción que se dio es por RX
+	if(USART2->SR & USART_SR_RXNE){
+		auxRxData = (uint8_t) USART2->DR;
+		usart2Rx_Callback();
+	}
+}
+
+/** ISR de la interrupción del USART6 */
+void USART6_IRQHandler(void){
+	// Evaluamos si la interrupción que se dio es por RX
+	if(USART6->SR & USART_SR_RXNE){
+		auxRxData = (uint8_t) USART6->DR;
+		usart6Rx_Callback();
+	}
+}
+
+/** Funciones callback weak, que pueden ser sobre-escritas*/
+__attribute__((weak)) void usart1Rx_Callback(void){
+		/* 	NOTE: This function should not be modified, when the callback is needed,
+		  		  the BasicTimer_Callback could be implemented in the main file
+		 */
+	__NOP();
+}
+__attribute__((weak)) void usart2Rx_Callback(void){
+		/* 	NOTE: This function should not be modified, when the callback is needed,
+		  		  the BasicTimer_Callback could be implemented in the main file
+		 */
+	__NOP();
+}
+__attribute__((weak)) void usart6Rx_Callback(void){
+		/* 	NOTE: This function should not be modified, when the callback is needed,
+		  		  the BasicTimer_Callback could be implemented in the main file
+		 */
+	__NOP();
+}
 

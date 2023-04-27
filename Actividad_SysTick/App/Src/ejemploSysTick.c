@@ -1,8 +1,8 @@
 /**
  ******************************************************************************
- * @file           : BasicProject_Main.c
+ * @file           : ejemploSysTick.c
  * @author         : Miller Quintero - miquinterog@unal.edu.co
- * @brief          : Solución básica de un proyecto con librerías externas
+ * @brief          : Ensayo del driver SysTick
  ******************************************************************************
  * Generación del archivo de configuración por defecto
  * como plantilla para los proyectos funcionales
@@ -22,9 +22,9 @@
 #include "USARTxDriver.h"
 #include "SysTickDriver.h"
 
-#define HSI_CLOCK_CONFIGURED	0;	// 16MHz
-#define HSE_CLOCK_CONFIGURED	1;
-#define PLL_CLOCK_CONFIGURED	2;
+#define HSI_CLOCK_CONFIGURED	0	// 16MHz
+#define HSE_CLOCK_CONFIGURED	1
+#define PLL_CLOCK_CONFIGURED	2
 
 /* Definición de los handlers necesarios */
 
@@ -48,18 +48,51 @@ uint8_t flagUserButton = 	0;		// Variable bandera de la interrupción del User B
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 			// Función que inicializa los periféricos básicos
 
-/** Función principal del programa
- * ¡Esta función es el corazón del programa! */
+/** Función principal del programa */
 int main(void){
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
+	// Se configura el SysTicks a 16Mhz
+	config_SysTick_ms(HSI_CLOCK_CONFIGURED);
 
     /* Loop forever */
 	while(1){
 
-		if(flagUserButton){
-			flagUserButton = 0;
+
+		if(sendMsg > 4){
+			writeMsg(&usart2Comm, "Hola mundo \n");
+
+			// Pruebas al SysTick
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(300);
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(300);
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(300);
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(300);
+
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(250);
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(250);
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(250);
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(250);
+			GPIOxTooglePin(&handlerBlinkyPin);
+
+			delay_ms(100);
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(100);
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(100);
+			GPIOxTooglePin(&handlerBlinkyPin);
+			delay_ms(100);
+			GPIOxTooglePin(&handlerBlinkyPin);
+
+			sendMsg = 0;
 		}
 	}
 }
@@ -75,8 +108,7 @@ void initSystem(void){
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinOPType 		= GPIO_OTYPE_PUSHPULL;
 	// Cargo la configuración
 	GPIO_Config(&handlerBlinkyPin);
-	// Pongo estado en alto
-	GPIO_WritePin(&handlerBlinkyPin, SET);
+
 	// Atributos para el Timer 2 del LED de estado
 	handlerBlinkyTimer.ptrTIMx								= TIM2;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
@@ -92,9 +124,23 @@ void initSystem(void){
 	handlerUserButton.pGPIOx							= GPIOC;
 	handlerUserButton.GPIO_PinConfig.GPIO_PinNumber 	= PIN_13;
 	handlerUserButton.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_IN; // Entrada
+	GPIO_Config(&handlerUserButton);
 	handlerUserButtonExti.pGPIOHandler					= &handlerUserButton;
 	handlerUserButtonExti.edgeType						= EXTERNAL_INTERRUPT_RISING_EDGE; // Detecto flanco de subida en el clock
 	extInt_Config(&handlerUserButtonExti);
+
+	/* Configuración de pines para el USART2 */
+	handlerPinTX.pGPIOx								= GPIOA;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_2;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
+	GPIO_Config(&handlerPinTX);
+
+	handlerPinRX.pGPIOx								= GPIOA;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_3;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
+	GPIO_Config(&handlerPinRX);
 
 	/* Configuración de la comunicación serial */
 	usart2Comm.ptrUSARTx						= USART2;
@@ -110,7 +156,7 @@ void initSystem(void){
 
 /** Interrupción del timer blinky LED*/
 void BasicTimer2_Callback(void){
-	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
+	sendMsg++;
 }
 
 /** Interrupción externa del User Button */

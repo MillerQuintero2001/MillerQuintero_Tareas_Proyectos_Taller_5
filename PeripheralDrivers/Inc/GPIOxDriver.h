@@ -2,7 +2,7 @@
  * GPIOxDriver.h
  *
  *  Created on: 9/03/2023
- *      Author: miller
+ *      Author: MillerQuintero2001
  *
  *  Este programa se encarga de las definiciones relacionadas únicamente con el
  *  debido manejo y control del periférico GPIOx (funciones del controlador)

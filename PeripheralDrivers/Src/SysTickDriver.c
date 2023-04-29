@@ -31,25 +31,29 @@ void config_SysTick_ms(uint8_t systemClock){
 	switch(systemClock){
 
 	// Caso para el reloj HSI a 16MHz
-	case 0:
-		SysTick->LOAD = SYSTICK_LOAD_VALUE_16MHz_1ms;
-		break;
-
-	// Caso	para el reloj HSE
-	case 1:
-		SysTick->LOAD = SYSTICK_LOAD_VALUE_16MHz_1ms;
-		break;
-
-	// Caso para el reloj PLL a 100Mhz
-	case 2:
-		SysTick->LOAD = SYSTICK_LOAD_VALUE_100MHz_1ms;
-		break;
-
-	// Caso por defecto
-	default:
+	case 0: {
 		SysTick->LOAD = SYSTICK_LOAD_VALUE_16MHz_1ms;
 		break;
 	}
+
+	// Caso	para el reloj HSE
+	case 1: {
+		SysTick->LOAD = SYSTICK_LOAD_VALUE_16MHz_1ms;
+		break;
+	}
+
+	// Caso para el reloj PLL a 100Mhz
+	case 2: {
+		SysTick->LOAD = SYSTICK_LOAD_VALUE_100MHz_1ms;
+		break;
+	}
+	// Caso por defecto
+	default: {
+		SysTick->LOAD = SYSTICK_LOAD_VALUE_16MHz_1ms;
+		break;
+	}
+
+	} // Fin del switch-case
 
 
 	// Limpiamos el valor actual de SysTick

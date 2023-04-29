@@ -41,9 +41,13 @@ GPIO_Handler_t handlerPinTX = {0};	// Pin de transmisión de datos
 GPIO_Handler_t handlerPinRX = {0};	// Pin de recepción de datos
 USART_Handler_t usart2Comm =  {0};	// Comunicación serial
 uint8_t sendMsg = 0; // Variable para controlar la comunicación
+uint8_t usart2DataReceived = 0; // Variable en la que se guarda el dato transmitido
+char bufferMsg[64] = {0}; // Buffer de datos como un arreglo de caracteres
+
 
 /* Inicializo variables a emplear */
-uint8_t flagUserButton = 	0;		// Variable bandera de la interrupción del User Button
+uint8_t flagUserButton = 0;	// Variable bandera de la interrupción del User Button
+uint8_t flagUsart2 = 0;	// Variable bandera de la interrupción del USART2
 
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 			// Función que inicializa los periféricos básicos
@@ -51,6 +55,9 @@ void initSystem(void); 			// Función que inicializa los periféricos básicos
 /** Función principal del programa
  * ¡Esta función es el corazón del programa! */
 int main(void){
+
+	/* Activamos el Coprocesador Matemático - FPU */
+	SCB->CPACR |= (0XF << 20);
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
@@ -61,7 +68,12 @@ int main(void){
 		if(flagUserButton){
 			flagUserButton = 0;
 		}
+
+		if(flagUsart2){
+			flagUsart2 = 0;
+		}
 	}
+	return 0;
 }
 
 /** Función encargada de iniciar hardware para un pin*/
@@ -96,6 +108,19 @@ void initSystem(void){
 	handlerUserButtonExti.edgeType						= EXTERNAL_INTERRUPT_RISING_EDGE; // Detecto flanco de subida en el clock
 	extInt_Config(&handlerUserButtonExti);
 
+	/* Configuración de pines para el USART2 */
+	handlerPinTX.pGPIOx								= GPIOA;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_2;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
+	GPIO_Config(&handlerPinTX);
+
+	handlerPinRX.pGPIOx								= GPIOA;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_3;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
+	GPIO_Config(&handlerPinRX);
+
 	/* Configuración de la comunicación serial */
 	usart2Comm.ptrUSARTx						= USART2;
 	usart2Comm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
@@ -103,7 +128,7 @@ void initSystem(void){
 	usart2Comm.USART_Config.USART_parity		= USART_PARITY_NONE;
 	usart2Comm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
 	usart2Comm.USART_Config.USART_mode			= USART_MODE_RXTX;
-	usart2Comm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_DISABLE;
+	usart2Comm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
 	usart2Comm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
 	USART_Config(&usart2Comm);
 }
@@ -117,5 +142,11 @@ void BasicTimer2_Callback(void){
 void callback_extInt13(void){
 	flagUserButton = 1;	// Pongo en alto la variable bandera del Exti 13 para el main
 }
+
+/** Interrupción del USART2 */
+void usart2Rx_Callback(void){
+	flagUsart2 = 1;	// Pongo en alto la variable bandera del USART2 para el main
+}
+
 
 

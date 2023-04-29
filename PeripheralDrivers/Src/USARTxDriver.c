@@ -15,6 +15,7 @@
  */
 
 uint8_t auxRxData = 0;
+
 void USART_Config(USART_Handler_t *ptrUsartHandler){
 	/* 1. Activamos la señal de reloj que viene desde el BUS al que pertenece el periferico */
 	/* Lo debemos hacer para cada uno de las pisbles opciones que tengamos (USART1, USART2, USART6) */
@@ -112,7 +113,7 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 	}
 
 	// 2.5 Configuracion del Baudrate (SFR USART_BRR)
-	// Ver tabla de valores (Tabla 73), Frec = 16MHz, over8 = 0;
+	// Ver tabla de valores (Tabla 75), Frec = 16MHz, over8 = 0;
 	if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_9600){
 		// El valor a cargar es 104.1875 -> Mantiza = 104,fraction = 0.1875
 		// Mantiza = 104 = 0x68, fraction = 16 * 0.1875 = 3
@@ -160,6 +161,13 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 		// Configurando el Baudrate generator para una velocidad de 57600bps
 		ptrUsartHandler->ptrUSARTx->BRR = 0x0045;
 	}
+	else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_921600){
+		// El valor a cargar es 1.0625 -> Mantiza = 1,fraction = 0.0625
+		// Mantiza = 1 = 0x1, fraction = 16 * 0.0625 = 1
+		// Valor a cargar 0x0011
+		// Configurando el Baudrate generator para una velocidad de 57600bps
+		ptrUsartHandler->ptrUSARTx->BRR = 0x0011;
+	}
 
 	// 2.6 Configuramos el modo: TX only, RX only, RXTX, disable
 	switch(ptrUsartHandler->USART_Config.USART_mode){
@@ -204,7 +212,38 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 	}
 	}
 
-	// 2.7 Activamos el modulo serial.
+	// 2.7 Veamos si las interrupciones van a ser activadas
+
+	__disable_irq(); // Desactivo interrupciones globales
+
+	// Interrupción por recepción
+	if(ptrUsartHandler->USART_Config.USART_enableIntRX == USART_RX_INTERRUP_ENABLE){
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RXNEIE;
+		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_RXNEIE;
+	}else{
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_RXNEIE;
+	}
+
+	// Interrupción por transmisión
+	if(ptrUsartHandler->USART_Config.USART_enableIntTX == USART_TX_INTERRUP_ENABLE){
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
+		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TXEIE;
+	}else{
+		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
+	}
+
+	// Matriculamos en el NVIC para el USART correspondiente
+	if(ptrUsartHandler->ptrUSARTx == USART1){
+		__NVIC_EnableIRQ(USART1_IRQn);
+	}else if(ptrUsartHandler->ptrUSARTx == USART2){
+		__NVIC_EnableIRQ(USART2_IRQn);
+	}else if(ptrUsartHandler->ptrUSARTx == USART6){
+		__NVIC_EnableIRQ(USART6_IRQn);
+	}
+
+	__enable_irq();	// Activo nuevamente las interrupciones globales
+
+	// 2.8 Activamos el modulo serial.
 	if(ptrUsartHandler->USART_Config.USART_mode != USART_MODE_DISABLE){
 		ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_UE;
 		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_UE; //Activo USART

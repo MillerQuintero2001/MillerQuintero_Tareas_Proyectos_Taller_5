@@ -55,6 +55,9 @@ void initSystem(void); 			// Función que inicializa los periféricos básicos
  * ¡Esta función es el corazón del programa! */
 int main(void){
 
+	/* Activamos el Coprocesador Matemático - FPU */
+	SCB->CPACR |= (0XF << 20); // Esto es escribir 0b1111 en bits del 20 al 23, activando los 2 CP necesarios
+
 	// Inicializamos todos los elementos del sistema
 	initSystem();
 

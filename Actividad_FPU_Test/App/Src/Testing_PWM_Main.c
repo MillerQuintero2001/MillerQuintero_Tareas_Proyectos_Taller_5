@@ -1,11 +1,10 @@
 /**
  ******************************************************************************
- * @file           : BasicProject_Main.c
+ * @file           : Testing_PWM_Main.c
  * @author         : Miller Quintero - miquinterog@unal.edu.co
- * @brief          : Solución básica de un proyecto con librerías externas
+ * @brief          : Testing a basic PWM
  ******************************************************************************
- * Generación del archivo de configuración por defecto
- * como plantilla para los proyectos funcionales
+ * Probar driver de señales PWM de los Timers
  ******************************************************************************
  */
 
@@ -45,10 +44,15 @@ uint8_t sendMsg = 0; // Variable para controlar la comunicación
 uint8_t usart2DataReceived = 0; // Variable en la que se guarda el dato transmitido
 char bufferMsg[64] = {0}; // Buffer de datos como un arreglo de caracteres
 
+// Elementos para el PWM
+GPIO_Handler_t handlerPinPwmChannel = {0};
+PWM_Handler_t handlerSignalPWM = {0};
 
 /* Inicializo variables a emplear */
 uint8_t flagUserButton = 0;	// Variable bandera de la interrupción del User Button
 uint8_t flagUsart2 = 0;	// Variable bandera de la interrupción del USART2
+uint16_t duttyValue = 1500; // Variable que guarda el ciclo de trabajo del PWM
+
 
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 			// Función que inicializa los periféricos básicos
@@ -58,7 +62,7 @@ void initSystem(void); 			// Función que inicializa los periféricos básicos
 int main(void){
 
 	/* Activamos el Coprocesador Matemático - FPU */
-	SCB->CPACR |= (0XF << 20);
+	SCB->CPACR |= (0XF << 20); // Esto es escribir 0b1111 en bits del 20 al 23, activando los 2 CP necesarios
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
@@ -66,13 +70,34 @@ int main(void){
     /* Loop forever */
 	while(1){
 
-		if(flagUserButton){
-			flagUserButton = 0;
+//		if(sendMsg > 4){
+//			writeMsg(&usart2Comm, "Probando...");
+//			sendMsg = 0;
+//		}
+
+		if(usart2DataReceived != '\0'){
+			/* Down del Dutty Cycle */
+			if(usart2DataReceived == 'D'){
+				duttyValue -= 50;
+				updateDuttyCycle(&handlerSignalPWM, duttyValue);
+
+			}
+
+			/* Up del Dutty Cycle */
+			else if(usart2DataReceived == 'U'){
+				duttyValue += 50;
+				updateDuttyCycle(&handlerSignalPWM, duttyValue);
+
+			}
+
+			// Imprimimos el mensaje
+			sprintf(bufferMsg, "dutty = %u \n", (unsigned int)duttyValue);
+			writeMsg(&usart2Comm, bufferMsg);
+			// Cambio de nuevo a carácter nulo
+			usart2DataReceived = '\0';
+
 		}
 
-		if(flagUsart2){
-			flagUsart2 = 0;
-		}
 	}
 	return 0;
 }
@@ -124,7 +149,7 @@ void initSystem(void){
 
 	/* Configuración de la comunicación serial */
 	usart2Comm.ptrUSARTx						= USART2;
-	usart2Comm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+	usart2Comm.USART_Config.USART_baudrate 		= USART_BAUDRATE_19200;
 	usart2Comm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
 	usart2Comm.USART_Config.USART_parity		= USART_PARITY_NONE;
 	usart2Comm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
@@ -132,21 +157,44 @@ void initSystem(void){
 	usart2Comm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
 	usart2Comm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
 	USART_Config(&usart2Comm);
+
+	/* Configuración del Pin PWM */
+	handlerPinPwmChannel.pGPIOx								= GPIOC;
+	handlerPinPwmChannel.GPIO_PinConfig.GPIO_PinNumber		= PIN_7;
+	handlerPinPwmChannel.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+	handlerPinPwmChannel.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+	handlerPinPwmChannel.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerPinPwmChannel.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+	handlerPinPwmChannel.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
+	GPIO_Config(&handlerPinPwmChannel);
+
+	/* Configurando el Timer para que genera la señal PWM */
+	handlerSignalPWM.ptrTIMx						= TIM3;
+	handlerSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_2;
+	handlerSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValue;
+	handlerSignalPWM.PWMx_Config.PWMx_Period		= 20000;
+	handlerSignalPWM.PWMx_Config.PWMx_Prescaler		= 16;
+	pwm_Config(&handlerSignalPWM);
+
+	/* Activando la señal */
+	enableOutput(&handlerSignalPWM);
+	startPwmSignal(&handlerSignalPWM);
 }
 
 /** Interrupción del timer blinky LED*/
 void BasicTimer2_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
+	//sendMsg++;
 }
 
 /** Interrupción externa del User Button */
 void callback_extInt13(void){
-	flagUserButton = 1;	// Pongo en alto la variable bandera del Exti 13 para el main
+	__NOP();	// Pongo en alto la variable bandera del Exti 13 para el main
 }
 
 /** Interrupción del USART2 */
 void usart2Rx_Callback(void){
-	flagUsart2 = 1;	// Pongo en alto la variable bandera del USART2 para el main
+	usart2DataReceived = getRxData();	// Pongo en alto la variable bandera del USART2 para el main
 }
 
 

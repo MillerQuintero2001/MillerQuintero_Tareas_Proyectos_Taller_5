@@ -37,7 +37,7 @@ void pwm_Config(PWM_Handler_t *ptrPwmHandler){
 	}
 
 	/* 1. Cargamos la frecuencia deseada */
-	setFrequency(ptrPwmHandler);
+	setPeriod(ptrPwmHandler);
 
 	/* 2. Cargamos el valor del dutty-Cycle*/
 	setDuttyCycle(ptrPwmHandler);
@@ -168,7 +168,7 @@ void enableOutput(PWM_Handler_t *ptrPwmHandler) {
  * y el valor límite al que llega el Timer (ARR), con estos dos se establece
  * la frecuencia.
  * */
-void setFrequency(PWM_Handler_t *ptrPwmHandler){
+void setPeriod(PWM_Handler_t *ptrPwmHandler){
 
 	// Cargamos el valor del prescaler, nos define la velocidad (en ns) a la cual se incrementa el timer
 	ptrTimerPWM->PSC = ptrPwmHandler->PWMx_Config.PWMx_Prescaler;
@@ -181,12 +181,12 @@ void setFrequency(PWM_Handler_t *ptrPwmHandler){
 
 
 /* Función para actualizar la frecuencia, funciona de la mano con setFrequency */
-void updateFrequency(PWM_Handler_t *ptrPwmHandler, uint16_t newPeriod){
+void updatePeriod(PWM_Handler_t *ptrPwmHandler, uint16_t newPeriod){
 	// Actualizamos el registro que manipula el periodo
 	ptrPwmHandler->PWMx_Config.PWMx_Period = newPeriod;
 
 	// Llamamos a la fucnión que cambia la frecuencia
-	setFrequency(ptrPwmHandler);
+	setPeriod(ptrPwmHandler);
 }
 
 /* El valor del dutty debe estar dado en valores de %, entre 0% y 100%*/

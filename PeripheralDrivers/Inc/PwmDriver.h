@@ -46,8 +46,8 @@ typedef struct
 
 /* Prototipos de las funciones */
 void pwm_Config(PWM_Handler_t *ptrPwmHandler);
-void setFrequency(PWM_Handler_t *ptrPwmHandler);
-void updateFrequency(PWM_Handler_t *ptrPwmHandler, uint16_t newPeriod);
+void setPeriod(PWM_Handler_t *ptrPwmHandler);
+void updatePeriod(PWM_Handler_t *ptrPwmHandler, uint16_t newPeriod);
 void setDuttyCycle(PWM_Handler_t *ptrPwmHandler);
 void updateDuttyCycle(PWM_Handler_t *ptrPwmHandler, uint16_t newDutty);
 void enableOutput(PWM_Handler_t *ptrPwmHandler);

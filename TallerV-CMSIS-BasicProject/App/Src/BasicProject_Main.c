@@ -9,6 +9,8 @@
  ******************************************************************************
  */
 
+#include <stdlib.h>
+#include <string.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -22,6 +24,7 @@
 #include "USARTxDriver.h"
 #include "SysTickDriver.h"
 #include "PwmDriver.h"
+#include "I2CDriver.h"
 
 #define HSI_CLOCK_CONFIGURED	0;	// 16MHz
 #define HSE_CLOCK_CONFIGURED	1;
@@ -42,9 +45,20 @@ GPIO_Handler_t handlerPinTX = {0};	// Pin de transmisión de datos
 GPIO_Handler_t handlerPinRX = {0};	// Pin de recepción de datos
 USART_Handler_t usart2Comm =  {0};	// Comunicación serial
 uint8_t sendMsg = 0; // Variable para controlar la comunicación
-uint8_t usart2DataReceived = 0; // Variable en la que se guarda el dato transmitido
+uint8_t usart2RxData = 0; // Variable en la que se guarda el dato transmitido
 char bufferMsg[64] = {0}; // Buffer de datos como un arreglo de caracteres
+char bufferData[64] = "Mensaje para enviar";
 
+// Elementos del SysTick
+uint32_t systemTicks = 0;
+uint32_t systemTicksStart = 0;
+uint32_t systemTicksEnd = 0;
+
+// Elementos para utilizar comunicación I2C
+GPIO_Handler_t handlerI2C_SDA = {0};
+GPIO_Handler_t handlerI2C_SCL = {0};
+I2C_Handler_t handlerSensor = {0};
+uint8_t i2cBuffer = 0;
 
 /* Inicializo variables a emplear */
 uint8_t flagUserButton = 0;	// Variable bandera de la interrupción del User Button
@@ -113,12 +127,18 @@ void initSystem(void){
 	handlerPinTX.pGPIOx								= GPIOA;
 	handlerPinTX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_2;
 	handlerPinTX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
 	handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
 	GPIO_Config(&handlerPinTX);
 
 	handlerPinRX.pGPIOx								= GPIOA;
 	handlerPinRX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_3;
 	handlerPinRX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
 	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
 	GPIO_Config(&handlerPinRX);
 

@@ -304,20 +304,21 @@ void USART6_IRQHandler(void){
 /** Funciones callback weak, que pueden ser sobre-escritas*/
 __attribute__((weak)) void usart1Rx_Callback(void){
 		/* 	NOTE: This function should not be modified, when the callback is needed,
-		  		  the BasicTimer_Callback could be implemented in the main file
+		  		  the usart1Rx_Callback could be implemented in the main file
 		 */
 	__NOP();
 }
 __attribute__((weak)) void usart2Rx_Callback(void){
 		/* 	NOTE: This function should not be modified, when the callback is needed,
-		  		  the BasicTimer_Callback could be implemented in the main file
+		  		  the usart2Rx_Callback could be implemented in the main file
 		 */
 	__NOP();
 }
 __attribute__((weak)) void usart6Rx_Callback(void){
 		/* 	NOTE: This function should not be modified, when the callback is needed,
-		  		  the BasicTimer_Callback could be implemented in the main file
+		  		  the usart6Rx_Callback could be implemented in the main file
 		 */
 	__NOP();
 }
+
 

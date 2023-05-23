@@ -12,9 +12,11 @@
 #include <stm32f4xx.h>
 
 #define HSI_FREQUENCY 	16000000
-/* Frecuencias definidas para el driver en MHz */
-#define PLL_FREQUENCY_80MHz		80
 
+
+/* NOTA: Para poder parametrizar el problema, y usar una función configPLL más o menos cómoda
+ * las frecuencias deseadas deben ser ingresadas en MHz, y no pueden exceder los 100MHz, ya que eso
+ * es lo máximo permitido por el MCU, si se ingresa un valor superior a 100, el sistema queda con el HSI */
 
 void configPLL(int PLL_Freq);
 uint64_t getConfigPLL(void);

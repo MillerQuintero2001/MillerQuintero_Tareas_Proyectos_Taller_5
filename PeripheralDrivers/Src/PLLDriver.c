@@ -23,8 +23,12 @@ void configPLL(int PLLFreqMHz){
 	RCC->APB1ENR |= RCC_APB1ENR_PWREN;
 
 	// 4. Seleccionamos el regulador para la frecuencia deseada
-	//PWR->CR &= ~PWR_CR_VOS;
-	PWR->CR |= (0x2 << PWR_CR_VOS_Pos);
+	if(PLLFreqMHz<=84){
+		PWR->CR |= (0x2 << PWR_CR_VOS_Pos);
+	}
+	else if((84<PLLFreqMHz)&&(PLLFreqMHz<=100)){
+		PWR->CR |= (0x3 << PWR_CR_VOS_Pos);
+	}
 
 	/* 5. Cambiamos los registros necesarios para poder acceder a la memoria flash */
 
@@ -35,7 +39,15 @@ void configPLL(int PLLFreqMHz){
 
 	// 5.2 Configuramos la respectiva latencia para 80 MHz que es 2 Wait States para 2.7 a 3.6 Voltios
 	FLASH->ACR &= ~ FLASH_ACR_LATENCY;
-	FLASH->ACR |= FLASH_ACR_LATENCY_2WS;
+	if(PLLFreqMHz<=84){
+		FLASH->ACR |= FLASH_ACR_LATENCY_2WS;
+	}
+	else if((84<PLLFreqMHz)&&(PLLFreqMHz<=100)){
+		FLASH->ACR |= FLASH_ACR_LATENCY_3WS;
+	}
+	else{
+		__NOP();
+	}
 
 	/* 6. Ahora escogemos los pre-escaler adecuados */
 
@@ -44,29 +56,46 @@ void configPLL(int PLLFreqMHz){
 	RCC->PLLCFGR |= (8 << RCC_PLLCFGR_PLLM_Pos); // Escogemos 8 y al VCO le llegan 2MHz, 16/8=2
 
 	// 6.3 Definimos cual va a ser el valor del PLLN, pre-escaler que multiplica lo que entra al VCO
-	RCC->PLLCFGR &= ~RCC_PLLCFGR_PLLN;
-	RCC->PLLCFGR |= (160 <<  RCC_PLLCFGR_PLLN_Pos); // Con esto si usamos 160 del VCO salen 320 MHz
+	/* NOTA: Como dejamos el PLLM en 8, y el PLLP en 2, el valor del PLLN siempre será igual
+	 * a la PLLFreqMHz deseada, limitando que no pasemos de 100 MHz*/
+	if(PLLFreqMHz<=100){
+		RCC->PLLCFGR &= ~RCC_PLLCFGR_PLLN;
+		RCC->PLLCFGR |= (PLLFreqMHz <<  RCC_PLLCFGR_PLLN_Pos); // Con esto si usamos 80 del VCO salen 160 MHz
+	}
+	else{
+		__NOP();
+	}
 
 	// 6.4 Definimos cual va a ser el valor del PLLP, pre-escaler que divide lo que sale del VCO y llega al SysClk
 	RCC->PLLCFGR &= ~RCC_PLLCFGR_PLLP;
-	RCC->PLLCFGR |= (0b01 <<RCC_PLLCFGR_PLLP_Pos); 	// Con esto dividimos por 4 y obtenemos 80 MHz, 320/4=80
+	RCC->PLLCFGR |= (0b00 <<RCC_PLLCFGR_PLLP_Pos); 	// Con esto dividimos por 2 y obtenemos 80 MHz, 160/2=80
 
 	// 6.5 Ahora configuramos para AHB
 	RCC->CFGR &= ~RCC_CFGR_HPRE;
-	RCC->CFGR |= RCC_CFGR_HPRE_DIV1; // Con esto para el bus AHB dividimos por 1, queda en 80 MHz
+	RCC->CFGR |= RCC_CFGR_HPRE_DIV1; // Con esto para el bus AHB dividimos por 1, queda en 80 MHz, o lo mismo del PLLFreqMHz
 
 	// 6.6 Para APB1
-	RCC->CFGR &= ~RCC_CFGR_PPRE1;
-	RCC->CFGR |= RCC_CFGR_PPRE1_DIV2; // Si escogemos que se divide por 2, dan 40 MHz
-									  // esto para no exceder el límite de 50MHz
-	// 6.7 Para APB2
-	RCC->CFGR |= RCC_CFGR_PPRE2_DIV1; // No se divide para valor menores a 4, se queda en 80 MHz, ya que admite hasta 100 MHz
+	if(PLLFreqMHz>50){
+		RCC->CFGR &= ~RCC_CFGR_PPRE1;
+		// Si escogemos que se divide por 2, dan 40 MHz, esto para no exceder el límite de 50MHz
+		RCC->CFGR |= RCC_CFGR_PPRE1_DIV2;
+	}
+	else if(PLLFreqMHz<=50){
+		RCC->CFGR &= ~RCC_CFGR_PPRE1;
+		RCC->CFGR |= RCC_CFGR_PPRE1_DIV1;
+	}
+	else{
+		__NOP();
+	}
 
+	// 6.7 Para APB2
+	// No se divide para valores en el registro menores a 4(binario), se queda en 80 MHz, ya que admite hasta 100 MHz
+	RCC->CFGR |= RCC_CFGR_PPRE2_DIV1;
 
 	// 7. Personalmente quiero habilitar la posbilidad de usar un pin del micro para observar la señal
-	RCC -> CFGR |= RCC_CFGR_MCO1; // Con este para el MCO1 uso la PLL de 80 MHz
-	RCC -> CFGR &= ~RCC_CFGR_MCO1PRE;
-	RCC -> CFGR |= RCC_CFGR_MCO1PRE; // Con esta macro, divido los 80MHz por 5, para tener 16MHz en el pin MCO1
+	RCC->CFGR |= RCC_CFGR_MCO1; // Con este para el MCO1 uso la PLL
+	RCC->CFGR &= ~RCC_CFGR_MCO1PRE;
+	RCC->CFGR |= RCC_CFGR_MCO1PRE; // Con esta macro, divido los 80MHz por 5, para tener 16MHz en el pin MCO1
 
 
 	// 8. Ahora activamos el PLL
@@ -77,10 +106,15 @@ void configPLL(int PLLFreqMHz){
 		__NOP();
 	}
 
-	// Ahora convertimos nuestro PLL de 80MHz en nuestro System Clock
-	RCC->CFGR &= ~RCC_CFGR_SW;
-	RCC->CFGR |= RCC_CFGR_SW_1;
-
+	// Ahora convertimos nuestro PLL en nuestro System Clock, solo si la PLLFreqMHz no supera los 100MHz
+	// de lo contrario se queda con el HSI
+	if(PLLFreqMHz<=100){
+		RCC->CFGR &= ~RCC_CFGR_SW;
+		RCC->CFGR |= RCC_CFGR_SW_1;
+	}
+	else{
+		__NOP();
+	}
 
 }
 
@@ -88,12 +122,17 @@ void configPLL(int PLLFreqMHz){
 uint64_t getConfigPLL(void){
 	uint64_t freq = 0;
 	/* Vamos a leer los registros para obtener el valor de los pre-escaler
-	 * entendiendo que para que esta función sea correcta el PLLP debe ser siempre 4
+	 * entendiendo que para que esta función sea correcta el PLLP debe ser siempre 2
 	 * lo que hacemos es conseguir el valor del PLLM y el PLLN que son sencillos
 	 * obteniendo el valor en la posición, y luego desplazando a la izquierda
 	 * en esa misma posición */
-	uint32_t PLLM = ((RCC->PLLCFGR & RCC_PLLCFGR_PLLM_Msk) >> RCC_PLLCFGR_PLLM_Pos);
-	uint32_t PLLN = ((RCC->PLLCFGR & RCC_PLLCFGR_PLLN_Msk) >> RCC_PLLCFGR_PLLN_Pos);
-	freq = (HSI_FREQUENCY*(PLLN))/(4*PLLM);
+	if(RCC->CFGR & RCC_CFGR_SW){
+		uint32_t PLLM = ((RCC->PLLCFGR & RCC_PLLCFGR_PLLM_Msk) >> RCC_PLLCFGR_PLLM_Pos);
+		uint32_t PLLN = ((RCC->PLLCFGR & RCC_PLLCFGR_PLLN_Msk) >> RCC_PLLCFGR_PLLN_Pos);
+		freq = (HSI_FREQUENCY*(PLLN))/(2*PLLM);
+	}
+	else{
+		freq = HSI_FREQUENCY;
+	}
 	return freq;
 }

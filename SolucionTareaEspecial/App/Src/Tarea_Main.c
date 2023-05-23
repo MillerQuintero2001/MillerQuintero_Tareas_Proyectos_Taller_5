@@ -27,10 +27,9 @@
 #include "I2CDriver.h"
 #include "PLLDriver.h"
 
-#define HSI_CLOCK_CONFIGURED		0;	// 16MHz
-#define HSE_CLOCK_CONFIGURED		1;
-#define PLL_1_CLOCK_CONFIGURED		2; 	// 80MHz
-#define PLL_2_CLOCK_CONFIGURED		3;	// 100MHz
+#define HSI_CLOCK_CONFIGURED	0;	// 16MHz
+#define HSE_CLOCK_CONFIGURED	1;
+#define PLL_CLOCK_CONFIGURED	2;
 
 /* Definición de los handlers necesarios */
 
@@ -39,6 +38,8 @@ GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 int freq = 800;
 int clock = 80;
+uint8_t bandera = 0;
+
 
 //// Elementos para la interrupción externa del User Button
 //GPIO_Handler_t handlerUserButton = 			{0}; // Boton de usuario del Pin C13
@@ -75,12 +76,10 @@ void initSystem(void); 			// Función que inicializa los periféricos básicos
  * ¡Esta función es el corazón del programa! */
 int main(void){
 
-	/* Activamos el Coprocesador Matemático - FPU */
-	SCB->CPACR |= (0XF << 20);
-
 	// Inicializamos todos los elementos del sistema
 	initSystem();
 
+	config_SysTick_ms(2);
 
     /* Loop forever */
 	while(1){
@@ -93,10 +92,11 @@ int main(void){
 //		if(flagUsart2){
 //			flagUsart2 = 0;
 //		}
+		bandera = (USART2->CR1 & USART_CR1_TXEIE);
+		freq = (unsigned int)getConfigPLL();
+		sprintf(bufferMsg, "La frecuencia configurada es de %u Hz \n", freq);
 		if(sendMsg > 4){
-			//freq = getConfigPLL();
-			sprintf(bufferMsg, "La frecuencia configurada es de %d Hz", freq);
-			writeMsg(&usart1Comm, bufferMsg);
+			enableTXEIE(&usart1Comm);
 			sendMsg = 0;
 		}
 
@@ -107,7 +107,10 @@ int main(void){
 /** Función encargada de iniciar hardware para un pin*/
 void initSystem(void){
 
-	//configPLL(clock);
+	/* Activamos el Coprocesador Matemático - FPU */
+	SCB->CPACR |= (0XF << 20);
+
+	configPLL(clock);
 
 	/* GPIO y Timer del Blinky Led de Estado */
 	handlerBlinkyPin.pGPIOx								= GPIOA;
@@ -122,7 +125,7 @@ void initSystem(void){
 	// Atributos para el Timer 2 del LED de estado
 	handlerBlinkyTimer.ptrTIMx								= TIM2;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_SPEED_100us;
+	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_80MHz_SPEED_100us;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerBlinkyTimer);
@@ -158,7 +161,7 @@ void initSystem(void){
 	GPIO_Config(&handlerPinRX);
 
 	/* Configuración de la comunicación serial */
-	usart1Comm.ptrUSARTx						= USART2;
+	usart1Comm.ptrUSARTx						= USART1;
 	usart1Comm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
 	usart1Comm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
 	usart1Comm.USART_Config.USART_parity		= USART_PARITY_NONE;
@@ -181,8 +184,12 @@ void BasicTimer2_Callback(void){
 //}
 //
 /** Interrupción del USART2 */
-void usart1Rx_Callback(void){
-	usart1RxData = getRxData();	// Pongo en alto la variable bandera del USART2 para el main
+//void usart2Rx_Callback(void){
+//	usart1RxData = getRxData();	// Pongo en alto la variable bandera del USART2 para el main
+//}
+void usart1Tx_Callback(void){
+	writeMsg(&usart1Comm, bufferMsg);
+	disableTXEIE(&usart1Comm);
 }
 
 

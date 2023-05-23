@@ -114,60 +114,110 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 
 	// 2.5 Configuracion del Baudrate (SFR USART_BRR)
 	// Si el PLL ha sido seleccionado como el System Clock a 80 MHz
-	if(RCC->CFGR & RCC_CFGR_SW){
-		if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_9600){
-			// El valor a cargar es 520.8333 -> Mantiza = 520,fraction = 0.8333
-			// Mantiza = 104 = 0x208, fraction = 16 * 0.1875 = 13
-			// Valor a cargar 0x208D
-			// Configurando el Baudrate generator para una velocidad de 9600bps
-			ptrUsartHandler->ptrUSARTx->BRR = 0x208D;
-		}
+	if((RCC->CFGR & RCC_CFGR_SW) == RCC_CFGR_SW_PLL){
+		if((ptrUsartHandler->ptrUSARTx == USART1)||(ptrUsartHandler->ptrUSARTx == USART6)){
 
-		else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_19200) {
-			// El valor a cargar es 260.4166 -> Mantiza = 260,fraction = 0.4166
-			// Mantiza = 260 = 0x104, fraction = 16 * 0.4166 = 6.66 = 7
-			// Valor a cargar 0x01047
-			// Configurando el Baudrate generator para una velocidad de 19200bps
-			ptrUsartHandler->ptrUSARTx->BRR = 0x1047;
+			if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_9600){
+				// El valor a cargar es 520.8333 -> Mantiza = 520,fraction = 0.8333
+				// Mantiza = 104 = 0x208, fraction = 16 * 0.1875 = 13
+				// Valor a cargar 0x208D
+				// Configurando el Baudrate generator para una velocidad de 9600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x208D;
+			}
+			else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_19200) {
+				// El valor a cargar es 260.4166 -> Mantiza = 260,fraction = 0.4166
+				// Mantiza = 260 = 0x104, fraction = 16 * 0.4166 = 6.66 = 7
+				// Valor a cargar 0x01047
+				// Configurando el Baudrate generator para una velocidad de 19200bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x1047;
+			}
+			else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_38400) {
+				// El valor a cargar es 130.2083 -> Mantiza = 130,fraction = 0.2083
+				// Mantiza = 130 = 0x082, fraction = 16 * 0.2083 = 3.33
+				// Valor a cargar 0x0823
+				// Configurando el Baudrate generator para una velocidad de 38400bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x0823;
+			}
+			else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_57600) {
+				// El valor a cargar es 86.8055 -> Mantiza = 86,fraction = 0.8055
+				// Mantiza = 86 = 0x56, fraction = 16 * 0.8055 = 12.88 = 13
+				// Valor a cargar 0x056D
+				// Configurando el Baudrate generator para una velocidad de 57600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x056D;
+			}
+			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_115200){
+				// El valor a cargar es 43.4027 -> Mantiza = 43,fraction = 0.4027
+				// Mantiza = 43 = 0x02B, fraction = 16 * 0.4027 = 6.44
+				// Valor a cargar 0x02B6
+				// Configurando el Baudrate generator para una velocidad de 57600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x02B6;
+			}
+			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_230400){
+				// El valor a cargar es 21.7013 -> Mantiza = 21,fraction = 0.7013
+				// Mantiza = 21 = 0x015, fraction = 16 * 0.7013 = 11.22
+				// Valor a cargar 0x015B
+				// Configurando el Baudrate generator para una velocidad de 57600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x015B;
+			}
+			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_921600){
+				// El valor a cargar es 5.4253 -> Mantiza = 5,fraction = 0.4253
+				// Mantiza = 5 = 0x005, fraction = 16 * 0.4253 = 6.80 = 7
+				// Valor a cargar 0x0057
+				// Configurando el Baudrate generator para una velocidad de 57600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x0057;
+			}
 		}
-
-		else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_38400) {
-			// El valor a cargar es 130.2083 -> Mantiza = 130,fraction = 0.2083
-			// Mantiza = 130 = 0x082, fraction = 16 * 0.2083 = 3.33
-			// Valor a cargar 0x0823
-			// Configurando el Baudrate generator para una velocidad de 38400bps
-			ptrUsartHandler->ptrUSARTx->BRR = 0x0823;
-		}
-
-		else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_57600) {
-			// El valor a cargar es 86.8055 -> Mantiza = 86,fraction = 0.8055
-			// Mantiza = 86 = 0x56, fraction = 16 * 0.8055 = 12.88 = 13
-			// Valor a cargar 0x056D
-			// Configurando el Baudrate generator para una velocidad de 57600bps
-			ptrUsartHandler->ptrUSARTx->BRR = 0x056D;
-		}
-
-		else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_115200){
-			// El valor a cargar es 43.4027 -> Mantiza = 43,fraction = 0.4027
-			// Mantiza = 43 = 0x02B, fraction = 16 * 0.4027 = 6.44
-			// Valor a cargar 0x02B6
-			// Configurando el Baudrate generator para una velocidad de 57600bps
-			ptrUsartHandler->ptrUSARTx->BRR = 0x02B6;
-		}
-
-		else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_230400){
-			// El valor a cargar es 21.7013 -> Mantiza = 21,fraction = 0.7013
-			// Mantiza = 21 = 0x015, fraction = 16 * 0.7013 = 11.22
-			// Valor a cargar 0x015B
-			// Configurando el Baudrate generator para una velocidad de 57600bps
-			ptrUsartHandler->ptrUSARTx->BRR = 0x015B;
-		}
-		else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_921600){
-			// El valor a cargar es 5.4253 -> Mantiza = 5,fraction = 0.4253
-			// Mantiza = 5 = 0x005, fraction = 16 * 0.4253 = 6.80 = 7
-			// Valor a cargar 0x0057
-			// Configurando el Baudrate generator para una velocidad de 57600bps
-			ptrUsartHandler->ptrUSARTx->BRR = 0x0057;
+		else if(ptrUsartHandler->ptrUSARTx == USART2){
+			// Estamos con el USART2 usando el PLL a 80MHz, que para el APB1 queda a 40MHz
+			if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_9600){
+				// El valor a cargar es 260.4166 -> Mantiza = 260,fraction = 0.4166
+				// Mantiza = 260 = 0x104, fraction = 16 * 0.4166 = 6.66 = 7
+				// Valor a cargar 0x1047
+				// Configurando el Baudrate generator para una velocidad de 9600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x1047;
+			}
+			else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_19200) {
+				// El valor a cargar es 130.2083 -> Mantiza = 130,fraction = 0.2083
+				// Mantiza = 130 = 0x82, fraction = 16 * 0.0625 = 3.33 = 3
+				// Valor a cargar 0x0823
+				// Configurando el Baudrate generator para una velocidad de 19200bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x0823;
+			}
+			else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_38400) {
+				// El valor a cargar es 65.1041 -> Mantiza = 65,fraction = 0.1041
+				// Mantiza = 65 = 0x41, fraction = 16 * 0.1041 = 1.66 = 2
+				// Valor a cargar 0x0412
+				// Configurando el Baudrate generator para una velocidad de 38400bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x0412;
+			}
+			else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_57600) {
+				// El valor a cargar es 43.4027 -> Mantiza = 43,fraction = 0.4027
+				// Mantiza = 43 = 0x2B, fraction = 16 * 0.4027 = 6.44
+				// Valor a cargar 0x02B6
+				// Configurando el Baudrate generator para una velocidad de 57600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x02B6;
+			}
+			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_115200){
+				// El valor a cargar es 21.70138 -> Mantiza = 21,fraction = 0.7013
+				// Mantiza = 21 = 0x15, fraction = 16 * 0.6875 = 11.22
+				// Valor a cargar 0x015B
+				// Configurando el Baudrate generator para una velocidad de 57600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x015B;
+			}
+			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_230400){
+				// El valor a cargar es 10.8507 -> Mantiza = 10,fraction = 0.8507
+				// Mantiza = 10 = 0xA, fraction = 16 * 0.8507 = 13.61 = 14
+				// Valor a cargar 0x00AE
+				// Configurando el Baudrate generator para una velocidad de 57600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x00AE;
+			}
+			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_921600){
+				// El valor a cargar es 2.7126 -> Mantiza = 2,fraction = 0.7126
+				// Mantiza = 1 = 0x1, fraction = 16 * 0.7126 = 11.40
+				// Valor a cargar 0x001B
+				// Configurando el Baudrate generator para una velocidad de 57600bps
+				ptrUsartHandler->ptrUSARTx->BRR = 0x001B;
+			}
 		}
 	}
 	// Sino, estamos con el HSI
@@ -180,7 +230,6 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 			// Configurando el Baudrate generator para una velocidad de 9600bps
 			ptrUsartHandler->ptrUSARTx->BRR = 0x0683;
 		}
-
 		else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_19200) {
 			// El valor a cargar es 52.0625 -> Mantiza = 52,fraction = 0.0625
 			// Mantiza = 52 = 0x34, fraction = 16 * 0.0625 = 1
@@ -188,7 +237,6 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 			// Configurando el Baudrate generator para una velocidad de 19200bps
 			ptrUsartHandler->ptrUSARTx->BRR = 0x0341;
 		}
-
 		else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_38400) {
 			// El valor a cargar es 26.0625 -> Mantiza = 26,fraction = 0.0625
 			// Mantiza = 26 = 0x1A, fraction = 16 * 0.0625 = 1
@@ -196,7 +244,6 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 			// Configurando el Baudrate generator para una velocidad de 38400bps
 			ptrUsartHandler->ptrUSARTx->BRR = 0x01A1;
 		}
-
 		else if (ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_57600) {
 			// El valor a cargar es 17.3750 -> Mantiza = 17,fraction = 0.3750
 			// Mantiza = 17 = 0x11, fraction = 16 * 0.3750 = 6
@@ -204,7 +251,6 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 			// Configurando el Baudrate generator para una velocidad de 57600bps
 			ptrUsartHandler->ptrUSARTx->BRR = 0x0116;
 		}
-
 		else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_115200){
 			// El valor a cargar es 8.6875 -> Mantiza = 8,fraction = 0.6875
 			// Mantiza = 8 = 0x8, fraction = 16 * 0.6875 = 11
@@ -212,7 +258,6 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 			// Configurando el Baudrate generator para una velocidad de 57600bps
 			ptrUsartHandler->ptrUSARTx->BRR = 0x008B;
 		}
-
 		else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_230400){
 			// El valor a cargar es 4.3125 -> Mantiza = 4,fraction = 0.3125
 			// Mantiza = 4 = 0x4, fraction = 16 * 0.3125 = 5
@@ -335,12 +380,27 @@ uint8_t getRxData(void){
 	return auxRxData;
 }
 
+void enableTXEIE(USART_Handler_t *ptrUsartHandler){
+	ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_TXEIE;
+}
+
+void disableTXEIE(USART_Handler_t *ptrUsartHandler){
+	ptrUsartHandler->ptrUSARTx->CR1 &= ~USART_CR1_TXEIE;
+}
+
 /** ISR de la interrupción del USART1 */
 void USART1_IRQHandler(void){
 	// Evaluamos si la interrupción que se dio es por RX
 	if(USART1->SR & USART_SR_RXNE){
 		auxRxData = (uint8_t) USART1->DR;
 		usart1Rx_Callback();
+	}
+	// Evaluamos si la interrupción que se dio es por TX
+	else if(USART1->SR & USART_SR_TXE){
+		usart1Tx_Callback();
+	}
+	else{
+		__NOP();
 	}
 }
 
@@ -351,6 +411,13 @@ void USART2_IRQHandler(void){
 		auxRxData = (uint8_t) USART2->DR;
 		usart2Rx_Callback();
 	}
+	// Evaluamos si la interrupción que se dio es por TX
+	else if(USART2->SR & USART_SR_TXE){
+		usart2Tx_Callback();
+	}
+	else{
+		__NOP();
+	}
 }
 
 /** ISR de la interrupción del USART6 */
@@ -359,6 +426,13 @@ void USART6_IRQHandler(void){
 	if(USART6->SR & USART_SR_RXNE){
 		auxRxData = (uint8_t) USART6->DR;
 		usart6Rx_Callback();
+	}
+	// Evaluamos si la interrupción que se dio es por TX
+	else if(USART6->SR & USART_SR_TXE){
+		usart6Tx_Callback();
+	}
+	else{
+		__NOP();
 	}
 }
 
@@ -378,6 +452,27 @@ __attribute__((weak)) void usart2Rx_Callback(void){
 __attribute__((weak)) void usart6Rx_Callback(void){
 		/* 	NOTE: This function should not be modified, when the callback is needed,
 		  		  the usart6Rx_Callback could be implemented in the main file
+		 */
+	__NOP();
+}
+
+
+/** Funciones callback weak, que pueden ser sobre-escritas*/
+__attribute__((weak)) void usart1Tx_Callback(void){
+		/* 	NOTE: This function should not be modified, when the callback is needed,
+		  		  the usart1Tx_Callback could be implemented in the main file
+		 */
+	__NOP();
+}
+__attribute__((weak)) void usart2Tx_Callback(void){
+		/* 	NOTE: This function should not be modified, when the callback is needed,
+		  		  the usart2Tx_Callback could be implemented in the main file
+		 */
+	__NOP();
+}
+__attribute__((weak)) void usart6Tx_Callback(void){
+		/* 	NOTE: This function should not be modified, when the callback is needed,
+		  		  the usart6Tx_Callback could be implemented in the main file
 		 */
 	__NOP();
 }

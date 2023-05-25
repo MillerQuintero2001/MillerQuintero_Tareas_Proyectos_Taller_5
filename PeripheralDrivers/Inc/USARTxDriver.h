@@ -80,16 +80,19 @@ typedef struct
 /* Definicion de los prototipos para las funciones del USART */
 void USART_Config(USART_Handler_t *ptrUsartHandler);
 int writeChar(USART_Handler_t *ptrUsartHandler, char dataToSend );
+int writeCharTXE(USART_Handler_t *ptrUsartHandler, char dataToSend );
 void writeMsg(USART_Handler_t *ptrUsartHandler, char *messageToSend );
+void writeMsgTXE(USART_Handler_t *ptrUsartHandler, char *messageToSend );
 uint8_t getRxData(void);
 void usart1Rx_Callback(void);
 void usart2Rx_Callback(void);
 void usart6Rx_Callback(void);
-void usart1Tx_Callback(void);
-void usart2Tx_Callback(void);
-void usart6Tx_Callback(void);
-void enableTXEIE(USART_Handler_t *ptrUsartHandler);
-void disableTXEIE(USART_Handler_t *ptrUsartHandler);
+void usart1Tx_Char(void);
+void usart1Tx_String(void);
+void usart2Tx_Char(void);
+void usart2Tx_String(void);
+void usart6Tx_Char(void);
+void usart6Tx_String(void);
 
 
 #endif /* USARTXDRIVER_H_ */

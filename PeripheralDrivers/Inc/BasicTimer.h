@@ -18,8 +18,8 @@
 #define BTIMER_SPEED_1ms	16000
 
 // Cuando tengo el micro a 80 MHz, al APB1 de los Timers 2 al 5 le llegan 40 MHz
-#define BTIMER_PLL_80MHz_SPEED_10us		800
-#define BTIMER_PLL_80MHz_SPEED_100us	8000
+#define BTIMER_PLL_80MHz_SPEED_10us		807
+#define BTIMER_PLL_80MHz_SPEED_100us	8078
 
 #define BTIMER_INTERRUP_DISABLE		0
 #define BTIMER_INTERRUP_ENABLE 		1

@@ -27,18 +27,15 @@
 #include "I2CDriver.h"
 #include "PLLDriver.h"
 
-#define HSI_CLOCK_CONFIGURED	0;	// 16MHz
-#define HSE_CLOCK_CONFIGURED	1;
-#define PLL_CLOCK_CONFIGURED	2;
 
 /* Definición de los handlers necesarios */
 
 // Elementos para el Blinky LED
 GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
-int freq = 800;
-int clock = 80;
-uint8_t bandera = 0;
+unsigned int freq = 0;
+uint16_t clock80 = 80;
+uint8_t dato = 0;
 
 
 //// Elementos para la interrupción externa del User Button
@@ -78,26 +75,16 @@ int main(void){
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
-
-	config_SysTick_ms(2);
+	freq = (unsigned int)getConfigPLL();
 
     /* Loop forever */
 	while(1){
-//
-//		if(flagUserButton){
-//			flagUserButton = 0;
-//			freq++;
-//		}
-//
-//		if(flagUsart2){
-//			flagUsart2 = 0;
-//		}
-		bandera = (USART2->CR1 & USART_CR1_TXEIE);
-		freq = (unsigned int)getConfigPLL();
-		sprintf(bufferMsg, "La frecuencia configurada es de %u Hz \n", freq);
+
+
 		if(sendMsg > 4){
-			enableTXEIE(&usart1Comm);
-			sendMsg = 0;
+			//sprintf(bufferMsg, "Se ingreso %c \n", (char)dato);
+			writeCharTXE(&usart1Comm, dato);
+			sendMsg = 0;;
 		}
 
 	}
@@ -107,10 +94,13 @@ int main(void){
 /** Función encargada de iniciar hardware para un pin*/
 void initSystem(void){
 
-	/* Activamos el Coprocesador Matemático - FPU */
+	// Activamos el Coprocesador Matemático - FPU
 	SCB->CPACR |= (0XF << 20);
 
-	configPLL(clock);
+	//
+	configPLL(clock80);
+
+	config_SysTick_ms(PLL_CLOCK_CONFIGURED);
 
 	/* GPIO y Timer del Blinky Led de Estado */
 	handlerBlinkyPin.pGPIOx								= GPIOA;
@@ -178,19 +168,12 @@ void BasicTimer2_Callback(void){
 	sendMsg++;
 }
 
-///** Interrupción externa del User Button */
-//void callback_extInt13(void){
-//	flagUserButton = 1;	// Pongo en alto la variable bandera del Exti 13 para el main
-//}
-//
-/** Interrupción del USART2 */
-//void usart2Rx_Callback(void){
-//	usart1RxData = getRxData();	// Pongo en alto la variable bandera del USART2 para el main
-//}
-void usart1Tx_Callback(void){
-	writeMsg(&usart1Comm, bufferMsg);
-	disableTXEIE(&usart1Comm);
-}
 
+/* Interrupción del USART1 */
+void usart1Rx_Callback(void){
+	//GPIOxTooglePin(&handlerBlinkyPin);
+	dato = getRxData();
+	//GPIOxTooglePin(&handlerBlinkyPin);
+}
 
 

@@ -22,14 +22,14 @@
 uint64_t ticks = 0;
 uint64_t ticks_start = 0;
 uint64_t ticks_counting = 0;
-uint64_t freq_clock = 0;
+//uint64_t freq_clock = 0;
 
 /** Función de configuracíon del SysTick */
 void config_SysTick_ms(uint8_t systemClock){
 
 	// Reiniciamos el valor de la variable que cuenta tiempo
 	ticks = 0;
-	freq_clock = getConfigPLL();
+	//freq_clock = getConfigPLL();
 
 	switch(systemClock){
 
@@ -45,9 +45,9 @@ void config_SysTick_ms(uint8_t systemClock){
 		break;
 	}
 
-	// Caso para el reloj PLL
+	// Caso para el reloj PLL 80MHz
 	case 2: {
-		SysTick->LOAD = freq_clock/1000;
+		SysTick->LOAD = SYSTICK_LOAD_VALUE_80MHz_1ms; //Este valor particular es para tener verdaderamente delay de
 		break;
 	}
 	// Caso por defecto

@@ -10,6 +10,7 @@
 #define PLLDRIVER_H_
 
 #include <stm32f4xx.h>
+#include <stdint.h>
 
 #define HSI_FREQUENCY 	16000000
 
@@ -18,7 +19,7 @@
  * las frecuencias deseadas deben ser ingresadas en MHz, y no pueden exceder los 100MHz, ya que eso
  * es lo máximo permitido por el MCU, si se ingresa un valor superior a 100, el sistema queda con el HSI */
 
-void configPLL(int PLL_Freq);
+void configPLL(uint16_t PLL_Freq);
 uint64_t getConfigPLL(void);
 
 #endif /* PLLDRIVER_H_ */

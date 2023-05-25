@@ -16,6 +16,7 @@
 #define MAIN_CLOCK_4_Mhz_FOR_I2C	4
 #define MAIN_CLOCK_16_Mhz_FOR_I2C	16
 #define MAIN_CLOCK_20_Mhz_FOR_I2C	20
+#define MAIN_CLOCK_80_Mhz_FOR_I2C	40 // Divide por 2 por que APB1 no puede más de 50MHz
 
 #define I2C_MODE_SM		0
 #define I2C_MODE_FM		1
@@ -23,12 +24,16 @@
 #define I2C_DUTY_FM_2_1		0
 #define I2C_DUTY_FM_16_9	1
 
-#define I2C_MODE_SM_SPEED_100Khz 			80
-#define I2C_MODE_FM_DUTY_0_SPEED_400Khz 	13
-#define I2C_MODE_FM_DUTY_1_SPEED_400Khz 	14
+#define I2C_MODE_SM_SPEED_100Khz 				80
+#define I2C_MODE_SM_SPEED_100Khz_PLL 			202
+#define I2C_MODE_FM_DUTY_0_SPEED_400Khz 		13
+#define I2C_MODE_FM_DUTY_0_SPEED_400Khz_PLL 	33
+#define I2C_MODE_FM_DUTY_1_SPEED_400Khz 		14
 
-#define I2C_MAX_RISE_TIME_SM	17
-#define I2C_MAX_RISE_TIME_FM	5
+#define I2C_MAX_RISE_TIME_SM		17
+#define I2C_MAX_RISE_TIME_SM_PLL	41
+#define I2C_MAX_RISE_TIME_FM		5
+#define I2C_MAX_RISE_TIME_FM_PLL	13
 
 typedef struct
 {

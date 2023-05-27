@@ -26,9 +26,6 @@
 #include "PwmDriver.h"
 #include "I2CDriver.h"
 
-#define HSI_CLOCK_CONFIGURED	0;	// 16MHz
-#define HSE_CLOCK_CONFIGURED	1;
-#define PLL_CLOCK_CONFIGURED	2;
 
 /* Definición de los handlers necesarios */
 
@@ -57,7 +54,7 @@ I2C_Handler_t handlerAccelerometer = {0};
 uint8_t i2cBuffer = 0;
 
 // Macro-definiciones específicas para el sensor
-#define ACCEL_ADDRESS 0b1101001; // 0xD2 -> Dirección del sensor Acelerómetro con ADO=1
+#define ACCEL_ADDRESS 	0b1101000; // 0xD2 -> Dirección del sensor Acelerómetro con ADO=1
 #define ACCEL_XOUT_H	59 // 0x3B
 #define ACCEL_XOUT_L	60 // OX3C
 #define ACCEL_YOUT_H	61 // 0x3D

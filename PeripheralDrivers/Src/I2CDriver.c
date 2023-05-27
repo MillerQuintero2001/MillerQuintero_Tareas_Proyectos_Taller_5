@@ -60,7 +60,6 @@ void i2c_config(I2C_Handler_t *ptrHandlerI2C){
 		if((RCC->CFGR & RCC_CFGR_SW) == RCC_CFGR_SW_PLL){
 			//	Configuramos el registro que se encarga de generar la señal del reloj
 			ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_SM_SPEED_100Khz_PLL << I2C_CCR_CCR_Pos);
-
 			//	Configuramos el registro que controla el tiempo T-Rise máximo
 			ptrHandlerI2C->ptrI2Cx->TRISE |= (I2C_MAX_RISE_TIME_SM_PLL);
 		}
@@ -78,30 +77,29 @@ void i2c_config(I2C_Handler_t *ptrHandlerI2C){
 		//	Seleccionamos el modo rápido
 		ptrHandlerI2C->ptrI2Cx->CCR |= I2C_CCR_FS;
 
-		//	Configuramos el registro que se encarga de generar la señal del reloj
+		//	Verificamos el tipo de Duty
 		if(ptrHandlerI2C->dutyFastModeI2C == I2C_DUTY_FM_2_1){ //Duty 2:1
 			ptrHandlerI2C->ptrI2Cx->CCR &= ~(0b1 << 14); //Bit DUTY = 0
 			if((RCC->CFGR & RCC_CFGR_SW) == RCC_CFGR_SW_PLL){
+				// //	Configuramos el registro que se encarga de generar la señal del reloj
 				ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_FM_DUTY_0_SPEED_400Khz_PLL << I2C_CCR_CCR_Pos);
+				// Configuramos el registro que controla el tiempo T-Rise máximo
+				ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_FM_PLL;
 			}
 			else{
+				// Configuramos el registro que controla el reloj
 				ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_FM_DUTY_0_SPEED_400Khz << I2C_CCR_CCR_Pos);
+				// Configuramos el registro que controla el tiempo T-Rise máximo
+				ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_FM;
 			}
 		}
 		else if(ptrHandlerI2C->dutyFastModeI2C == I2C_DUTY_FM_16_9){ //Duty 16:9
 			ptrHandlerI2C->ptrI2Cx->CCR |= (0b1 << 14); //Bit DUTY = 1
 			ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_FM_DUTY_1_SPEED_400Khz << I2C_CCR_CCR_Pos);
+			ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_FM;
 		}
 		else{
 			__NOP();
-		}
-
-		// Configuramos el registro que controla el tiempo T-Rise máximo
-		if((RCC->CFGR & RCC_CFGR_SW) == RCC_CFGR_SW_PLL){
-			ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_FM_PLL;
-		}
-		else{
-			ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_FM;
 		}
 
 	}

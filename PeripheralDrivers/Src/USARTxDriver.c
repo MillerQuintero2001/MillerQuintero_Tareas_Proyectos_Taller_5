@@ -18,6 +18,7 @@ uint8_t auxRxData = 0;				// Variable que guarda el dato recibido
 uint8_t charOrString = 0; 			// Variable que guarda el modo, 0 es carácter, 1 es string
 char dataUSARTchar = '\0'; 			// Variable que guarda el carácter a enviar por interrupción
 char *ptrdataUSARTstring = NULL; 	// Puntero que guarda la primera posición del string a enviar por interrupción
+int pos = 0;						// Contador de posición para el arreglo de carácteres
 
 void USART_Config(USART_Handler_t *ptrUsartHandler){
 	/* 1. Activamos la señal de reloj que viene desde el BUS al que pertenece el periferico */
@@ -412,32 +413,42 @@ void usart6Tx_Char(void){
 
 /** Función para cuando hay interrupción Tx en Usart1, cargue string en el DR y desactive */
 void usart1Tx_String(void){
-	int j = 0;
-	while(ptrdataUSARTstring[j] != '\0'){
-		USART1->DR = ptrdataUSARTstring[j];
-		j++;
+	if(ptrdataUSARTstring[pos] != '\0'){
+		USART1->DR = ptrdataUSARTstring[pos];
+		pos++;
 	}
-	USART1->CR1 &= ~USART_CR1_TXEIE;
+	else{
+		USART1->CR1 &= ~USART_CR1_TXEIE;
+		pos = 0;
+		ptrdataUSARTstring = NULL;
+	}
+
 }
 
 /** Función para cuando hay interrupción Tx en Usart2, cargue string en el DR y desactive */
 void usart2Tx_String(void){
-	int j = 0;
-	while(ptrdataUSARTstring[j] != '\0'){
-		USART2->DR = ptrdataUSARTstring[j];
-		j++;
+	if(ptrdataUSARTstring[pos] != '\0'){
+		USART2->DR = ptrdataUSARTstring[pos];
+		pos++;
 	}
-	USART2->CR1 &= ~USART_CR1_TXEIE;
+	else{
+		USART2->CR1 &= ~USART_CR1_TXEIE;
+		pos = 0;
+		ptrdataUSARTstring = NULL;
+	}
 }
 
 /** Función para cuando hay interrupción Tx en Usart6, cargue string en el DR y desactive */
 void usart6Tx_String(void){
-	int j = 0;
-	while(ptrdataUSARTstring[j] != '\0'){
-		USART6->DR = ptrdataUSARTstring[j];
-		j++;
+	if(ptrdataUSARTstring[pos] != '\0'){
+		USART6->DR = ptrdataUSARTstring[pos];
+		pos++;
 	}
-	USART6->CR1 &= ~USART_CR1_TXEIE;
+	else{
+		USART6->CR1 &= ~USART_CR1_TXEIE;
+		pos = 0;
+		ptrdataUSARTstring = NULL;
+	}
 }
 
 /** Función para recibir datos */

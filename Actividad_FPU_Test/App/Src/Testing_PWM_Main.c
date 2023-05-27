@@ -22,9 +22,9 @@
 #include "SysTickDriver.h"
 #include "PwmDriver.h"
 
-#define HSI_CLOCK_CONFIGURED	0;	// 16MHz
-#define HSE_CLOCK_CONFIGURED	1;
-#define PLL_CLOCK_CONFIGURED	2;
+#define HSI_CLOCK_CONFIGURED	0	// 16MHz
+#define HSE_CLOCK_CONFIGURED	1
+#define PLL_CLOCK_CONFIGURED	2
 
 /* Definición de los handlers necesarios */
 

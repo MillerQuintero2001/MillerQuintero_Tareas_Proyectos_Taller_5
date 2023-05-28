@@ -51,12 +51,17 @@ BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 
 // Elementos para el muestreo a 1KHz
 BasicTimer_Handler_t handlerSamplingTimer = {0}; 	// Timer del muestreo de datos
-int arrayXdata[2000] = {0};							// Array que guarda la información de datos eje X
-int arrayYdata[2000] = {0};							// Array que guarda la información de datos eje X
-int arrayZdata[2000] = {0};							// Array que guarda la información de datos eje X
+float arrayXdata[1000] = {0};						// Array que guarda la información de datos eje X
+float arrayYdata[1000] = {0};						// Array que guarda la información de datos eje Y
+float arrayZdata[1000] = {0};						// Array que guarda la información de datos eje Z
+float arrayXdataprint[2000] = {0};					// Array que guarda la información de datos eje X
+float arrayYdataprint[2000] = {0};					// Array que guarda la información de datos eje Y
+float arrayZdataprint[2000] = {0};					// Array que guarda la información de datos eje Z
 int arrayLCDdata[3] = {0};							// Array que guarda la tripleta de datos para la LCD
+uint16_t countPrint = 0;
 uint16_t counter_ms = 0;							// Contador de milisegundos con el Timer 3
 uint8_t flagPrintSamples = 0;						// Bandera para indicar que se solictaron 6000 datos desde la terminal
+uint8_t flag6000Data = 0;
 uint8_t flag2seg = 0;								// Bandera para indicar que han pasado 2seg
 uint8_t flag1KHzSamplingData = 0;					// Bandera para indicar tomar dato cada 1ms
 
@@ -68,7 +73,6 @@ USART_Handler_t usart1Comm =  {0};	// Comunicación serial
 uint8_t sendMsg = 0; // Variable para controlar la comunicación
 uint8_t usart1RxData = 0; 	// Variable en la que se guarda el dato transmitido
 char bufferData[64] = {0}; // Buffer de datos como un arreglo de caracteres
-char bufferPrint[ ] = {0}; // Buffer de datos como un arreglo de caracteres
 
 // Elementos para utilizar comunicación I2C con Acelerometro
 GPIO_Handler_t handlerI2C_SDA = {0};
@@ -123,8 +127,6 @@ int main(void){
 	initSystem();
 	// Mensajes de inicio
 	freq = (unsigned int)getConfigPLL();
-	sprintf(bufferData,"Welcome, the current frequency of the MCU is %u Hz \n", freq);
-	writeMsg(&usart1Comm, bufferData);
 
     /* Loop forever */
 	while(1){
@@ -136,20 +138,29 @@ int main(void){
 
 		// Muestreo de datos constante cada 1ms
 		if(flag1KHzSamplingData){
-			saveData();
+			if(counter_ms > 1000){
+				counter_ms = 0;
+			}
+			if(countPrint > 2000){ // Esta para control del iterador de los 2000 datos por eje, y las banderas
+				countPrint = 0;
+				flag6000Data = 0;
+				flag2seg = 1;
+			}
+			saveData(); //Función que guarda los datos en arreglos, al ser sujeta a la flag1KHz, esta función se llama solo cada 1ms
+
 			flag1KHzSamplingData = 0;
 		}
 
 		// Si han pasado 2seg y se dio la orden con la 'm' en la terminal, muestre los datos tomados en ese tiempo
-		if(flagPrintSamples && flag2seg){
+		if(flag2seg){
+
 			sprintf(bufferData, "      X;            Y;            Z;\n");
 			writeMsg(&usart1Comm, bufferData);
-			for(int i; i<2000; i++){
-				sprintf(bufferData,"%.3f m/s²;   %.3f m/s²;   %.3f m/s²;   Dato #%d\n", arrayXdata[i]*factConv, arrayYdata[i]*factConv, arrayZdata[i]*factConv,i+1);
+			for(int i=0; i<2000; i++){
+				sprintf(bufferData,"%.3f m/s²;   %.3f m/s²;   %.3f m/s²;   Dato #%d\n", arrayXdataprint[i], arrayYdataprint[i], arrayZdataprint[i],i+1);
 				writeMsg(&usart1Comm, bufferData);
 			}
-			flagPrintSamples = 0;	//Solo una vez que se hayan imprimido los datos, se baja la bandera
-			flag2seg = 0;
+			flag2seg = 0;	//Solo una vez que se hayan imprimido los datos, se baja la bandera
 		}
 
 	}
@@ -185,18 +196,8 @@ void initSystem(void){
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerBlinkyTimer);
-	/* Fin del GPIO y Timer del LED de estado
-	 * ----------------------------------------*/
-
-//	/* GPIO's y EXTI's*/
-//	// Botón de Usario, GPIO y EXTI
-//	handlerUserButton.pGPIOx							= GPIOC;
-//	handlerUserButton.GPIO_PinConfig.GPIO_PinNumber 	= PIN_13;
-//	handlerUserButton.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_IN; // Entrada
-//	handlerUserButtonExti.pGPIOHandler					= &handlerUserButton;
-//	handlerUserButtonExti.edgeType						= EXTERNAL_INTERRUPT_RISING_EDGE; // Detecto flanco de subida en el clock
-//	extInt_Config(&handlerUserButtonExti);
-//
+	// Fin del GPIO y Timer del LED de estado
+	/*----------------------------------------------------------------------------------------*/
 
 	/* Configuración del Timer 3 para controlar el muestreo*/
 	handlerSamplingTimer.ptrTIMx							= TIM3;
@@ -348,7 +349,14 @@ void initSystem(void){
 
 /** Función encargada de gestionar las acciones según la tecla de recepción*/
 void actionRxData(void){
-	if(usart1RxData == 'w'){
+
+	if(usart1RxData == 'i'){
+		sprintf(bufferData,"Welcome, the current frequency of the MCU is %u Hz \n", freq);
+		writeMsg(&usart1Comm, bufferData);
+		usart1RxData = '\0';
+	}
+
+	else if(usart1RxData == 'w'){
 		sprintf(bufferData, "WHO_AM_I? (r)\n"); // La "(r)" en el texto es para indicar que estamos leyendo
 		writeMsg(&usart1Comm, bufferData);
 
@@ -359,7 +367,7 @@ void actionRxData(void){
 	}
 
 	else if(usart1RxData == 'm'){
-		flagPrintSamples = 1;
+		flag6000Data = 1;		// Levanto bandera de solicitar 6 mil datos (2 mil por eje), para iniciar el conteo de 2 segundos
 		usart1RxData = '\0';
 	}
 	else if(usart1RxData == 'r'){
@@ -402,6 +410,15 @@ void actionRxData(void){
 		writeMsg(&usart1Comm, bufferData);
 		usart1RxData = '\0';
 	}
+
+	else if(usart1RxData == 'h'){
+		sprintf(bufferData, "Axis X data;   Axis Y data;   Axis Z data \n");
+		writeMsg(&usart1Comm, bufferData);
+
+		sprintf(bufferData, "%.3f m/s²;    %.3f m/s²;    %.3f m/s²;\n", arrayXdata[999], arrayYdata[999], arrayZdata[999]);
+		writeMsg(&usart1Comm, bufferData);
+		usart1RxData = '\0';
+	}
 	else{
 		usart1RxData = '\0';
 	}
@@ -423,12 +440,17 @@ void saveData(void){
 	uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
 	uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
 	int16_t AccelZ = AccelZ_high << 8 | AccelZ_low; // Aquí lo que se hace es básicamente concatenar los valores
-	arrayLCDdata[2] = (int)AccelZ;
+	arrayLCDdata[2] = AccelZ*factConv;
 
-	if(counter_ms>0){
-		arrayXdata[counter_ms-1] = (int)AccelX;
-		arrayYdata[counter_ms-1] = (int)AccelY;
-		arrayZdata[counter_ms-1] = (int)AccelZ;
+	if(counter_ms > 0){
+		arrayXdata[counter_ms-1] = AccelX*factConv; 	// Se guardan datos para el muestreo constante de 1KHz
+		arrayYdata[counter_ms-1] = AccelY*factConv;
+		arrayZdata[counter_ms-1] = AccelZ*factConv;
+	}
+	if((flag6000Data)&&(countPrint > 0)){
+		arrayXdataprint[countPrint-1] = AccelX*factConv;	// Se guardan los datos 2000 datos por eje, solo cuando se solicitan
+		arrayYdataprint[countPrint-1] = AccelY*factConv;	// con la tecla, y se usa el muestreo 1KHz
+		arrayZdataprint[countPrint-1] = AccelZ*factConv;
 	}
 
 }
@@ -440,14 +462,11 @@ void BasicTimer2_Callback(void){
 
 /** Interrupción del timer de muestreo*/
 void BasicTimer3_Callback(void){
-	if(counter_ms>2000){
-		counter_ms = 0;
-		flag2seg = 1;
+	flag1KHzSamplingData = 1; 	// Levanto bandera para tomar datos cada 1ms
+	counter_ms++;
+	if(flag6000Data){
+		countPrint++;
 	}
-	else{
-		counter_ms++;
-	}
-	flag1KHzSamplingData = 1;
 }
 
 

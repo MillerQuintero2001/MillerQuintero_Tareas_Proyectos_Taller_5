@@ -85,19 +85,19 @@ uint8_t i2cBuffer = 0;
 //GPIO_Handler_t handlerI2C_SCL_LCD = {0};
 //I2C_Handler_t handlerLCD = {0};
 //uint8_t i2cLCDBuffer = 0;
-//
-//// Elementos para los pines en modo PWM, representando duttyCycle en función del eje
-//GPIO_Handler_t handlerPinPwmAxisX = {0};
-//GPIO_Handler_t handlerPinPwmAxisY = {0};
-//GPIO_Handler_t handlerPinPwmAxisZ = {0};
-//
-//PWM_Handler_t handlerXSignalPWM = {0};
-//PWM_Handler_t handlerYSignalPWM = {0};
-//PWM_Handler_t handlerZSignalPWM = {0};
-//
-//uint16_t duttyValueX = 10000;
-//uint16_t duttyValueY = 10000;
-//uint16_t duttyValueZ = 10000;
+
+// Elementos para los pines en modo PWM, representando duttyCycle en función del eje
+GPIO_Handler_t handlerPinPwmAxisX = {0};
+GPIO_Handler_t handlerPinPwmAxisY = {0};
+GPIO_Handler_t handlerPinPwmAxisZ = {0};
+
+PWM_Handler_t handlerXSignalPWM = {0};
+PWM_Handler_t handlerYSignalPWM = {0};
+PWM_Handler_t handlerZSignalPWM = {0};
+
+uint16_t duttyValueX = 10000;
+uint16_t duttyValueY = 10000;
+uint16_t duttyValueZ = 10000;
 
 // Elementos del SysTick
 uint32_t systemTicks = 0;
@@ -112,12 +112,13 @@ uint32_t systemTicksEnd = 0;
 ///* Inicializo variables a emplear */
 unsigned int freq = 0;
 uint16_t clock80 = 80;
-float factConv = 9.78/16384.0; //Factor de conversión para pasar medidas de acelerómetro a m/s²
+float factConv = 9.78/16384.0; //Factor de conversión para pasar medidas de acelerómetro, gravedad de Medellín 9.78
 
 /* Definición de las cabeceras de funciones del main */
-void initSystem(void); 					// Función que inicializa los periféricos básicos
-void actionRxData(void);				// Funcíón con la que se gestionan los casos de teclas recibidas
-void saveData(void);					// Función encargada de guardar los datos
+void initSystem(void); 								// Función que inicializa los periféricos básicos
+void actionRxData(void);							// Funcíón con la que se gestionan los casos de teclas recibidas
+void saveData(void);								// Función encargada de guardar los datos
+int16_t duttyAccordData(int data);					// Función encargada de entegar el valor de ajusta para el duty cycle PWM según datos Accel X,Y,Z
 
 /** Función principal del programa
  * ¡Esta función es el corazón del programa! */
@@ -147,6 +148,11 @@ int main(void){
 				flag2seg = 1;
 			}
 			saveData(); //Función que guarda los datos en arreglos, al ser sujeta a la flag1KHz, esta función se llama solo cada 1ms
+
+			//Aquí voy a hacer de una vez el updateDuttyCycle, ya que los datos se actualizan cada 1ms
+			updateDuttyCycle(&handlerXSignalPWM, duttyValueX + duttyAccordData(arrayLCDdata[0]));
+			updateDuttyCycle(&handlerYSignalPWM, duttyValueY + duttyAccordData(arrayLCDdata[1]));
+			updateDuttyCycle(&handlerZSignalPWM, duttyValueZ + duttyAccordData(arrayLCDdata[2]));
 
 			flag1KHzSamplingData = 0;
 		}
@@ -200,7 +206,7 @@ void initSystem(void){
 	/*----------------------------------------------------------------------------------------*/
 
 	/* Configuración del Timer 3 para controlar el muestreo*/
-	handlerSamplingTimer.ptrTIMx							= TIM3;
+	handlerSamplingTimer.ptrTIMx							= TIM4;
 	handlerSamplingTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerSamplingTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_80MHz_SPEED_100us;
 	handlerSamplingTimer.TIMx_Config.TIMx_period			= 10;
@@ -265,58 +271,62 @@ void initSystem(void){
 
 	/*--------------------------------------------------------------------------------*/
 
-//	/* Configuración de los pines PWM para mostrar señal según valor de los datos*/
-//
-//	handlerPinPwmAxisX.pGPIOx								= GPIOA;
-//	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinNumber		= PIN_0;
-//	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-//	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
-//	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-//	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
-//	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
-//	GPIO_Config(&handlerPinPwmAxisX);
-//
-//	handlerXSignalPWM.ptrTIMx						= TIM5;
-//	handlerXSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_1;
-//	handlerXSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueX;
-//	handlerXSignalPWM.PWMx_Config.PWMx_Period		= 20000;
-//	handlerXSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
-//	pwm_Config(&handlerXSignalPWM);
-//
-//	handlerPinPwmAxisY.pGPIOx								= GPIOA;
-//	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinNumber		= PIN_1;
-//	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-//	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
-//	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-//	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
-//	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
-//	GPIO_Config(&handlerPinPwmAxisY);
-//
-//	handlerYSignalPWM.ptrTIMx						= TIM5;
-//	handlerYSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_2;
-//	handlerYSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueY;
-//	handlerYSignalPWM.PWMx_Config.PWMx_Period		= 20000;
-//	handlerYSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
-//	pwm_Config(&handlerYSignalPWM);
-//
-//	handlerPinPwmAxisZ.pGPIOx								= GPIOA;
-//	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinNumber		= PIN_2;
-//	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-//	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
-//	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-//	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
-//	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
-//	GPIO_Config(&handlerPinPwmAxisZ);
-//
-//	handlerZSignalPWM.ptrTIMx						= TIM5;
-//	handlerZSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_3;
-//	handlerZSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueZ;
-//	handlerZSignalPWM.PWMx_Config.PWMx_Period		= 20000;
-//	handlerZSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
-//	pwm_Config(&handlerZSignalPWM);
-//
-//	/*-------------- Fin de la configuración de los 3 pines como PWM --------------*/
-//
+	/* Configuración de los pines PWM para mostrar señal según valor de los datos*/
+
+	handlerPinPwmAxisX.pGPIOx								= GPIOA;
+	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinNumber		= PIN_6;
+	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
+	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
+	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
+	GPIO_Config(&handlerPinPwmAxisX);
+	handlerXSignalPWM.ptrTIMx						= TIM3;
+	handlerXSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_1;
+	handlerXSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueX;
+	handlerXSignalPWM.PWMx_Config.PWMx_Period		= 20000;
+	handlerXSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
+	pwm_Config(&handlerXSignalPWM);
+
+	handlerPinPwmAxisY.pGPIOx								= GPIOA;
+	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinNumber		= PIN_7;
+	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
+	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
+	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
+	GPIO_Config(&handlerPinPwmAxisY);
+	handlerYSignalPWM.ptrTIMx						= TIM3;
+	handlerYSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_2;
+	handlerYSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueY;
+	handlerYSignalPWM.PWMx_Config.PWMx_Period		= 20000;
+	handlerYSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
+	pwm_Config(&handlerYSignalPWM);
+
+	handlerPinPwmAxisZ.pGPIOx								= GPIOB;
+	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinNumber		= PIN_0;
+	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
+	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
+	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
+	GPIO_Config(&handlerPinPwmAxisZ);
+	handlerZSignalPWM.ptrTIMx						= TIM3;
+	handlerZSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_3;
+	handlerZSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueZ;
+	handlerZSignalPWM.PWMx_Config.PWMx_Period		= 20000;
+	handlerZSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
+	pwm_Config(&handlerZSignalPWM);
+
+	enableOutput(&handlerXSignalPWM);
+	enableOutput(&handlerYSignalPWM);
+	enableOutput(&handlerZSignalPWM);
+	startPwmSignal(&handlerXSignalPWM);
+	startPwmSignal(&handlerYSignalPWM);
+	startPwmSignal(&handlerZSignalPWM);
+
+	/*-------------- Fin de la configuración de los 3 pines como PWM --------------*/
+
 //	/* Configuración de la LCD por I2C, usaremos el puerto 2 del I2C*/
 //
 //	/* Configuración del pin SCL del I2C2 */
@@ -440,7 +450,7 @@ void saveData(void){
 	uint8_t AccelZ_low = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_L);
 	uint8_t AccelZ_high = i2c_readSingleRegister(&handlerAccelerometer, ACCEL_ZOUT_H);
 	int16_t AccelZ = AccelZ_high << 8 | AccelZ_low; // Aquí lo que se hace es básicamente concatenar los valores
-	arrayLCDdata[2] = AccelZ*factConv;
+	arrayLCDdata[2] = (int)AccelZ;
 
 	if(counter_ms > 0){
 		arrayXdata[counter_ms-1] = AccelX*factConv; 	// Se guardan datos para el muestreo constante de 1KHz
@@ -455,13 +465,30 @@ void saveData(void){
 
 }
 
+/** Función que retorna el valor necesario para ajustar el Dutty-Cycle de los PWM */
+int16_t duttyAccordData(int data){
+	int16_t ajuste = 0;
+	if(data == 0){
+		// Si el dato es nulo, el ajuste es 0, quedando en 10000 el dutty, para tener 50% de Dutty-Cycle
+		ajuste = 0;
+	}
+	else{
+		/* Hago una división del dato, por 1.5 veces el máximo valor que en teoría entrega el sensor,
+		 * para controlar un poco más el duty; luego multiplico por 10000 ya que es lo que falta
+		 * para llegar a los 20000 del ARR, finalmente casteo el resultado a un signed int de
+		 * 16 bits, ya que con este tipo de dato es que trabaja la función updateDuttyCycle*/
+		ajuste = (int16_t)(10000*((float)data/(1.5*16384.0)));
+	}
+	return ajuste; // Este valor se lo vamos a sumar al DuttyValue del PWM según eje, nótese que está garantizada para negativos y positivos
+}
+
 /** Interrupción del timer blinky LED*/
 void BasicTimer2_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
 }
 
 /** Interrupción del timer de muestreo*/
-void BasicTimer3_Callback(void){
+void BasicTimer4_Callback(void){
 	flag1KHzSamplingData = 1; 	// Levanto bandera para tomar datos cada 1ms
 	counter_ms++;
 	if(flag6000Data){
@@ -474,4 +501,3 @@ void BasicTimer3_Callback(void){
 void usart1Rx_Callback(void){
 	usart1RxData = getRxData();
 }
-

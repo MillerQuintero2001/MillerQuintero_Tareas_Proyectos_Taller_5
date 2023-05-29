@@ -1,6 +1,6 @@
 /**
  ********************************************************************************
- * @file         : Tarea_Main.c
+ * @file         : LCD_Test.c
  * @author       : Miller Quintero - miquinterog@unal.edu.co - MillerQuintero2001
  * @brief        : Solución básica de la Tarea Especial
  ********************************************************************************
@@ -26,6 +26,7 @@
 #include "PwmDriver.h"
 #include "I2CDriver.h"
 #include "PLLDriver.h"
+#include "LcdDriver.h"
 
 // Macro-definiciones específicas para el sensor
 #define ACCEL_ADDRESS 	0b1101000; // 0xD2 -> Dirección del sensor Acelerómetro con ADO=0
@@ -99,15 +100,6 @@ uint16_t duttyValueX = 10000;
 uint16_t duttyValueY = 10000;
 uint16_t duttyValueZ = 10000;
 
-// Elementos del SysTick
-uint32_t systemTicks = 0;
-uint32_t systemTicksStart = 0;
-uint32_t systemTicksEnd = 0;
-
-//// Elementos para la interrupción externa del User Button
-//GPIO_Handler_t handlerUserButton = 			{0}; // Boton de usuario del Pin C13
-//EXTI_Config_t handlerUserButtonExti = 		{0}; // Interrupción externa del botón de usuario
-//
 
 ///* Inicializo variables a emplear */
 unsigned int freq = 0;
@@ -132,41 +124,14 @@ int main(void){
     /* Loop forever */
 	while(1){
 
-		// Hacemos un "eco" con el valor que nos llega por el serial
-		if(usart1RxData != '\0'){
-			actionRxData();
-		}
+		if(counter_ms > 16){
+			clearLCD(&handlerLCD);
 
-		// Muestreo de datos constante cada 1ms
-		if(flag1KHzSamplingData){
-			if(counter_ms > 1000){
-				counter_ms = 0;
-			}
-			if(countPrint > 2000){ // Esta para control del iterador de los 2000 datos por eje, y las banderas
-				countPrint = 0;
-				flag6000Data = 0;
-				flag2seg = 1;
-			}
-			saveData(); //Función que guarda los datos en arreglos, al ser sujeta a la flag1KHz, esta función se llama solo cada 1ms
-
-			//Aquí voy a hacer de una vez el updateDuttyCycle, ya que los datos se actualizan cada 1ms
-			updateDuttyCycle(&handlerXSignalPWM, duttyValueX + duttyAccordData(arrayLCDdata[0]));
-			updateDuttyCycle(&handlerYSignalPWM, duttyValueY + duttyAccordData(arrayLCDdata[1]));
-			updateDuttyCycle(&handlerZSignalPWM, duttyValueZ + duttyAccordData(arrayLCDdata[2]));
-
-			flag1KHzSamplingData = 0;
-		}
-
-		// Si han pasado 2seg y se dio la orden con la 'm' en la terminal, muestre los datos tomados en ese tiempo
-		if(flag2seg){
-
-			sprintf(bufferData, "      X;            Y;            Z;\n");
-			writeMsg(&usart1Comm, bufferData);
-			for(int i=0; i<2000; i++){
-				sprintf(bufferData,"%.3f m/s²;   %.3f m/s²;   %.3f m/s²;   Dato #%d\n", arrayXdataprint[i], arrayYdataprint[i], arrayZdataprint[i],i+1);
-				writeMsg(&usart1Comm, bufferData);
-			}
-			flag2seg = 0;	//Solo una vez que se hayan imprimido los datos, se baja la bandera
+			sendStringLCD(&handlerLCD, "Mis panitas, como");
+			delay_ms(1000);
+			moveCursorLCD(&handlerLCD, 0, 1);
+			sendStringLCD(&handlerLCD, "quiero a mis panitas");
+			counter_ms = 0;
 		}
 
 	}
@@ -205,133 +170,12 @@ void initSystem(void){
 	// Fin del GPIO y Timer del LED de estado
 	/*----------------------------------------------------------------------------------------*/
 
-	/* Configuración del Timer 3 para controlar el muestreo*/
-	handlerSamplingTimer.ptrTIMx							= TIM4;
-	handlerSamplingTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-	handlerSamplingTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_80MHz_SPEED_100us;
-	handlerSamplingTimer.TIMx_Config.TIMx_period			= 10;
-	handlerSamplingTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
-	BasicTimer_Config(&handlerSamplingTimer);
-
-	/* Configuración de pines para el USART1 */
-	handlerPinTX.pGPIOx								= GPIOA;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_9;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
-	GPIO_Config(&handlerPinTX);
-
-	handlerPinRX.pGPIOx								= GPIOA;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_10;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
-	GPIO_Config(&handlerPinRX);
-
-	/* Configuración de la comunicación serial */
-	usart1Comm.ptrUSARTx						= USART1;
-	usart1Comm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
-	usart1Comm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-	usart1Comm.USART_Config.USART_parity		= USART_PARITY_NONE;
-	usart1Comm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-	usart1Comm.USART_Config.USART_mode			= USART_MODE_RXTX;
-	usart1Comm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
-	usart1Comm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
-	USART_Config(&usart1Comm);
-
-	/* Configuración del pin SCL del I2C1 */
-	handlerI2C_SCL.pGPIOx								= GPIOB;
-	handlerI2C_SCL.GPIO_PinConfig.GPIO_PinNumber		= PIN_8;
-	handlerI2C_SCL.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-	handlerI2C_SCL.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
-	handlerI2C_SCL.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
-	handlerI2C_SCL.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerI2C_SCL.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
-	GPIO_Config(&handlerI2C_SCL);
-
-	/* Configuración del pin SDA del I2C1 */
-	handlerI2C_SDA.pGPIOx								= GPIOB;
-	handlerI2C_SDA.GPIO_PinConfig.GPIO_PinNumber		= PIN_9;
-	handlerI2C_SDA.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-	handlerI2C_SDA.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
-	handlerI2C_SDA.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
-	handlerI2C_SDA.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerI2C_SDA.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
-	GPIO_Config(&handlerI2C_SDA);
-
-	/* Configuración para el I2C1 */
-	handlerAccelerometer.ptrI2Cx		= I2C1;
-	handlerAccelerometer.modeI2C		= I2C_MODE_FM;
-	handlerAccelerometer.slaveAddress	= ACCEL_ADDRESS;
-	i2c_config(&handlerAccelerometer);
-
-	/*--------------------------------------------------------------------------------*/
-
-	/* Configuración de los pines PWM para mostrar señal según valor de los datos*/
-
-	handlerPinPwmAxisX.pGPIOx								= GPIOA;
-	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinNumber		= PIN_6;
-	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
-	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
-	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
-	GPIO_Config(&handlerPinPwmAxisX);
-	handlerXSignalPWM.ptrTIMx						= TIM3;
-	handlerXSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_1;
-	handlerXSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueX;
-	handlerXSignalPWM.PWMx_Config.PWMx_Period		= 20000;
-	handlerXSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
-	pwm_Config(&handlerXSignalPWM);
-
-	handlerPinPwmAxisY.pGPIOx								= GPIOA;
-	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinNumber		= PIN_7;
-	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
-	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
-	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
-	GPIO_Config(&handlerPinPwmAxisY);
-	handlerYSignalPWM.ptrTIMx						= TIM3;
-	handlerYSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_2;
-	handlerYSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueY;
-	handlerYSignalPWM.PWMx_Config.PWMx_Period		= 20000;
-	handlerYSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
-	pwm_Config(&handlerYSignalPWM);
-
-	handlerPinPwmAxisZ.pGPIOx								= GPIOB;
-	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinNumber		= PIN_0;
-	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
-	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
-	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
-	GPIO_Config(&handlerPinPwmAxisZ);
-	handlerZSignalPWM.ptrTIMx						= TIM3;
-	handlerZSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_3;
-	handlerZSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueZ;
-	handlerZSignalPWM.PWMx_Config.PWMx_Period		= 20000;
-	handlerZSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
-	pwm_Config(&handlerZSignalPWM);
-
-	enableOutput(&handlerXSignalPWM);
-	enableOutput(&handlerYSignalPWM);
-	enableOutput(&handlerZSignalPWM);
-	startPwmSignal(&handlerXSignalPWM);
-	startPwmSignal(&handlerYSignalPWM);
-	startPwmSignal(&handlerZSignalPWM);
-
-	/*-------------- Fin de la configuración de los 3 pines como PWM --------------*/
 
 	/* Configuración de la LCD por I2C, usaremos el puerto 2 del I2C*/
 
 	/* Configuración del pin SCL del I2C2 */
-	handlerI2C_SCL_LCD.pGPIOx								= GPIOB;
-	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinNumber		= PIN_10;
+	handlerI2C_SCL_LCD.pGPIOx								= GPIOA;
+	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinNumber		= PIN_8;
 	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
 	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
 	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
@@ -341,8 +185,8 @@ void initSystem(void){
 
 
 	/* Configuración del pin SDA del I2C2 */
-	handlerI2C_SDA_LCD.pGPIOx								= GPIOB;
-	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinNumber		= PIN_11;
+	handlerI2C_SDA_LCD.pGPIOx								= GPIOC;
+	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinNumber		= PIN_9;
 	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
 	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
 	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
@@ -351,10 +195,12 @@ void initSystem(void){
 	GPIO_Config(&handlerI2C_SDA_LCD);
 
 	/* Configuración para el I2C1 */
-	handlerLCD.ptrI2Cx		= I2C2;
+	handlerLCD.ptrI2Cx		= I2C3;
 	handlerLCD.modeI2C		= I2C_MODE_FM;
 	handlerLCD.slaveAddress	= LCD_ADDRESS;
 	i2c_config(&handlerLCD);
+
+	initLCD(&handlerLCD);
 
 }
 
@@ -486,19 +332,9 @@ int16_t duttyAccordData(int data){
 /** Interrupción del timer blinky LED*/
 void BasicTimer2_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
-}
-
-/** Interrupción del timer de muestreo*/
-void BasicTimer4_Callback(void){
-	flag1KHzSamplingData = 1; 	// Levanto bandera para tomar datos cada 1ms
 	counter_ms++;
-	if(flag6000Data){
-		countPrint++;
-	}
 }
 
 
-/* Interrupción del USART1 */
-void usart1Rx_Callback(void){
-	usart1RxData = getRxData();
-}
+
+

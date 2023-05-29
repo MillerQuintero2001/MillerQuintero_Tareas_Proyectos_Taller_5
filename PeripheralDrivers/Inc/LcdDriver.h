@@ -58,10 +58,10 @@ void sendStringLCD(I2C_Handler_t *ptrHandlerI2C, char *message);
 // Función para mover el cursor
 void moveCursorLCD(I2C_Handler_t *ptrHandlerI2C, uint8_t column, uint8_t line);
 
-// Función para limpiar LCD
+// Función para limpiar toda la pantalla LCD
 void clearLCD(I2C_Handler_t *ptrHandlerI2C);
 
-// Función para limpiar toda la pantalla
-void clearScreenLCD(I2C_Handler_t *ptrHandlerI2C, uint8_t cursor);
+// Función para limpiar solo una línea de la LCD
+void clearLineLCD(I2C_Handler_t *ptrHandlerI2C, uint8_t cursor);
 
 #endif /* LCDDRIVER_H_ */

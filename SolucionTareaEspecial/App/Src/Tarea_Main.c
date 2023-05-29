@@ -26,6 +26,7 @@
 #include "PwmDriver.h"
 #include "I2CDriver.h"
 #include "PLLDriver.h"
+#include "LcdDriver.h"
 
 // Macro-definiciones específicas para el sensor
 #define ACCEL_ADDRESS 	0b1101000; // 0xD2 -> Dirección del sensor Acelerómetro con ADO=0
@@ -39,7 +40,7 @@
 #define PWR_MGMT_1	107
 #define WHO_AM_I	117
 
-// Macro-definiciones específicas para la LCD
+// Macro-definición del slave address del LCD, en realidad es del CPF8
 #define LCD_ADDRESS 	34; // 0x22 -> Dirección de la LCD, AD2=0, AD1=1, AD0=0
 
 
@@ -57,20 +58,18 @@ float arrayZdata[1000] = {0};						// Array que guarda la información de datos 
 float arrayXdataprint[2000] = {0};					// Array que guarda la información de datos eje X
 float arrayYdataprint[2000] = {0};					// Array que guarda la información de datos eje Y
 float arrayZdataprint[2000] = {0};					// Array que guarda la información de datos eje Z
-int arrayLCDdata[3] = {0};							// Array que guarda la tripleta de datos para la LCD
-uint16_t countPrint = 0;
-uint16_t counter_ms = 0;							// Contador de milisegundos con el Timer 3
-uint8_t flagPrintSamples = 0;						// Bandera para indicar que se solictaron 6000 datos desde la terminal
-uint8_t flag6000Data = 0;
-uint8_t flag2seg = 0;								// Bandera para indicar que han pasado 2seg
 uint8_t flag1KHzSamplingData = 0;					// Bandera para indicar tomar dato cada 1ms
-
+uint16_t counter_ms = 0;							// Contador de milisegundos con el Timer 4
+uint8_t flag6000Data = 0;							// Bandera para indicar que se solictaron 6000 datos desde la terminal
+uint8_t flag2seg = 0;								// Bandera para indicar que han pasado 2seg
+uint16_t countPrint = 0;							// Contador de milisegundos con cuando se han pedido 6000 datos
+uint8_t flagAuthorizeLCD = 1;						// Bandera que autoriza a la LCD mostrar datos, se baja al solicitar 6000 datos, luego se sube
 
 // Elementos para hacer la comunicación serial
 GPIO_Handler_t handlerPinTX = {0};	// Pin de transmisión de datos
 GPIO_Handler_t handlerPinRX = {0};	// Pin de recepción de datos
 USART_Handler_t usart1Comm =  {0};	// Comunicación serial
-uint8_t sendMsg = 0; // Variable para controlar la comunicación
+//uint8_t sendMsg = 0; // Variable para controlar la comunicación
 uint8_t usart1RxData = 0; 	// Variable en la que se guarda el dato transmitido
 char bufferData[64] = {0}; // Buffer de datos como un arreglo de caracteres
 
@@ -79,12 +78,6 @@ GPIO_Handler_t handlerI2C_SDA = {0};
 GPIO_Handler_t handlerI2C_SCL = {0};
 I2C_Handler_t handlerAccelerometer = {0};
 uint8_t i2cBuffer = 0;
-
-// Elementos para utilizar comunicación I2C con LCD
-GPIO_Handler_t handlerI2C_SDA_LCD = {0};
-GPIO_Handler_t handlerI2C_SCL_LCD = {0};
-I2C_Handler_t handlerLCD = {0};
-uint8_t i2cLCDBuffer = 0;
 
 // Elementos para los pines en modo PWM, representando duttyCycle en función del eje
 GPIO_Handler_t handlerPinPwmAxisX = {0};
@@ -99,15 +92,17 @@ uint16_t duttyValueX = 10000;
 uint16_t duttyValueY = 10000;
 uint16_t duttyValueZ = 10000;
 
-// Elementos del SysTick
-uint32_t systemTicks = 0;
-uint32_t systemTicksStart = 0;
-uint32_t systemTicksEnd = 0;
+// Elementos para utilizar comunicación I2C con LCD
+GPIO_Handler_t handlerI2C_SDA_LCD = {0};
+GPIO_Handler_t handlerI2C_SCL_LCD = {0};
+I2C_Handler_t handlerLCD = {0};
+uint8_t i2cLCDBuffer = 0;
+int arrayLCDdata[3] = {0};							// Array que guarda la tripleta de datos para la LCD
+char bufferLCD[64] = {0};
+int dataXbefore = 0;
+int dataYbefore = 0;
+int dataZbefore = 0;
 
-//// Elementos para la interrupción externa del User Button
-//GPIO_Handler_t handlerUserButton = 			{0}; // Boton de usuario del Pin C13
-//EXTI_Config_t handlerUserButtonExti = 		{0}; // Interrupción externa del botón de usuario
-//
 
 ///* Inicializo variables a emplear */
 unsigned int freq = 0;
@@ -157,16 +152,58 @@ int main(void){
 			flag1KHzSamplingData = 0;
 		}
 
+		if((flagAuthorizeLCD) && (counter_ms > 0)){
+
+			moveCursorLCD(&handlerLCD, 0, 0);
+			if(dataXbefore == arrayLCDdata[0]){
+				__NOP();
+			}
+			else{
+				sprintf(bufferLCD, "X = %.3f m/s^2", arrayLCDdata[0]*factConv);
+				//clearLineLCD(&handlerLCD, 0);
+				sendStringLCD(&handlerLCD, bufferLCD);
+				dataXbefore = arrayLCDdata[0];
+			}
+
+			moveCursorLCD(&handlerLCD, 0, 1);
+			if(dataYbefore ==arrayLCDdata[1]){
+				__NOP();
+			}
+			else{
+				sprintf(bufferLCD, "Y = %.3f m/s^2", arrayLCDdata[1]*factConv);
+				//clearLineLCD(&handlerLCD, 1);
+				sendStringLCD(&handlerLCD, bufferLCD);
+				dataYbefore = arrayLCDdata[1];
+			}
+
+			moveCursorLCD(&handlerLCD, 0, 2);
+			if(dataZbefore ==arrayLCDdata[2]){
+				__NOP();
+			}
+			else{
+				sprintf(bufferLCD, "Z = %.3f m/s^2", arrayLCDdata[2]*factConv);
+				//clearLineLCD(&handlerLCD, 2);
+				sendStringLCD(&handlerLCD, bufferLCD);
+				dataYbefore = arrayLCDdata[2];
+			}
+
+			moveCursorLCD(&handlerLCD, 0, 3);
+			sendStringLCD(&handlerLCD, "Config:");
+
+			delay_ms(500);
+		}
+
 		// Si han pasado 2seg y se dio la orden con la 'm' en la terminal, muestre los datos tomados en ese tiempo
 		if(flag2seg){
 
 			sprintf(bufferData, "      X;            Y;            Z;\n");
 			writeMsg(&usart1Comm, bufferData);
 			for(int i=0; i<2000; i++){
-				sprintf(bufferData,"%.3f m/s²;   %.3f m/s²;   %.3f m/s²;   Dato #%d\n", arrayXdataprint[i], arrayYdataprint[i], arrayZdataprint[i],i+1);
+				sprintf(bufferData,"%.3f m/s²;   %.3f m/s²;   %.3f m/s²;      Dato #%d\n", arrayXdataprint[i], arrayYdataprint[i], arrayZdataprint[i],i+1);
 				writeMsg(&usart1Comm, bufferData);
 			}
-			flag2seg = 0;	//Solo una vez que se hayan imprimido los datos, se baja la bandera
+			flag2seg = 0;				// Solo una vez que se hayan imprimido los datos, se baja la bandera
+			flagAuthorizeLCD = 1;		// Solo una vez que se hayan imprimido los datos, autorizo nuevamente la LCD
 		}
 
 	}
@@ -327,11 +364,11 @@ void initSystem(void){
 
 	/*-------------- Fin de la configuración de los 3 pines como PWM --------------*/
 
-	/* Configuración de la LCD por I2C, usaremos el puerto 2 del I2C*/
+	/* Configuración de la LCD por I2C, usaremos el puerto 3 del I2C*/
 
-	/* Configuración del pin SCL del I2C2 */
-	handlerI2C_SCL_LCD.pGPIOx								= GPIOB;
-	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinNumber		= PIN_10;
+	/* Configuración del pin SCL del I2C3 */
+	handlerI2C_SCL_LCD.pGPIOx								= GPIOA;
+	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinNumber		= PIN_8;
 	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
 	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
 	handlerI2C_SCL_LCD.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
@@ -340,9 +377,9 @@ void initSystem(void){
 	GPIO_Config(&handlerI2C_SCL_LCD);
 
 
-	/* Configuración del pin SDA del I2C2 */
-	handlerI2C_SDA_LCD.pGPIOx								= GPIOB;
-	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinNumber		= PIN_11;
+	/* Configuración del pin SDA del I2C3 */
+	handlerI2C_SDA_LCD.pGPIOx								= GPIOC;
+	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinNumber		= PIN_9;
 	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
 	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
 	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
@@ -350,11 +387,13 @@ void initSystem(void){
 	handlerI2C_SDA_LCD.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
 	GPIO_Config(&handlerI2C_SDA_LCD);
 
-	/* Configuración para el I2C1 */
-	handlerLCD.ptrI2Cx		= I2C2;
+	/* Configuración para el I2C3 */
+	handlerLCD.ptrI2Cx		= I2C3;
 	handlerLCD.modeI2C		= I2C_MODE_FM;
 	handlerLCD.slaveAddress	= LCD_ADDRESS;
 	i2c_config(&handlerLCD);
+
+	initLCD(&handlerLCD);
 
 }
 
@@ -378,6 +417,7 @@ void actionRxData(void){
 	}
 
 	else if(usart1RxData == 'm'){
+		flagAuthorizeLCD = 0;	// Bajo la bandera que autoriza a la LCD mostrar datos, esto mientras se toman e imprimen los 6000 mil
 		flag6000Data = 1;		// Levanto bandera de solicitar 6 mil datos (2 mil por eje), para iniciar el conteo de 2 segundos
 		usart1RxData = '\0';
 	}
@@ -426,7 +466,7 @@ void actionRxData(void){
 		sprintf(bufferData, "Axis X data;   Axis Y data;   Axis Z data \n");
 		writeMsg(&usart1Comm, bufferData);
 
-		sprintf(bufferData, "%.3f m/s²;    %.3f m/s²;    %.3f m/s²;\n", arrayXdata[999], arrayYdata[999], arrayZdata[999]);
+		sprintf(bufferData, "%.3f m/s²;    %.3f m/s²;    %.3f m/s²;\n", arrayLCDdata[0]*factConv, arrayLCDdata[1]*factConv, arrayLCDdata[2]*factConv);
 		writeMsg(&usart1Comm, bufferData);
 		usart1RxData = '\0';
 	}
@@ -474,11 +514,11 @@ int16_t duttyAccordData(int data){
 		ajuste = 0;
 	}
 	else{
-		/* Hago una división del dato, por 1.5 veces el máximo valor que en teoría entrega el sensor,
+		/* Hago una división del dato, por 1.2 veces el máximo valor que en teoría entrega el sensor,
 		 * para controlar un poco más el duty; luego multiplico por 10000 ya que es lo que falta
 		 * para llegar a los 20000 del ARR, finalmente casteo el resultado a un signed int de
 		 * 16 bits, ya que con este tipo de dato es que trabaja la función updateDuttyCycle*/
-		ajuste = (int16_t)(10000*((float)data/(1.5*16384.0)));
+		ajuste = (int16_t)(10000*((float)data/(1.2*16384.0)));
 	}
 	return ajuste; // Este valor se lo vamos a sumar al DuttyValue del PWM según eje, nótese que está garantizada para negativos y positivos
 }

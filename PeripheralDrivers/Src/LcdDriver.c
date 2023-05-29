@@ -42,7 +42,7 @@ void initLCD(I2C_Handler_t *ptrHandlerI2C){
 	sendCommandLCD(ptrHandlerI2C, DISPLAY_ON_LCD_CMD);
 }
 
-/** Función para enviar una orden al PCCF8574 */
+/** Función para enviar una orden al PCF8574 */
 void sendCommandLCD(I2C_Handler_t *ptrHandlerI2C, char cmd){
 	/* Vamos a emplear modo de 4 bits para la LCD
 	 * lo cual requiere de trabajar con 4 bits
@@ -66,7 +66,7 @@ void sendCommandLCD(I2C_Handler_t *ptrHandlerI2C, char cmd){
 	}
 }
 
-/** Función para escribir una orden al PCCF8574 */
+/** Función para escribir una orden al PCF8574 */
 void writeCommandLCD(I2C_Handler_t *ptrHandlerI2C, uint8_t instruction){
 
 	/* 1. Generamos la condición de Start*/
@@ -111,7 +111,7 @@ void sendStringLCD(I2C_Handler_t *ptrHandlerI2C, char *message){
 	}
 }
 
-/* Función para mover el cursor segun columna y línea deseada*/
+/* Función para mover el cursor según columna y línea deseada*/
 void moveCursorLCD(I2C_Handler_t *ptrHandlerI2C, uint8_t column, uint8_t line){
 	uint8_t cursor;
 	switch (line) {
@@ -214,14 +214,14 @@ void moveCursorLCD(I2C_Handler_t *ptrHandlerI2C, uint8_t column, uint8_t line){
 	sendCommandLCD(ptrHandlerI2C, 0x80|cursor);
 }
 
-/** Función para limpiar LCD, se vale del comando */
+/** Función para limpiar toda la pantalla LCD, usando un comando */
 void clearLCD(I2C_Handler_t *ptrHandlerI2C){
 	sendCommandLCD(ptrHandlerI2C, CLEAR_LCD_CMD);
 	delay_ms(50);
 }
 
-/** Función para limpiar toda la pantalla */
-void clearScreenLCD(I2C_Handler_t *ptrHandlerI2C, uint8_t cursor){
+/** Función para limpiar solo una línea de la LCD*/
+void clearLineLCD(I2C_Handler_t *ptrHandlerI2C, uint8_t cursor){
 	char arrayClean[64] = "                    ";
 	moveCursorLCD(ptrHandlerI2C, 0, cursor);
 	sendStringLCD(ptrHandlerI2C, arrayClean);

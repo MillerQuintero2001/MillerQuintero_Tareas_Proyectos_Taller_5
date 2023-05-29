@@ -124,13 +124,21 @@ int main(void){
     /* Loop forever */
 	while(1){
 
-		if(counter_ms > 16){
-			clearLCD(&handlerLCD);
-
-			sendStringLCD(&handlerLCD, "Mis panitas, como");
-			delay_ms(1000);
+		if(counter_ms > 12){
+			moveCursorLCD(&handlerLCD, 0, 0);
+			sendStringLCD(&handlerLCD, "Mis");
+			//delay_ms(1);
 			moveCursorLCD(&handlerLCD, 0, 1);
-			sendStringLCD(&handlerLCD, "quiero a mis panitas");
+			sprintf(bufferData, "X = %d m/s^2", (int)countPrint);
+			sendStringLCD(&handlerLCD, bufferData);
+			//delay_ms(1);
+			moveCursorLCD(&handlerLCD, 0, 2);
+			sendStringLCD(&handlerLCD, "Accel");
+			//delay_ms(1);
+			moveCursorLCD(&handlerLCD, 0, 3);
+			sendStringLCD(&handlerLCD, "Test");
+			delay_ms(1000);
+			clearLineLCD(&handlerLCD, 1);
 			counter_ms = 0;
 		}
 
@@ -333,6 +341,9 @@ int16_t duttyAccordData(int data){
 void BasicTimer2_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
 	counter_ms++;
+	if(counter_ms > 4){
+		countPrint++;
+	}
 }
 
 

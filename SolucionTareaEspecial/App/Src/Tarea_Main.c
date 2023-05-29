@@ -2,10 +2,10 @@
  ********************************************************************************
  * @file         : Tarea_Main.c
  * @author       : Miller Quintero - miquinterog@unal.edu.co - MillerQuintero2001
- * @brief        : Solución básica de la Tarea Especial
+ * @brief        : Solución de la Tarea Especial
  ********************************************************************************
- * El equipo cargado con este programa deberá enviar datos por USART1 a CoolTerm
- * dichos datos son de un acelerometro MPU6050, y tambien son mostrados en LCD
+ * El equipo cargado con este programa deberá enviar datos por USART1 a CoolTerm,
+ * dichos datos son de un acelerómetro MPU6050, y también son mostrados en LCD
  ********************************************************************************
  */
 
@@ -40,7 +40,7 @@
 #define PWR_MGMT_1	107
 #define WHO_AM_I	117
 
-// Macro-definición del slave address del LCD, en realidad es del CPF8
+// Macro-definición del slave address del LCD, en realidad es del PCF8574
 #define LCD_ADDRESS 	34; // 0x22 -> Dirección de la LCD, AD2=0, AD1=1, AD0=0
 
 
@@ -52,26 +52,22 @@ BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 
 // Elementos para el muestreo a 1KHz
 BasicTimer_Handler_t handlerSamplingTimer = {0}; 	// Timer del muestreo de datos
-float arrayXdata[1000] = {0};						// Array que guarda la información de datos eje X
-float arrayYdata[1000] = {0};						// Array que guarda la información de datos eje Y
-float arrayZdata[1000] = {0};						// Array que guarda la información de datos eje Z
-float arrayXdataprint[2000] = {0};					// Array que guarda la información de datos eje X
-float arrayYdataprint[2000] = {0};					// Array que guarda la información de datos eje Y
-float arrayZdataprint[2000] = {0};					// Array que guarda la información de datos eje Z
+float arrayXdataprint[2000] = {0};					// Array que guarda la información de datos eje X, capacidad de 2 segundos de muestreo
+float arrayYdataprint[2000] = {0};					// Array que guarda la información de datos eje Y, capacidad de 2 segundos de muestreo
+float arrayZdataprint[2000] = {0};					// Array que guarda la información de datos eje Z, capacidad de 2 segundos de muestreo
 uint8_t flag1KHzSamplingData = 0;					// Bandera para indicar tomar dato cada 1ms
 uint16_t counter_ms = 0;							// Contador de milisegundos con el Timer 4
 uint8_t flag6000Data = 0;							// Bandera para indicar que se solictaron 6000 datos desde la terminal
 uint8_t flag2seg = 0;								// Bandera para indicar que han pasado 2seg
-uint16_t countPrint = 0;							// Contador de milisegundos con cuando se han pedido 6000 datos
+uint16_t countPrint = 0;							// Contador de milisegundos cuando se han pedido 6000 datos
 uint8_t flagAuthorizeLCD = 1;						// Bandera que autoriza a la LCD mostrar datos, se baja al solicitar 6000 datos, luego se sube
 
 // Elementos para hacer la comunicación serial
 GPIO_Handler_t handlerPinTX = {0};	// Pin de transmisión de datos
 GPIO_Handler_t handlerPinRX = {0};	// Pin de recepción de datos
 USART_Handler_t usart1Comm =  {0};	// Comunicación serial
-//uint8_t sendMsg = 0; // Variable para controlar la comunicación
-uint8_t usart1RxData = 0; 	// Variable en la que se guarda el dato transmitido
-char bufferData[64] = {0}; // Buffer de datos como un arreglo de caracteres
+uint8_t usart1RxData = 0; 			// Variable en la que se guarda el dato transmitido
+char bufferData[64] = {0}; 			// Buffer de datos como un arreglo de caracteres
 
 // Elementos para utilizar comunicación I2C con Acelerometro
 GPIO_Handler_t handlerI2C_SDA = {0};
@@ -97,23 +93,23 @@ GPIO_Handler_t handlerI2C_SDA_LCD = {0};
 GPIO_Handler_t handlerI2C_SCL_LCD = {0};
 I2C_Handler_t handlerLCD = {0};
 uint8_t i2cLCDBuffer = 0;
-int arrayLCDdata[3] = {0};							// Array que guarda la tripleta de datos para la LCD
-char bufferLCD[64] = {0};
-int dataXbefore = 0;
-int dataYbefore = 0;
-int dataZbefore = 0;
+int arrayLCDdata[3] = {0};			// Array que guarda la tripleta de datos para la LCD
+char bufferLCD[64] = {0};			// Buffer de datos para la imprimir en LCD, quise tener uno a parte
+int dataXbefore = 0;				// Guarda el dato tomado anteriormente en eje X, para ver si se refresca LCD
+int dataYbefore = 0;				// Guarda el dato tomado anteriormente en eje Y, para ver si se refresca LCD
+int dataZbefore = 0;				// Guarda el dato tomado anteriormente en eje Z, para ver si se refresca LCD
 
-
-///* Inicializo variables a emplear */
-unsigned int freq = 0;
-uint16_t clock80 = 80;
-float factConv = 9.78/16384.0; //Factor de conversión para pasar medidas de acelerómetro, gravedad de Medellín 9.78
+/* Inicializo variables a emplear */
+unsigned int freq = 0;				// Variable en la que guardo los Hz de reloj del micro, entregados por getConfigPLL()
+uint16_t clock80 = 80;				// Variable que guarda 80, para argumento de la función configPLL(), y poner a 80MHz
+float factConv = 9.78/16384.0; 		// Factor de conversión para pasar medidas de acelerómetro, gravedad de Medellín 9.78
 
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 								// Función que inicializa los periféricos básicos
 void actionRxData(void);							// Funcíón con la que se gestionan los casos de teclas recibidas
 void saveData(void);								// Función encargada de guardar los datos
-int16_t duttyAccordData(int data);					// Función encargada de entegar el valor de ajusta para el duty cycle PWM según datos Accel X,Y,Z
+int16_t duttyAccordData(int data);					// Función encargada de entegar el valor de ajuste para el duty cycle PWM según datos Accel X,Y,Z
+
 
 /** Función principal del programa
  * ¡Esta función es el corazón del programa! */
@@ -121,7 +117,7 @@ int main(void){
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
-	// Mensajes de inicio
+	// Cargo en variable el valor en Hz del reloj MCU
 	freq = (unsigned int)getConfigPLL();
 
     /* Loop forever */
@@ -132,15 +128,62 @@ int main(void){
 			actionRxData();
 		}
 
+		// Si la LCD está autorizada a imprimir y han pasado 1 segundos (1000ms)
+		if((flagAuthorizeLCD) && (counter_ms >= 1000)){
+
+			// Dato X en línea 1
+			moveCursorLCD(&handlerLCD, 0, 0);
+			// Verifico si es igual al anterior
+			if(dataXbefore == arrayLCDdata[0]){
+				__NOP();
+			}
+			// Sino escribo en la LCD
+			else{
+				sprintf(bufferLCD, "X = %.3f m/s^2 ;", arrayLCDdata[0]*factConv);
+				sendStringLCD(&handlerLCD, bufferLCD);
+				dataXbefore = arrayLCDdata[0];
+			}
+
+			// Dato Y en línea 2
+			moveCursorLCD(&handlerLCD, 0, 1);
+			// Verifico si es igual al anterior
+			if(dataYbefore == arrayLCDdata[1]){
+				__NOP();
+			}
+			// Sino escribo en la LCD
+			else{
+				sprintf(bufferLCD, "Y = %.3f m/s^2 ;", arrayLCDdata[1]*factConv);
+				sendStringLCD(&handlerLCD, bufferLCD);
+				dataYbefore = arrayLCDdata[1];
+			}
+
+			// Dato Z en línea 3
+			moveCursorLCD(&handlerLCD, 0, 2);
+			// Verifico si es igual al anterior
+			if(dataZbefore == arrayLCDdata[2]){
+				__NOP();
+			}
+			// Sino escribo en la LCD
+			else{
+				sprintf(bufferLCD, "Z = %.3f m/s^2 ;", arrayLCDdata[2]*factConv);
+				sendStringLCD(&handlerLCD, bufferLCD);
+				dataZbefore = arrayLCDdata[2];
+			}
+
+			// Escribo info. del sensor, el Full Scale y la Sensitivity, en línea 4
+			moveCursorLCD(&handlerLCD, 0, 3);
+			sendStringLCD(&handlerLCD, "AFS:2g Sens:16384LSB");
+		}
+
 		// Muestreo de datos constante cada 1ms
 		if(flag1KHzSamplingData){
-			if(counter_ms > 1000){
+			if(counter_ms > 1000){		// Controlo el contador de milisegundos
 				counter_ms = 0;
 			}
-			if(countPrint > 2000){ // Esta para control del iterador de los 2000 datos por eje, y las banderas
-				countPrint = 0;
-				flag6000Data = 0;
-				flag2seg = 1;
+			if(countPrint > 2000){ 		// Control del iterador de los 2000 datos por eje, y las banderas
+				countPrint = 0;			// Pongo en cero el contador
+				flag6000Data = 0;		// Bajo la bandera de 6000 datos solicitados, porque ya se han guardado
+				flag2seg = 1;			// Subo la bandera indicando que ya pasaron 2 seg, se tienen datos, y se puede imprimir
 			}
 			saveData(); //Función que guarda los datos en arreglos, al ser sujeta a la flag1KHz, esta función se llama solo cada 1ms
 
@@ -149,53 +192,11 @@ int main(void){
 			updateDuttyCycle(&handlerYSignalPWM, duttyValueY + duttyAccordData(arrayLCDdata[1]));
 			updateDuttyCycle(&handlerZSignalPWM, duttyValueZ + duttyAccordData(arrayLCDdata[2]));
 
-			flag1KHzSamplingData = 0;
+			flag1KHzSamplingData = 0; 	// Bajo bandera porque ya se tomaron datos en este milisegundo
 		}
 
-		if((flagAuthorizeLCD) && (counter_ms > 0)){
-
-			moveCursorLCD(&handlerLCD, 0, 0);
-			if(dataXbefore == arrayLCDdata[0]){
-				__NOP();
-			}
-			else{
-				sprintf(bufferLCD, "X = %.3f m/s^2", arrayLCDdata[0]*factConv);
-				//clearLineLCD(&handlerLCD, 0);
-				sendStringLCD(&handlerLCD, bufferLCD);
-				dataXbefore = arrayLCDdata[0];
-			}
-
-			moveCursorLCD(&handlerLCD, 0, 1);
-			if(dataYbefore ==arrayLCDdata[1]){
-				__NOP();
-			}
-			else{
-				sprintf(bufferLCD, "Y = %.3f m/s^2", arrayLCDdata[1]*factConv);
-				//clearLineLCD(&handlerLCD, 1);
-				sendStringLCD(&handlerLCD, bufferLCD);
-				dataYbefore = arrayLCDdata[1];
-			}
-
-			moveCursorLCD(&handlerLCD, 0, 2);
-			if(dataZbefore ==arrayLCDdata[2]){
-				__NOP();
-			}
-			else{
-				sprintf(bufferLCD, "Z = %.3f m/s^2", arrayLCDdata[2]*factConv);
-				//clearLineLCD(&handlerLCD, 2);
-				sendStringLCD(&handlerLCD, bufferLCD);
-				dataYbefore = arrayLCDdata[2];
-			}
-
-			moveCursorLCD(&handlerLCD, 0, 3);
-			sendStringLCD(&handlerLCD, "Config:");
-
-			delay_ms(500);
-		}
-
-		// Si han pasado 2seg y se dio la orden con la 'm' en la terminal, muestre los datos tomados en ese tiempo
+		// Si han pasado 2seg muestre los datos tomados en ese tiempo
 		if(flag2seg){
-
 			sprintf(bufferData, "      X;            Y;            Z;\n");
 			writeMsg(&usart1Comm, bufferData);
 			for(int i=0; i<2000; i++){
@@ -240,9 +241,10 @@ void initSystem(void){
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerBlinkyTimer);
 	// Fin del GPIO y Timer del LED de estado
+
 	/*----------------------------------------------------------------------------------------*/
 
-	/* Configuración del Timer 3 para controlar el muestreo*/
+	/* Configuración del Timer 4 para controlar el muestreo*/
 	handlerSamplingTimer.ptrTIMx							= TIM4;
 	handlerSamplingTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerSamplingTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_80MHz_SPEED_100us;
@@ -280,6 +282,8 @@ void initSystem(void){
 	usart1Comm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
 	USART_Config(&usart1Comm);
 
+	/* 			Configuraciones del I2C1 para el acelerómetro 			*/
+
 	/* Configuración del pin SCL del I2C1 */
 	handlerI2C_SCL.pGPIOx								= GPIOB;
 	handlerI2C_SCL.GPIO_PinConfig.GPIO_PinNumber		= PIN_8;
@@ -310,8 +314,9 @@ void initSystem(void){
 
 	/* Configuración de los pines PWM para mostrar señal según valor de los datos*/
 
-	handlerPinPwmAxisX.pGPIOx								= GPIOA;
-	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinNumber		= PIN_6;
+	// Eje X
+	handlerPinPwmAxisX.pGPIOx								= GPIOB;
+	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinNumber		= PIN_4;
 	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
 	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
 	handlerPinPwmAxisX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
@@ -325,8 +330,9 @@ void initSystem(void){
 	handlerXSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
 	pwm_Config(&handlerXSignalPWM);
 
-	handlerPinPwmAxisY.pGPIOx								= GPIOA;
-	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinNumber		= PIN_7;
+	// Eje Y
+	handlerPinPwmAxisY.pGPIOx								= GPIOB;
+	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinNumber		= PIN_5;
 	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
 	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
 	handlerPinPwmAxisY.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
@@ -340,8 +346,9 @@ void initSystem(void){
 	handlerYSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
 	pwm_Config(&handlerYSignalPWM);
 
+	// Eje Z
 	handlerPinPwmAxisZ.pGPIOx								= GPIOB;
-	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinNumber		= PIN_0;
+	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinNumber		= PIN_1;
 	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
 	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
 	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
@@ -349,12 +356,13 @@ void initSystem(void){
 	handlerPinPwmAxisZ.GPIO_PinConfig.GPIO_PinAltFunMode	= AF2;
 	GPIO_Config(&handlerPinPwmAxisZ);
 	handlerZSignalPWM.ptrTIMx						= TIM3;
-	handlerZSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_3;
+	handlerZSignalPWM.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_4;
 	handlerZSignalPWM.PWMx_Config.PWMx_DuttyCicle	= duttyValueZ;
 	handlerZSignalPWM.PWMx_Config.PWMx_Period		= 20000;
 	handlerZSignalPWM.PWMx_Config.PWMx_Prescaler	= 80;
 	pwm_Config(&handlerZSignalPWM);
 
+	// Inicia PWM
 	enableOutput(&handlerXSignalPWM);
 	enableOutput(&handlerYSignalPWM);
 	enableOutput(&handlerZSignalPWM);
@@ -364,7 +372,7 @@ void initSystem(void){
 
 	/*-------------- Fin de la configuración de los 3 pines como PWM --------------*/
 
-	/* Configuración de la LCD por I2C, usaremos el puerto 3 del I2C*/
+	/*		Configuración de la LCD por I2C, usaremos el puerto 3 del I2C		*/
 
 	/* Configuración del pin SCL del I2C3 */
 	handlerI2C_SCL_LCD.pGPIOx								= GPIOA;
@@ -393,7 +401,9 @@ void initSystem(void){
 	handlerLCD.slaveAddress	= LCD_ADDRESS;
 	i2c_config(&handlerLCD);
 
-	initLCD(&handlerLCD);
+	initLCD(&handlerLCD); // Inicio la LCD
+
+	//Fin initSystem
 
 }
 
@@ -493,11 +503,6 @@ void saveData(void){
 	int16_t AccelZ = AccelZ_high << 8 | AccelZ_low; // Aquí lo que se hace es básicamente concatenar los valores
 	arrayLCDdata[2] = (int)AccelZ;
 
-	if(counter_ms > 0){
-		arrayXdata[counter_ms-1] = AccelX*factConv; 	// Se guardan datos para el muestreo constante de 1KHz
-		arrayYdata[counter_ms-1] = AccelY*factConv;
-		arrayZdata[counter_ms-1] = AccelZ*factConv;
-	}
 	if((flag6000Data)&&(countPrint > 0)){
 		arrayXdataprint[countPrint-1] = AccelX*factConv;	// Se guardan los datos 2000 datos por eje, solo cuando se solicitan
 		arrayYdataprint[countPrint-1] = AccelY*factConv;	// con la tecla, y se usa el muestreo 1KHz
@@ -523,20 +528,19 @@ int16_t duttyAccordData(int data){
 	return ajuste; // Este valor se lo vamos a sumar al DuttyValue del PWM según eje, nótese que está garantizada para negativos y positivos
 }
 
-/** Interrupción del timer blinky LED*/
+/* Interrupción del timer blinky LED */
 void BasicTimer2_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
 }
 
-/** Interrupción del timer de muestreo*/
+/* Interrupción del timer de muestreo */
 void BasicTimer4_Callback(void){
 	flag1KHzSamplingData = 1; 	// Levanto bandera para tomar datos cada 1ms
 	counter_ms++;
-	if(flag6000Data){
+	if(flag6000Data){ 			// Si la bandera de 6000 datos esta levantada, aumente el countPrint, para el arreglo de datos
 		countPrint++;
 	}
 }
-
 
 /* Interrupción del USART1 */
 void usart1Rx_Callback(void){

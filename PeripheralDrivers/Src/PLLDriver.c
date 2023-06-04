@@ -5,7 +5,7 @@
  *      Author: MillerQuintero2001
  *
  * 	Este driver permite manipular la frecuencia de la señal de reloj del microncontrolador,
- * 	como el tiempo apremia, de momento solo va a ser para la frecuencia de 80 MHz
+ * 	obtener información de esta, y emplear el pin MC01 para medir las señales.
  */
 
 #include <stm32f4xx.h>
@@ -89,21 +89,16 @@ void configPLL(uint16_t PLLFreqMHz){
 	// No se divide para valores en el registro menores a 4(binario), se queda en 80 MHz, ya que admite hasta 100 MHz
 	RCC->CFGR |= RCC_CFGR_PPRE2_DIV1;
 
-	// 4. Personalmente quiero habilitar la posibilidad de usar un pin del micro para observar la señal
-	RCC->CFGR |= RCC_CFGR_MCO1; // Con este para el MCO1 uso la PLL
-	RCC->CFGR &= ~RCC_CFGR_MCO1PRE;
-	RCC->CFGR |= RCC_CFGR_MCO1PRE; // Con esta macro, divido los 80MHz por 5, para tener 16MHz en el pin MCO1
 
-
-	// 5. Ahora activamos el PLL
+	// 4. Ahora activamos el PLL
 	RCC->CR |= RCC_CR_PLLON;
 
-	// 6.1 Esperamos hasta que el hardware indique que el PLL esta desbloqueado
+	// 5. Esperamos hasta que el hardware indique que el PLL esta desbloqueado
 	while( !(RCC->CR & RCC_CR_PLLRDY)){
 		__NOP();
 	}
 
-	/* 7. Ahora convertimos nuestro PLL en nuestro System Clock, solo si la PLLFreqMHz no supera los 100MHz
+	/* 6. Ahora convertimos nuestro PLL en nuestro System Clock, solo si la PLLFreqMHz no supera los 100MHz
 	 * de lo contrario se queda con el HSI */
 	if(PLLFreqMHz<=100){
 		RCC->CFGR &= ~RCC_CFGR_SW;
@@ -132,4 +127,12 @@ uint64_t getConfigPLL(void){
 		freq = HSI_FREQUENCY;
 	}
 	return freq;
+}
+
+/** Función para definir la fuente de reloj y el pre-escaler para el pin usado como Microcontroller Clock Output 1*/
+void changeMCO1(uint8_t sourceClock, uint8_t preEscaler){
+		RCC->CFGR &= ~RCC_CFGR_MCO1; 						// Limpio
+		RCC->CFGR |= (sourceClock << RCC_CFGR_MCO1_Pos); 	// Selecciona el reloj
+		RCC->CFGR &= ~RCC_CFGR_MCO1PRE; 					// Limpio
+		RCC->CFGR |= (preEscaler << RCC_CFGR_MCO1PRE_Pos); 	// Selecciono el pre-escaler para el MCO1
 }

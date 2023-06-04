@@ -57,6 +57,7 @@ void i2c_sendAck(I2C_Handler_t *ptrHandlerI2C);
 void i2c_sendNoAck(I2C_Handler_t *ptrHandlerI2C);
 
 uint8_t i2c_readSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead);
+void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t* arrayRegToRead, uint8_t numberOfReg, uint8_t* arraySaveData);
 void i2c_writeSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToWrite,uint8_t newValue);
 
 #endif /* I2CDRIVER_H_ */

@@ -14,12 +14,24 @@
 
 #define HSI_FREQUENCY 	16000000
 
+#define MCO1_HSI_CLOCK 	0
+#define MCO1_LSE_CLOCK 	1
+#define MCO1_HSE_CLOCK	2
+#define MC01_PLL_CLOCK 	3
+
+#define MC01_DIVIDED_BY_1	0
+#define MC01_DIVIDED_BY_2	0b100
+#define MC01_DIVIDED_BY_3	0b101
+#define MC01_DIVIDED_BY_4	0b110
+#define MC01_DIVIDED_BY_5	0b111
+
 
 /* NOTA: Para poder parametrizar el problema, y usar una función configPLL más o menos cómoda
  * las frecuencias deseadas deben ser ingresadas en MHz, y no pueden exceder los 100MHz, ya que eso
  * es lo máximo permitido por el MCU, si se ingresa un valor superior a 100, el sistema queda con el HSI */
 
-void configPLL(uint16_t PLL_Freq);
+void configPLL(uint16_t PLLFreqMHz);
 uint64_t getConfigPLL(void);
+void changeMCO1(uint8_t sourceClock, uint8_t preEscaler);
 
 #endif /* PLLDRIVER_H_ */

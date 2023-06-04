@@ -89,7 +89,7 @@ void adc_Config(ADC_Config_t *adcConfig){
 	ADC1->SQR3 |= (adcConfig->channel << 0);
 
 	/* 9. Configuramos el preescaler del ADC en 2:1 (el mas rápido que se puede tener */
-	//ADC1-> &= ~ADC_CCR_ADCPRE;
+	ADC->CCR &= ~ADC_CCR_ADCPRE;
 
 	/* 10. Desactivamos las interrupciones globales */
 	__disable_irq();
@@ -101,7 +101,7 @@ void adc_Config(ADC_Config_t *adcConfig){
 	__NVIC_EnableIRQ(ADC_IRQn);
 
 	/* 11b. Configuramos la prioridad para la interrupción ADC */
-
+	__NVIC_SetPriority(ADC_IRQn, 4);
 
 	/* 12. Activamos el modulo ADC */
 	ADC1->CR2 |= ADC_CR2_ADON;
@@ -196,45 +196,51 @@ void configAnalogPin(uint8_t adcChannel) {
 		// se necesitan para trabajos posteriores.
 		break;
 	}
-		;
 
 	case ADC_CHANNEL_1: {
-		// Buscar y configurar adecuadamente
-
+		// Es el pin PA1
+		handlerAdcPin.pGPIOx 						= GPIOA;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_1;
 		break;
 	}
 
 	case ADC_CHANNEL_2: {
-		// Buscar y configurar adecuadamente
-
+		// Es el pin PA2
+		handlerAdcPin.pGPIOx 						= GPIOA;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_2;
 		break;
 	}
 
 	case ADC_CHANNEL_3: {
-		// Buscar y configurar adecuadamente
-
+		// Es el pin PA3
+		handlerAdcPin.pGPIOx 						= GPIOA;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_3;
 		break;
 	}
 
 	case ADC_CHANNEL_4: {
-		// Buscar y configurar adecuadamente
-
+		// Es el pin PA4
+		handlerAdcPin.pGPIOx 						= GPIOA;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_4;
 		break;
 	}
 
 	case ADC_CHANNEL_5: {
-		// Buscar y configurar adecuadamente
-
+		// Es el pin PA5
+		handlerAdcPin.pGPIOx 						= GPIOA;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_5;
 		break;
 	}
 	case ADC_CHANNEL_6: {
-		// Buscar y configurar adecuadamente
-
+		// Es el pin PA6
+		handlerAdcPin.pGPIOx 						= GPIOA;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_6;
 		break;
 	}
 	case ADC_CHANNEL_7: {
-		// Buscar y configurar adecuadamente
-
+		// Es el pin PA7
+		handlerAdcPin.pGPIOx 						= GPIOA;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_7;
 		break;
 	}
 	case ADC_CHANNEL_8: {
@@ -244,38 +250,45 @@ void configAnalogPin(uint8_t adcChannel) {
 		break;
 	}
 	case ADC_CHANNEL_9: {
-		// Buscar y configurar adecuadamente
-
+		//Es el pin PB1
+		handlerAdcPin.pGPIOx 						= GPIOB;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_1;
 		break;
 	}
 	case ADC_CHANNEL_10: {
-		// Buscar y configurar adecuadamente
-
+		//Es el pin C0
+		handlerAdcPin.pGPIOx 						= GPIOC;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_0;
 		break;
 	}
 	case ADC_CHANNEL_11: {
-		// Buscar y configurar adecuadamente
-
+		//Es el pin PC1
+		handlerAdcPin.pGPIOx 						= GPIOC;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_1;
 		break;
 	}
 	case ADC_CHANNEL_12: {
-		// Buscar y configurar adecuadamente
-
+		//Es el pin PC2
+		handlerAdcPin.pGPIOx 						= GPIOC;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_2;
 		break;
 	}
 	case ADC_CHANNEL_13: {
-		// Buscar y configurar adecuadamente
-
+		//Es el pin PC3
+		handlerAdcPin.pGPIOx 						= GPIOC;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_3;
 		break;
 	}
 	case ADC_CHANNEL_14: {
-		// Buscar y configurar adecuadamente
-
+		//Es el pin PC4
+		handlerAdcPin.pGPIOx 						= GPIOC;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_4;
 		break;
 	}
 	case ADC_CHANNEL_15: {
-		// Buscar y configurar adecuadamente
-
+		//Es el pin PC5
+		handlerAdcPin.pGPIOx 						= GPIOC;
+		handlerAdcPin.GPIO_PinConfig.GPIO_PinNumber = PIN_5;
 		break;
 	}
 	default: {

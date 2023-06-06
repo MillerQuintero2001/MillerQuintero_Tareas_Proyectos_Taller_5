@@ -17,6 +17,7 @@
 #define MAIN_CLOCK_16_Mhz_FOR_I2C	16
 #define MAIN_CLOCK_20_Mhz_FOR_I2C	20
 #define MAIN_CLOCK_80_Mhz_FOR_I2C	40 // Divide por 2 por que APB1 no puede más de 50MHz
+#define MAIN_CLOCK_100_Mhz_FOR_I2C	50
 
 #define I2C_MODE_SM		0
 #define I2C_MODE_FM		1
@@ -24,16 +25,20 @@
 #define I2C_DUTY_FM_2_1		0
 #define I2C_DUTY_FM_16_9	1
 
-#define I2C_MODE_SM_SPEED_100Khz 				80
-#define I2C_MODE_SM_SPEED_100Khz_PLL 			202
-#define I2C_MODE_FM_DUTY_0_SPEED_400Khz 		14
-#define I2C_MODE_FM_DUTY_0_SPEED_400Khz_PLL 	33
-#define I2C_MODE_FM_DUTY_1_SPEED_400Khz 		14
+#define I2C_MODE_SM_SPEED_100Khz 						80
+#define I2C_MODE_SM_SPEED_100Khz_PLL_80Mhz 				202
+#define I2C_MODE_SM_SPEED_100Khz_PLL_100Mhz				250
+#define I2C_MODE_FM_DUTY_0_SPEED_400Khz 				14
+#define I2C_MODE_FM_DUTY_0_SPEED_400Khz_PLL_80Mhz 		33
+#define I2C_MODE_FM_DUTY_0_SPEED_400Khz_PLL_100Mhz		41
+#define I2C_MODE_FM_DUTY_1_SPEED_400Khz 				14
 
-#define I2C_MAX_RISE_TIME_SM		17
-#define I2C_MAX_RISE_TIME_SM_PLL	41
-#define I2C_MAX_RISE_TIME_FM		5
-#define I2C_MAX_RISE_TIME_FM_PLL	13
+#define I2C_MAX_RISE_TIME_SM				17
+#define I2C_MAX_RISE_TIME_SM_PLL_80Mhz		41
+#define I2C_MAX_RISE_TIME_SM_PLL_100Mhz		50
+#define I2C_MAX_RISE_TIME_FM				5
+#define I2C_MAX_RISE_TIME_FM_PLL_80Mhz		13
+#define I2C_MAX_RISE_TIME_FM_PLL_100Mhz		15
 
 typedef struct
 {
@@ -58,6 +63,7 @@ void i2c_sendNoAck(I2C_Handler_t *ptrHandlerI2C);
 
 uint8_t i2c_readSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead);
 void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t* arrayRegToRead, uint8_t numberOfReg, uint8_t* arraySaveData);
+//void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t startRegister, uint8_t numRegisters, uint8_t *registerValues);
 void i2c_writeSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToWrite,uint8_t newValue);
 
 #endif /* I2CDRIVER_H_ */

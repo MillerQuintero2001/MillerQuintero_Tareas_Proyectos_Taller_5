@@ -5,7 +5,11 @@
  *      Author: MillerQuintero2001
  */
 
+#include <stm32f4xx.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <math.h>
+#include "PLLDriver.h"
 
 #ifndef USARTXDRIVER_H_
 #define USARTXDRIVER_H_

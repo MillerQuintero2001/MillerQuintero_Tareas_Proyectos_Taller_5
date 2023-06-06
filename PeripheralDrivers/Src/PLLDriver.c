@@ -20,7 +20,10 @@ void configPLL(uint16_t PLLFreqMHz){
 	RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLSRC);
 
 	// 1. Seleccionamos el regulador para la frecuencia deseada
-	if(PLLFreqMHz<=84){
+	if(PLLFreqMHz<=64){
+		PWR->CR |= (0x1 << PWR_CR_VOS_Pos);
+	}
+	else if((64<PLLFreqMHz)&&(PLLFreqMHz<=84)){
 		PWR->CR |= (0x2 << PWR_CR_VOS_Pos);
 	}
 	else if((84<PLLFreqMHz)&&(PLLFreqMHz<=100)){
@@ -34,12 +37,18 @@ void configPLL(uint16_t PLLFreqMHz){
 	FLASH->ACR |= FLASH_ACR_ICEN;
 	FLASH->ACR |= FLASH_ACR_DCEN;
 
-	// 2.2 Configuramos la respectiva latencia para 80 MHz que es 2 Wait States para 2.7 a 3.6 Voltios
+	// 2.2 Configuramos la respectiva latencia para PLLFreqMHz con X Wait States para 2.7 a 3.6 Voltios
 	FLASH->ACR &= ~ FLASH_ACR_LATENCY;
-	if(PLLFreqMHz<=84){
+	if((0<PLLFreqMHz)&&(PLLFreqMHz<=30)){
+		FLASH->ACR |= FLASH_ACR_LATENCY_0WS;
+	}
+	else if((30<PLLFreqMHz)&&(PLLFreqMHz<=64)){
+		FLASH->ACR |= FLASH_ACR_LATENCY_1WS;
+	}
+	else if((64<PLLFreqMHz)&&(PLLFreqMHz<=90)){
 		FLASH->ACR |= FLASH_ACR_LATENCY_2WS;
 	}
-	else if((84<PLLFreqMHz)&&(PLLFreqMHz<=100)){
+	else if((90<PLLFreqMHz)&&(PLLFreqMHz<=100)){
 		FLASH->ACR |= FLASH_ACR_LATENCY_3WS;
 	}
 	else{
@@ -86,7 +95,7 @@ void configPLL(uint16_t PLLFreqMHz){
 	}
 
 	// 3.7 Para APB2
-	// No se divide para valores en el registro menores a 4(binario), se queda en 80 MHz, ya que admite hasta 100 MHz
+	// No se divide para valores en el registro menores a 4(binario), se queda en PLLFreqMHz, ya que admite hasta 100 MHz
 	RCC->CFGR |= RCC_CFGR_PPRE2_DIV1;
 
 

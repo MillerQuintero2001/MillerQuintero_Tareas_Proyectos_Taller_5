@@ -5,8 +5,13 @@
  *      Author: MillerQuintero2001
  */
 
+#include <stm32f4xx.h>
 #include <stdint.h>
 #include "I2CDriver.h"
+#include "PLLDriver.h"
+
+
+uint64_t freqClock1 = 0;
 
 /*
  * Recordar que se debe configurar los pines para el I2C (SDA y SCL),
@@ -39,7 +44,13 @@ void i2c_config(I2C_Handler_t *ptrHandlerI2C){
 	 * por el periférico para generar la señal de reloj para el bus I2C*/
 	ptrHandlerI2C->ptrI2Cx->CR2 &= ~I2C_CR2_FREQ_Msk; //  Borramos la configuración previa
 	if((RCC->CFGR & RCC_CFGR_SW) == RCC_CFGR_SW_PLL){
-		ptrHandlerI2C->ptrI2Cx->CR2 |= (MAIN_CLOCK_80_Mhz_FOR_I2C << I2C_CR2_FREQ_Pos);
+		freqClock1 = getConfigPLL();
+		if(freqClock1 == 80000000){
+			ptrHandlerI2C->ptrI2Cx->CR2 |= (MAIN_CLOCK_80_Mhz_FOR_I2C << I2C_CR2_FREQ_Pos);
+		}
+		else if(freqClock1 == 100000000){
+			ptrHandlerI2C->ptrI2Cx->CR2 |= (MAIN_CLOCK_100_Mhz_FOR_I2C << I2C_CR2_FREQ_Pos);
+		}
 	}
 	else{
 		ptrHandlerI2C->ptrI2Cx->CR2 |= I2C_CR2_FREQ_4; //Se escribe 16 MHz, o sino la macro DE 16 Mhz también
@@ -58,10 +69,19 @@ void i2c_config(I2C_Handler_t *ptrHandlerI2C){
 		//	Seleccionamos el modo estándar
 		ptrHandlerI2C->ptrI2Cx->CCR &= ~I2C_CCR_FS;
 		if((RCC->CFGR & RCC_CFGR_SW) == RCC_CFGR_SW_PLL){
-			//	Configuramos el registro que se encarga de generar la señal del reloj
-			ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_SM_SPEED_100Khz_PLL << I2C_CCR_CCR_Pos);
-			//	Configuramos el registro que controla el tiempo T-Rise máximo
-			ptrHandlerI2C->ptrI2Cx->TRISE |= (I2C_MAX_RISE_TIME_SM_PLL);
+			if(freqClock1 == 80000000){
+				//	Configuramos el registro que se encarga de generar la señal del reloj
+				ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_SM_SPEED_100Khz_PLL_80Mhz << I2C_CCR_CCR_Pos);
+				//	Configuramos el registro que controla el tiempo T-Rise máximo
+				ptrHandlerI2C->ptrI2Cx->TRISE |= (I2C_MAX_RISE_TIME_SM_PLL_80Mhz);
+			}
+			else if(freqClock1 == 100000000){
+				//	Configuramos el registro que se encarga de generar la señal del reloj
+				ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_SM_SPEED_100Khz_PLL_100Mhz << I2C_CCR_CCR_Pos);
+				//	Configuramos el registro que controla el tiempo T-Rise máximo
+				ptrHandlerI2C->ptrI2Cx->TRISE |= (I2C_MAX_RISE_TIME_SM_PLL_100Mhz);
+			}
+
 		}
 		else{
 			//	Configuramos el registro que se encarga de generar la señal del reloj
@@ -81,10 +101,18 @@ void i2c_config(I2C_Handler_t *ptrHandlerI2C){
 		if(ptrHandlerI2C->dutyFastModeI2C == I2C_DUTY_FM_2_1){ //Duty 2:1
 			ptrHandlerI2C->ptrI2Cx->CCR &= ~(0b1 << 14); //Bit DUTY = 0
 			if((RCC->CFGR & RCC_CFGR_SW) == RCC_CFGR_SW_PLL){
-				// //	Configuramos el registro que se encarga de generar la señal del reloj
-				ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_FM_DUTY_0_SPEED_400Khz_PLL << I2C_CCR_CCR_Pos);
-				// Configuramos el registro que controla el tiempo T-Rise máximo
-				ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_FM_PLL;
+				if(freqClock1 == 80000000){
+					// Configuramos el registro que se encarga de generar la señal del reloj
+					ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_FM_DUTY_0_SPEED_400Khz_PLL_80Mhz << I2C_CCR_CCR_Pos);
+					// Configuramos el registro que controla el tiempo T-Rise máximo
+					ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_FM_PLL_80Mhz;
+				}
+				else if(freqClock1 == 100000000){
+					// Configuramos el registro que se encarga de generar la señal del reloj
+					ptrHandlerI2C->ptrI2Cx->CCR |= (I2C_MODE_FM_DUTY_0_SPEED_400Khz_PLL_100Mhz << I2C_CCR_CCR_Pos);
+					// Configuramos el registro que controla el tiempo T-Rise máximo
+					ptrHandlerI2C->ptrI2Cx->TRISE |= I2C_MAX_RISE_TIME_FM_PLL_100Mhz;
+				}
 			}
 			else{
 				// Configuramos el registro que controla el reloj
@@ -213,7 +241,7 @@ uint8_t i2c_readDataByte(I2C_Handler_t *ptrHandlerI2C){
 
 }
 
-/** Función para leer un byte simple*/
+/** Función para leer un byte simple */
 uint8_t i2c_readSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead){
 
 	/* 0. Creamos una variable auxiliar para recibir el dato que leemos */
@@ -246,16 +274,40 @@ uint8_t i2c_readSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead){
 	return auxRead;
 }
 
+//void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t startRegister, uint8_t numRegisters, uint8_t *registerValues) {
+//    // Se genera el start
+//    i2c_startTransaction(ptrHandlerI2C);
+//    // Se envía la dirección del slave y se indica ESCRIBIR
+//    i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_WRITE_DATA);
+//    // Se envía la dirección de memoria que se desea leer
+//    i2c_sendMemoryAddress(ptrHandlerI2C, startRegister);
+//    // Se crea condición de restart
+//    i2c_reStartTransaction(ptrHandlerI2C);
+//    // Enviamos la dirección del slave y la indicación de leer
+//    i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_READ_DATA);
+//
+//    for (uint8_t i = 0; i < numRegisters; i++) {
+//
+//        // Leemos el dato que envía el slave
+//        registerValues[i] = i2c_readDataByte(ptrHandlerI2C);
+//    }
+//            i2c_sendNoAck(ptrHandlerI2C);
+//
+//    // Se genera condición de stop para que se detenga después de leer los registros
+//    i2c_stopTransaction(ptrHandlerI2C);
+//}
+
 /** Función para leer bytes de múltiples registros*/
 void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t* arrayRegToRead, uint8_t numberOfReg, uint8_t* arraySaveData){
 
-	/* 1. Generamos la condición de Start */
-	i2c_startTransaction(ptrHandlerI2C);
-
-	/* 2. Enviamos la dirección del esclavo y la indicación de ESCRIBIR */
-	i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_WRITE_DATA);
-
 	for(int i = 0; i < numberOfReg; i++){
+
+		/* 1. Generamos la condición de Start */
+		i2c_startTransaction(ptrHandlerI2C);
+
+		/* 2. Enviamos la dirección del esclavo y la indicación de ESCRIBIR */
+		i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_WRITE_DATA);
+
 		/* 3. Enviamos la dirección de memoria que deseamos leer */
 		i2c_sendMemoryAddress(ptrHandlerI2C, arrayRegToRead[i]);
 
@@ -267,13 +319,13 @@ void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t* arrayRegTo
 
 		/* 6. Leemos el dato que envía el esclavo y guardamos en arreglo */
 		arraySaveData[i] = i2c_readDataByte(ptrHandlerI2C);
+
+		/* 7. Generamos la condición de NoAck, para el Master no responda y el Slave solo envíe 1 byte */
+		i2c_sendNoAck(ptrHandlerI2C);
+
+		/* 8. Generamos la condición Stop, para que el Slave se detenga después de 1 byte */
+		i2c_stopTransaction(ptrHandlerI2C);
 	}
-
-	/* 7. Generamos la condición de NoAck, para el Master no responda y el Slave solo envíe 1 byte */
-	i2c_sendNoAck(ptrHandlerI2C);
-
-	/* 8. Generamos la condición Stop, para que el Slave se detenga después de 1 byte */
-	i2c_stopTransaction(ptrHandlerI2C);
 }
 
 /** Función para escribir un byte simple */

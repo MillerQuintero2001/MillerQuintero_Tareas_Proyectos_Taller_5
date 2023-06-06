@@ -19,11 +19,11 @@
 #define MCO1_HSE_CLOCK	2
 #define MC01_PLL_CLOCK 	3
 
-#define MC01_DIVIDED_BY_1	0
-#define MC01_DIVIDED_BY_2	0b100
-#define MC01_DIVIDED_BY_3	0b101
-#define MC01_DIVIDED_BY_4	0b110
-#define MC01_DIVIDED_BY_5	0b111
+#define MCO1_DIVIDED_BY_1	0
+#define MCO1_DIVIDED_BY_2	0b100
+#define MCO1_DIVIDED_BY_3	0b101
+#define MCO1_DIVIDED_BY_4	0b110
+#define MCO1_DIVIDED_BY_5	0b111
 
 
 /* NOTA: Para poder parametrizar el problema, y usar una función configPLL más o menos cómoda

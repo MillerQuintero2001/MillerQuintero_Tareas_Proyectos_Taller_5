@@ -8,6 +8,7 @@
 #ifndef INC_ADCDRIVER_H_
 #define INC_ADCDRIVER_H_
 
+#include <stdint.h>
 #include "stm32f4xx.h"
 
 #define ADC_CHANNEL_0		0
@@ -51,8 +52,17 @@ typedef struct
 	uint8_t		resolution;		// Precisión con la que el ADC hace la adquisición del dato
 	uint16_t	samplingPeriod;	// Tiempo deseado para hacer la adquisición del dato
 	uint8_t		dataAlignment;	// Alineación a la izquierda o a la derecha
-	uint16_t	adcData;			//Dato de la conversión
+	uint16_t	adcData;		//Dato de la conversión
 }ADC_Config_t;
+
+typedef struct
+{
+	uint8_t		*orderADC;		// Arreglo con el orden de operación de los canales
+	uint8_t 	resolution;		// Precisión con la que el ADC hace la adquisición del dato
+	uint16_t 	samplingPeriod;	// Tiempo deseado para hacer la adquisición del dato
+	uint8_t		dataAlignment;	// Alineación a la izquierda o a la derecha
+	uint16_t 	adcData;		//Dato de la conversión
+}ADC_Multichannel_Config_t;
 
 void adc_Config(ADC_Config_t *adcConfig);
 void configAnalogPin(uint8_t adcChannel);
@@ -61,6 +71,6 @@ void startSingleADC(void);
 void startContinousADC(void);
 uint16_t getADC(void);
 
-//void ADC_ConfigMultichannel (ADC_Config_t *adcConfig, uint8_t numeroDeCanales);
+void adc_ConfigMultichannel (ADC_Multichannel_Config_t *adcMultiConfig, uint8_t numeroDeCanales);
 
 #endif /* INC_ADCDRIVER_H_ */

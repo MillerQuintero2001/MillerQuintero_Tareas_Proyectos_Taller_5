@@ -41,8 +41,9 @@ uint8_t arrayRegisters[6] = {ACCEL_XOUT_L,ACCEL_XOUT_H, ACCEL_YOUT_L, ACCEL_YOUT
 /* Definición de los handlers necesarios */
 
 // Elementos para el Blinky LED
-GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
-BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
+GPIO_Handler_t handlerStatePin = 			{0};	// LED de estado del Pin H1
+GPIO_Handler_t handlerBlinkyPin = 			{0}; 	// LED de estado del Pin A5
+BasicTimer_Handler_t handlerBlinkyTimer = 	{0};	// Timer del LED de estado
 
 // Elemento para el Pin MC01 para chequear la señal
 GPIO_Handler_t handlerMCO = {0};
@@ -119,8 +120,8 @@ int main(void){
 			if(counter_ms > 50){			// Controlo el contador de milisegundos
 				counter_ms = 0;
 			}
-			//saveData(); //Función que guarda los datos en arreglos, al ser sujeta a la flag1KHz, esta función se llama solo cada 1ms
-			flag200HzSamplingData = 0; 	// Bajo bandera porque ya se tomaron datos en este milisegundo
+			saveData(); //Función que guarda los datos en arreglos, al ser sujeta a la flag200KHz, esta función se llama solo cada 5ms
+			flag200HzSamplingData = 0; 	// Bajo bandera porque ya se tomaron datos
 		}
 
 	}
@@ -159,8 +160,20 @@ void initSystem(void){
 	handlerMCO.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
 	handlerMCO.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_FAST;
 	handlerMCO.GPIO_PinConfig.GPIO_PinAltFunMode	= AF0;
+	GPIO_Config(&handlerMCO);
 
-	/* GPIO y Timer del Blinky Led de Estado */
+	/* GPIO y Timer del Blinky Led de Estado PH1 */
+	handlerStatePin.pGPIOx								= GPIOH;
+	handlerStatePin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_1;
+	handlerStatePin.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_OUT;
+	handlerStatePin.GPIO_PinConfig.GPIO_PinSpeed 		= GPIO_OSPEED_FAST;
+	handlerStatePin.GPIO_PinConfig.GPIO_PinOPType 		= GPIO_OTYPE_PUSHPULL;
+	// Cargo la configuración
+	GPIO_Config(&handlerStatePin);
+	// Pongo estado en alto
+	GPIO_WritePin(&handlerStatePin, SET);
+
+	/* GPIO y Timer del Blinky Led de Estado PA5 */
 	handlerBlinkyPin.pGPIOx								= GPIOA;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_5;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_OUT;
@@ -170,6 +183,7 @@ void initSystem(void){
 	GPIO_Config(&handlerBlinkyPin);
 	// Pongo estado en alto
 	GPIO_WritePin(&handlerBlinkyPin, SET);
+
 	// Atributos para el Timer 2 del LED de estado
 	handlerBlinkyTimer.ptrTIMx								= TIM2;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
@@ -308,7 +322,7 @@ void commandUSART(char* ptrBufferReception){
 	}
 	else if(strcmp(cmd, "MCO") == 0){
 		writeMsg(&usartComm, "CMD: MCO \n");
-		if((0 <= firstParameter)&&(firstParameter < 4)&&(firstParameter != 2)&&(secondParameter<6)){
+		if((0 <= firstParameter)&&(firstParameter < 6)&&(firstParameter != 2)&&(secondParameter<6)){
 			changeMCO1(firstParameter, secondParameter+2);
 			writeMsg(&usartComm, "MCO1 configuration succesfull \n");
 		}
@@ -345,7 +359,8 @@ void saveData(void){
 
 /* Interrupción del timer blinky LED */
 void BasicTimer2_Callback(void){
-	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
+	GPIOxTooglePin(&handlerStatePin);	//Cambio el estado del LED PH1
+	GPIOxTooglePin(&handlerBlinkyPin);	//Cambio el estado del LED PA5
 }
 
 /* Interrupción del timer de muestreo */
@@ -423,6 +438,10 @@ void actionRxData(void){
 }
 
 void initLSE(void){
+	// Activamos el Power Interface Clock
+	RCC->APB1ENR |= RCC_APB1ENR_PWREN;
+	// Permitimos escritura en el LSE
+	PWR->CR |= PWR_CR_DBP;
 	// Activamos el LSE
 	RCC->BDCR |= RCC_BDCR_LSEON;
 	// Esperamos hasta que sea estable

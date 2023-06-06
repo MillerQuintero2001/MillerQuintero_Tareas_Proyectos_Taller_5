@@ -189,7 +189,7 @@ void callback_extInt13(void){
 
 /** Interrupción del USART2 */
 void usart2Rx_Callback(void){
-	usart2RxData = getRxData();	// Pongo en alto la variable bandera del USART2 para el main
+	usart2RxData = getRxData();
 }
 
 void adcComplete_Callback(void){

@@ -8,18 +8,14 @@
 #include <stdint.h>
 #include "AdcDriver.h"
 #include "GPIOxDriver.h"
-#include "PLLDriver.h"
-#include <math.h>
 
 GPIO_Handler_t handlerAdcPin = {0};
 uint16_t adcRawData = 0;
-uint64_t freqAPB2 = 0;
-uint8_t prescalerADC = 0;
 
-void adc_ConfigMultichannel (ADC_Multichannel_Config_t *adcMultiConfig, uint8_t numeroDeCanales){
+void adc_ConfigMultichannel (ADC_Multichannel_Config_t *adcMultiConfig, uint8_t numChannels){
 
 	/* 1. Configuramos todos los pines en el orden específicado*/
-	for(uint8_t i = 0; i < numeroDeCanales; i++){
+	for(uint8_t i = 0; i < numChannels; i++){
 		configAnalogPin(adcMultiConfig->orderADC[i]);
 	}
 
@@ -79,24 +75,16 @@ void adc_ConfigMultichannel (ADC_Multichannel_Config_t *adcMultiConfig, uint8_t 
 		ADC1->CR2 |= ADC_CR2_ALIGN;
 	}
 
-	/* 6. Activamos el "continuos mode" */
-	ADC1->CR2 |= ADC_CR2_CONT;
+	/* 6. Configuración del Sampling y el orden de la secuencia */
+	for(uint8_t j = 0; j < numChannels; j++){
 
-	/* 7. Configuración del Sampling y el orden de la secuencia */
-	for(uint8_t j = 0; j < numeroDeCanales; j++){
-
-		// Acá configuramos el sampling
+		// 7. Configuramos el sampling
 		if(adcMultiConfig->orderADC[j] < ADC_CHANNEL_10){
-			ADC1->SMPR2 |= (adcMultiConfig->samplingPeriod << 3*adcMultiConfig->orderADC[j]);
+			ADC1->SMPR2 |= (adcMultiConfig->samplingPeriod[j] << 3*adcMultiConfig->orderADC[j]);
 		}
 		else{
-			ADC1->SMPR1 |= (adcMultiConfig->samplingPeriod << 3*(adcMultiConfig->orderADC[j]%10));
+			ADC1->SMPR1 |= (adcMultiConfig->samplingPeriod[j] << 3*(adcMultiConfig->orderADC[j]%10));
 		}
-
-		/* 8. Configuramos la secuencia y cuantos elementos hay en la secuencia */
-
-		// Al hacerlo todo 0, estamos seleccionando solo 1 elemento en el conteo de la secuencia
-		//ADC1->SQR1 = 0;
 
 		// Para las primeras 6 secuencias, el orden se carga en el SQR3
 		if(j < 6){
@@ -104,37 +92,44 @@ void adc_ConfigMultichannel (ADC_Multichannel_Config_t *adcMultiConfig, uint8_t 
 			ADC1->SQR3 |= (adcMultiConfig->orderADC[j] << j*5);
 		}
 		// Para las secuencias de la 7 a la 12, el orden se carga en el SQR2
-		else if(j < 12){
+		else if((j > 5)&&(j < 12)){
 			// Asignamos el canal de la conversión en los 5 bits que le corresponden
 			ADC1->SQR2 |= (adcMultiConfig->orderADC[j] << (j%6)*5);
 		}
 		// Para las primeras de la 13 a la 16, el orden se carga en el SQR3
-		else if(j < 16){
+		else if((j > 11)&&(j < 16)){
 			// Asignamos el canal de la conversión en los 5 bits que le corresponden
 			ADC1->SQR1 |= (adcMultiConfig->orderADC[j] << (j%12)*5);
 		}
 	}
 
 	/* 8. Establecemos la longitud de la secuencia multicanal */
-	ADC1->SQR3 |= ((numeroDeCanales-1) << ADC_SQR1_L_Pos);
+	ADC1->SQR1 |= ((numChannels-1) << ADC_SQR1_L_Pos);
 
 	/* 9. ¡IMPORTANTE! El módulo ADC está conectado al APB2, y solo puede trabajar
 	 * a una frecuencia máxima de 36MHz, así que debemos configurar según el reloj */
 	if(RCC->CFGR & RCC_CFGR_SW){		// Si estamos con el PLL
-		freqAPB2 = getConfigPLL();
-		prescalerADC = (uint8_t)ceil((freqAPB2/36000000.0)*2.0)*2;
 		ADC->CCR &= ~ADC_CCR_ADCPRE;
-		ADC->CCR |= ( prescalerADC << ADC_CCR_ADCPRE_Pos);	// Con esto si está a 100MHz se divide por 4 y queda a 25MHz, o 80MHz queda en 20MHz
+		ADC->CCR |= ADC_CCR_ADCPRE_0;	// Con esto si está a 100MHz se divide por 4 y queda a 25MHz, o 80MHz queda en 20MHz
 	}
 	else{
 		ADC->CCR &= ~ADC_CCR_ADCPRE;
 	}
+
+	/* 10. Activamos el external trigger para las conversiones */
+	ADC1->CR2 |= (adcMultiConfig->extTriggerEnable << ADC_CR2_EXTEN_Pos);
+
+	/* 11. Seleccionamos que evento queremos como trigger del ADC */
+	ADC1->CR2 |= (adcMultiConfig->extTriggerSelect << ADC_CR2_EXTSEL_Pos);
 
 	/* 10. Desactivamos las interrupciones globales */
 	__disable_irq();
 
 	/* 11. Activamos la interrupción debida a la finalización de una conversión EOC (CR1)*/
 	ADC1->CR1 |= ADC_CR1_EOCIE;
+
+	/* 12. Activamos EOCS para tener las interrupciones cada que un canal termina de convertir */
+	ADC1->CR2 |= ADC_CR2_EOCS;
 
 	/* 11a. Matriculamos la interrupción en el NVIC*/
 	__NVIC_EnableIRQ(ADC_IRQn);
@@ -145,7 +140,7 @@ void adc_ConfigMultichannel (ADC_Multichannel_Config_t *adcMultiConfig, uint8_t 
 	/* 12. Activamos el modulo ADC */
 	ADC1->CR2 |= ADC_CR2_ADON;
 
-	/* 13. Activamos las interrupciones globales */
+	/* 14. Activamos las interrupciones globales */
 	__enable_irq();
 
 }

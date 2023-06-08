@@ -24,19 +24,19 @@
 #include "SysTickDriver.h"
 #include "I2CDriver.h"
 #include "PLLDriver.h"
+#include "AdcDriver.h"
+#include "PwmDriver.h"
 
 // Macro-definiciones específicas para el sensor
 #define ACCEL_ADDRESS 	0b1101000; // 0xD2 -> Dirección del sensor Acelerómetro con ADO=0
-#define ACCEL_XOUT_H	59 // 0x3B
-#define ACCEL_XOUT_L	60 // OX3C
-#define ACCEL_YOUT_H	61 // 0x3D
-#define ACCEL_YOUT_L 	62 // 0x3E
-#define ACCEL_ZOUT_H 	63 // 0x3F
-#define ACCEL_ZOUT_L 	64 // 0x40
-uint8_t arrayRegisters[6] = {ACCEL_XOUT_L,ACCEL_XOUT_H, ACCEL_YOUT_L, ACCEL_YOUT_H, ACCEL_ZOUT_L, ACCEL_ZOUT_H};
-
-#define PWR_MGMT_1	107
-#define WHO_AM_I	117
+#define ACCEL_XOUT_H	59	// 0x3B
+#define ACCEL_XOUT_L	60	// OX3C
+#define ACCEL_YOUT_H	61	// 0x3D
+#define ACCEL_YOUT_L 	62	// 0x3E
+#define ACCEL_ZOUT_H 	63	// 0x3F
+#define ACCEL_ZOUT_L 	64	// 0x40
+#define PWR_MGMT_1		107	// 0x6B
+#define WHO_AM_I		117	// 0x75
 
 /* Definición de los handlers necesarios */
 
@@ -50,7 +50,6 @@ GPIO_Handler_t handlerMCO = {0};
 
 // Elementos para el muestreo a 200Hz
 BasicTimer_Handler_t handlerSamplingTimer = {0}; 	// Timer del muestreo de datos
-
 uint8_t arraySaveData[6] = {0};						// Array que guarda los datos leídos de los registros de forma multiple
 float arrayXYZdata[3] = {0};						// Array que guarda la información de los 3 ejes, cada 5 ms
 float arrayXdataprint[2000] = {0};					// Array que guarda la información de datos eje X, capacidad de 2 segundos de muestreo
@@ -68,7 +67,7 @@ char bufferData[64] = {0}; 			// Buffer de datos como un arreglo de caracteres
 char userMsg[] = "Funciona por comandos c: \n";
 char bufferReception[32] = {0};
 char cmd[16] = {0};
-uint8_t counterReception = 0;
+uint16_t counterReception = 0;
 bool stringComplete = false;
 unsigned int firstParameter = 0;
 unsigned int secondParameter = 0;
@@ -78,6 +77,20 @@ GPIO_Handler_t handlerI2C_SDA = {0};
 GPIO_Handler_t handlerI2C_SCL = {0};
 I2C_Handler_t handlerAccelerometer = {0};
 uint8_t i2cBuffer = 0;
+uint8_t arrayRegisters[6] = {ACCEL_XOUT_L,ACCEL_XOUT_H, ACCEL_YOUT_L, ACCEL_YOUT_H, ACCEL_ZOUT_L, ACCEL_ZOUT_H};
+
+// Elementos para la ADC
+ADC_Multichannel_Config_t handlerDualChannelADC = {0};
+uint8_t orderChannelADC[2] = {ADC_CHANNEL_0, ADC_CHANNEL_1};
+uint16_t freqADC = 10;
+uint16_t samplingArray[2] = {ADC_SAMPLING_PERIOD_84_CYCLES, ADC_SAMPLING_PERIOD_84_CYCLES};
+uint16_t dataChannelADC0[256] = {0};
+uint16_t dataChannelADC1[256]  = {0};
+PWM_Handler_t handlerPwmEventADC = {0};
+uint8_t counterDataADC = 0;
+uint8_t indicatorADC = 0;
+uint8_t adcComplete = 0;
+
 
 /* Inicializo variables a emplear */
 unsigned int freq = 0;				// Variable en la que guardo los Hz de reloj del micro, entregados por getConfigPLL()
@@ -107,6 +120,7 @@ int main(void){
 
 		// Hacemos un "eco" con el valor que nos llega por el serial
 		if(usartRxData != '\0'){
+			writeChar(&usartComm, usartRxData);
 			commandBuild();
 		}
 
@@ -115,12 +129,20 @@ int main(void){
 			stringComplete = false;
 		}
 
+		if(adcComplete){
+			adcComplete = 0;
+			for(uint8_t i = 0; i<256; i++){
+				sprintf(bufferData, "%u\t%u\n", dataChannelADC0[i],dataChannelADC1[i]);
+				writeMsg(&usartComm, bufferData);
+			}
+		}
+
 		// Muestreo de datos constante cada 1ms
 		if(flag200HzSamplingData){
-			if(counter_ms > 50){			// Controlo el contador de milisegundos
+			saveData(); 					// Rescato primero los datos
+			if(counter_ms > 2000){			// Controlo el contador de milisegundos
 				counter_ms = 0;
 			}
-			saveData(); //Función que guarda los datos en arreglos, al ser sujeta a la flag200KHz, esta función se llama solo cada 5ms
 			flag200HzSamplingData = 0; 	// Bajo bandera porque ya se tomaron datos
 		}
 
@@ -141,7 +163,7 @@ void initSystem(void){
 	 * Midiendo con el LED de estado y haciendo cálculos, considerando el pre-escaler y auto-reload escogidos
 	 * para el timer que controla el blinky, se llegó a una frecuencia real de 101044394,86532803052349080092 Hz
 	 * según la bibliografía consultada, los bits HSITRIM[4:0] que son los del 3 al 7 del RCC_CR, están por
-	 * defecto en un valor de 16, incrimentar en 1 binario aumenta X% del HSI la frecuencia real, y decrementar
+	 * defecto en un valor de 16, incrementar en 1 binario aumenta X% del HSI la frecuencia real, y decrementar
 	 * en 1 binario, disminuye X% del HSI la frecuencia real.
 	 * Haciendo pruebas se llego a que este es el valor con el que queda mejor calibrado */
 	RCC->CR &= ~(0b11111 << RCC_CR_HSITRIM_Pos); 	// Limpio
@@ -151,6 +173,7 @@ void initSystem(void){
 	while(!(RCC->CR & RCC_CR_HSIRDY)){
 		__NOP();
 	}
+	// Fin de la calibración
 
 	/* Configuración del Pin para el MC01 */
 	handlerMCO.pGPIOx								= GPIOA;
@@ -233,7 +256,7 @@ void initSystem(void){
 	usartComm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
 	USART_Config(&usartComm);
 
-	/* 			Configuraciones del I2C1 para el acelerómetro 			*/
+	/* ------------ Configuraciones del I2C1 para el acelerómetro ------------ */
 
 	/* Configuración del pin SCL del I2C1 */
 	handlerI2C_SCL.pGPIOx								= GPIOB;
@@ -261,7 +284,28 @@ void initSystem(void){
 	handlerAccelerometer.slaveAddress	= ACCEL_ADDRESS;
 	i2c_config(&handlerAccelerometer);
 
-	/*--------------------------------------------------------------------------------*/
+	/* ------------ Configuración del ADC y el evento disparador del ADC ------------ */
+
+	/* Configuración multicanal del ADC, la vamos a hacer con canales 0 y 1, es decir
+	 * usando los pines PA0 y PA1 */
+	handlerDualChannelADC.orderADC 			= orderChannelADC;
+	handlerDualChannelADC.samplingPeriod	= samplingArray;
+	handlerDualChannelADC.resolution		= ADC_RESOLUTION_12_BIT;
+	handlerDualChannelADC.dataAlignment		= ADC_ALIGNMENT_RIGHT;
+	handlerDualChannelADC.extTriggerEnable	= ADC_EXTEN_RISING_EDGE;
+	handlerDualChannelADC.extTriggerSelect	= ADC_EXTSEL_TIM5_CC3;
+	// Paso el elemento ADC la función de configuración, indicando el número de canales
+	adc_ConfigMultichannel(&handlerDualChannelADC, 2);
+
+	/* Configuración del PWM usado como disparador de la conversión ADC */
+	// Utilizo el canal 3 para PWM del Timer 5 ya que el 1 y 2 están ocupados por ADC
+	handlerPwmEventADC.ptrTIMx						= TIM5;
+	handlerPwmEventADC.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_3;
+	handlerPwmEventADC.PWMx_Config.PWMx_Prescaler	= BTIMER_PLL_100MHz_SPEED_1us;
+	handlerPwmEventADC.PWMx_Config.PWMx_Period		= freqADC;
+	handlerPwmEventADC.PWMx_Config.PWMx_DuttyCicle	= freqADC/2;
+	pwm_Config(&handlerPwmEventADC);
+	enableOutput(&handlerPwmEventADC);
 
 	/* Inicio el cristal LSE como RTC activo */
 	initLSE();
@@ -302,26 +346,26 @@ void commandUSART(char* ptrBufferReception){
 
 	// Este primer comando imprime una lista con los otros comando que tiene el equipo
 	if(strcmp(cmd, "help") == 0){
-		writeMsg(&usartComm, "Help Menu CMDs:\n");
+		writeMsg(&usartComm, "\nHelp Menu CMDs:\n");
 		writeMsg(&usartComm, "1) help				-- Print this menu \n");
 		writeMsg(&usartComm, "2) freq				-- Print current MCU frequency \n");
 		writeMsg(&usartComm, "3) MCO #Source #Prescaler \n"
 				" -- Source: 0 = HSE; 1 = LSE, 3 = PLL \n"
 				" -- Pre-escaler from 1 to 5 \n");
-		writeMsg(&usartComm, "4) reset			-- Reset MCO config, as HSI with Prescaler = 1 \n");
-		writeMsg(&usartComm, "9) sampling		-- ADC sampling cmd, #A and #B are uint32_t \n");
-		writeMsg(&usartComm, "10) show			-- Show ADC data saved in arrays \n");
-		writeMsg(&usartComm, "11) capture		-- Launch capture of Accelerometer data \n");
-		writeMsg(&usartComm, "12) fourier		-- Show frequency data with CMSIS-FFT \n");
+		writeMsg(&usartComm, "4) reset				-- Reset MCO config, as HSI with Prescaler = 1 \n");
+		writeMsg(&usartComm, "9) sampling #Freq[Hz]	-- ADC sampling config, #A indicates the sampling frequency \n");
+		writeMsg(&usartComm, "10) show				-- Show ADC data saved in arrays \n");
+		writeMsg(&usartComm, "11) capture			-- Launch capture of Accelerometer data \n");
+		writeMsg(&usartComm, "12) fourier			-- Show frequency data with CMSIS-FFT \n");
 
 	}
 	else if(strcmp(cmd, "freq") == 0){
-		writeMsg(&usartComm, "CMD: freq \n");
+		writeMsg(&usartComm, "\nCMD: freq \n");
 		sprintf(bufferData, "The clock frequency is %u Hz \n", freq);
 		writeMsg(&usartComm, bufferData);
 	}
 	else if(strcmp(cmd, "MCO") == 0){
-		writeMsg(&usartComm, "CMD: MCO \n");
+		writeMsg(&usartComm, "\nCMD: MCO \n");
 		if((0 <= firstParameter)&&(firstParameter < 6)&&(firstParameter != 2)&&(secondParameter<6)){
 			changeMCO1(firstParameter, secondParameter+2);
 			writeMsg(&usartComm, "MCO1 configuration succesfull \n");
@@ -331,29 +375,56 @@ void commandUSART(char* ptrBufferReception){
 		}
 	}
 	else if(strcmp(cmd, "reset") == 0){
-		writeMsg(&usartComm, "CMD: reset \n");
+		writeMsg(&usartComm, "\nCMD: reset \n");
 		changeMCO1(MCO1_HSI_CLOCK, MCO1_DIVIDED_BY_1);
 		writeMsg(&usartComm, "The MC01 source is HSI with prescaler of 1 \n");
 	}
+	else if(strcmp(cmd, "sampling") == 0){
+			writeMsg(&usartComm, "\nCMD: sampling \n");
+			freqADC = firstParameter;
+			writeMsg(&usartComm, "The new frequency of");
+	}
+	else if(strcmp(cmd, "show") == 0){
+			writeMsg(&usartComm, "\nCMD: sampling \n");
+			startPwmSignal(&handlerPwmEventADC);
+			writeMsg(&usartComm, "Wait... We are taking 256 data from ADC\n");
+	}
 	else{
-		writeMsg(&usartComm, "Wrong command \n");
+		writeMsg(&usartComm, "\nWrong command \n");
 	}
 }
-
 
 /** Función encargada de guardar los datos tomados cada 1ms en los respectivos arreglos */
 void saveData(void){
 
-	i2c_readMultipleRegisters(&handlerAccelerometer, arrayRegisters, 6, arraySaveData);
+	i2c_readMultipleRegisters(&handlerAccelerometer, ACCEL_XOUT_H, 6, arraySaveData);
 
-	int16_t AccelX = arraySaveData[1] << 8 | arraySaveData[0]; // Aquí lo que se hace es básicamente concatenar los valores
+	int16_t AccelX = arraySaveData[0] << 8 | arraySaveData[1]; // Aquí lo que se hace es básicamente concatenar los valores
 	arrayXYZdata[0] = (float)((int)AccelX*factConv);
 
-	int16_t AccelY = arraySaveData[3] << 8 | arraySaveData[2]; // Aquí lo que se hace es básicamente concatenar los valores
+	int16_t AccelY = arraySaveData[2] << 8 | arraySaveData[3]; // Aquí lo que se hace es básicamente concatenar los valores
 	arrayXYZdata[1] = (float)((int)AccelY*factConv);
 
-	int16_t AccelZ = arraySaveData[5] << 8 | arraySaveData[4]; // Aquí lo que se hace es básicamente concatenar los valores
+	int16_t AccelZ = arraySaveData[4] << 8 | arraySaveData[5]; // Aquí lo que se hace es básicamente concatenar los valores
 	arrayXYZdata[2] = (float)((int)AccelZ*factConv);
+}
+
+/** Función encargada de iniciar el cristal LSE */
+void initLSE(void){
+	// Activamos el Power Interface Clock
+	RCC->APB1ENR |= RCC_APB1ENR_PWREN;
+	// Permitimos escritura en el LSE
+	PWR->CR |= PWR_CR_DBP;
+	// Activamos el LSE
+	RCC->BDCR |= RCC_BDCR_LSEON;
+	// Esperamos hasta que sea estable
+	while(!(RCC->BDCR & RCC_BDCR_LSERDY)){
+		__NOP();
+	}
+	// Seleccionamos el LSE como RTC
+	RCC->BDCR |= RCC_BDCR_RTCSEL_0;
+	// Activamos el RTC
+	RCC->BDCR |= RCC_BDCR_RTCEN;
 }
 
 
@@ -372,6 +443,24 @@ void BasicTimer4_Callback(void){
 /* Interrupción del USART1 */
 void usart1Rx_Callback(void){
 	usartRxData = getRxData();
+}
+
+/* Interrupción del ADC */
+void adcComplete_Callback(void){
+	if(indicatorADC == 0){
+		dataChannelADC0[counterDataADC] = getADC();
+		indicatorADC++;
+	}
+	else{
+		dataChannelADC1[counterDataADC] = getADC();
+		counterDataADC++;
+		indicatorADC = 0;
+	}
+	if(counterDataADC == 256){
+		counterDataADC = 0;
+		stopPwmSignal(&handlerPwmEventADC);
+		adcComplete = 1;
+	}
 }
 
 /** Función encargada de gestionar las acciones según la tecla de recepción*/
@@ -403,9 +492,9 @@ void actionRxData(void){
 		sprintf(bufferData, "Axis X data (r) \n");
 		writeMsg(&usartComm, bufferData);
 
-		i2c_readMultipleRegisters(&handlerAccelerometer, arrayRegisters, 6, arraySaveData);
+		i2c_readMultipleRegisters(&handlerAccelerometer, ACCEL_XOUT_H, 6, arraySaveData);
 
-		int16_t AccelX = arraySaveData[1] << 8 | arraySaveData[0]; // Aquí lo que se hace es básicamente concatenar los valores
+		int16_t AccelX = arraySaveData[0] << 8 | arraySaveData[1]; // Aquí lo que se hace es básicamente concatenar los valores
 		sprintf(bufferData, "AccelX = %.3f m/s² \n", AccelX*factConv);
 		writeMsg(&usartComm, bufferData);
 		usartRxData = '\0';
@@ -414,9 +503,9 @@ void actionRxData(void){
 		sprintf(bufferData, "Axis Y data (r) \n");
 		writeMsg(&usartComm, bufferData);
 
-		i2c_readMultipleRegisters(&handlerAccelerometer, arrayRegisters, 6, arraySaveData);
+		i2c_readMultipleRegisters(&handlerAccelerometer, ACCEL_XOUT_H, 6, arraySaveData);
 
-		int16_t AccelY = arraySaveData[3] << 8 | arraySaveData[2]; // Aquí lo que se hace es básicamente concatenar los valores
+		int16_t AccelY = arraySaveData[2] << 8 | arraySaveData[3]; // Aquí lo que se hace es básicamente concatenar los valores
 		sprintf(bufferData, "AccelY = %.3f m/s² \n", AccelY*factConv);
 		writeMsg(&usartComm, bufferData);
 		usartRxData = '\0';
@@ -425,9 +514,9 @@ void actionRxData(void){
 		sprintf(bufferData, "Axis Z data (r) \n");
 		writeMsg(&usartComm, bufferData);
 
-		i2c_readMultipleRegisters(&handlerAccelerometer, arrayRegisters, 6, arraySaveData);
+		i2c_readMultipleRegisters(&handlerAccelerometer, ACCEL_XOUT_H, 6, arraySaveData);
 
-		int16_t AccelZ = arraySaveData[5] << 8 | arraySaveData[4]; // Aquí lo que se hace es básicamente concatenar los valores
+		int16_t AccelZ = arraySaveData[4] << 8 | arraySaveData[5]; // Aquí lo que se hace es básicamente concatenar los valores
 		sprintf(bufferData, "AccelZ = %.3f m/s² \n", AccelZ*factConv);
 		writeMsg(&usartComm, bufferData);
 		usartRxData = '\0';
@@ -435,21 +524,4 @@ void actionRxData(void){
 	else{
 		usartRxData = '\0';
 	}
-}
-
-void initLSE(void){
-	// Activamos el Power Interface Clock
-	RCC->APB1ENR |= RCC_APB1ENR_PWREN;
-	// Permitimos escritura en el LSE
-	PWR->CR |= PWR_CR_DBP;
-	// Activamos el LSE
-	RCC->BDCR |= RCC_BDCR_LSEON;
-	// Esperamos hasta que sea estable
-	while(!(RCC->BDCR & RCC_BDCR_LSERDY)){
-		__NOP();
-	}
-	// Seleccionamos el LSE como RTC
-	RCC->BDCR |= RCC_BDCR_RTCSEL_0;
-	// Activamos el RTC
-	RCC->BDCR |= RCC_BDCR_RTCEN;
 }

@@ -274,59 +274,41 @@ uint8_t i2c_readSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead){
 	return auxRead;
 }
 
-//void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t startRegister, uint8_t numRegisters, uint8_t *registerValues) {
-//    // Se genera el start
-//    i2c_startTransaction(ptrHandlerI2C);
-//    // Se envía la dirección del slave y se indica ESCRIBIR
-//    i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_WRITE_DATA);
-//    // Se envía la dirección de memoria que se desea leer
-//    i2c_sendMemoryAddress(ptrHandlerI2C, startRegister);
-//    // Se crea condición de restart
-//    i2c_reStartTransaction(ptrHandlerI2C);
-//    // Enviamos la dirección del slave y la indicación de leer
-//    i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_READ_DATA);
-//
-//    for (uint8_t i = 0; i < numRegisters; i++) {
-//
-//        // Leemos el dato que envía el slave
-//        registerValues[i] = i2c_readDataByte(ptrHandlerI2C);
-//    }
-//            i2c_sendNoAck(ptrHandlerI2C);
-//
-//    // Se genera condición de stop para que se detenga después de leer los registros
-//    i2c_stopTransaction(ptrHandlerI2C);
-//}
+void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t startReg, uint8_t numReg, uint8_t* arraySaveValues){
 
-/** Función para leer bytes de múltiples registros*/
-void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t* arrayRegToRead, uint8_t numberOfReg, uint8_t* arraySaveData){
+	/* 1. Generamos la condición de Start */
+    i2c_startTransaction(ptrHandlerI2C);
 
-	for(int i = 0; i < numberOfReg; i++){
+    /* 2. Enviamos la dirección del esclavo y la indicación de ESCRIBIR */
+    i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_WRITE_DATA);
 
-		/* 1. Generamos la condición de Start */
-		i2c_startTransaction(ptrHandlerI2C);
+    /* 3. Enviamos la dirección de memoria que deseamos leer */
+    i2c_sendMemoryAddress(ptrHandlerI2C, startReg);
 
-		/* 2. Enviamos la dirección del esclavo y la indicación de ESCRIBIR */
-		i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_WRITE_DATA);
+    /* 4. Creamos una condición de Re-Start */
+    i2c_reStartTransaction(ptrHandlerI2C);
 
-		/* 3. Enviamos la dirección de memoria que deseamos leer */
-		i2c_sendMemoryAddress(ptrHandlerI2C, arrayRegToRead[i]);
+    /* 5. Enviamos la dirección del esclavo y la indicación de LEER */
+    i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_READ_DATA);
 
-		/* 4. Creamos una condición de Re-Start */
-		i2c_reStartTransaction(ptrHandlerI2C);
+    /* 6. Activamos la indicación de Ack, y vamos a aprovechar la propiedad de auto-incremento del sensor en el registro a leer */
+    i2c_sendAck(ptrHandlerI2C);
 
-		/* 5. Enviamos la dirección del esclavo y la indicación de LEER */
-		i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_READ_DATA);
+    for (uint8_t i = 0; i < numReg; i++) {
 
-		/* 6. Leemos el dato que envía el esclavo y guardamos en arreglo */
-		arraySaveData[i] = i2c_readDataByte(ptrHandlerI2C);
+    	/* 7. Leemos el dato que envía el esclavo */
+    	arraySaveValues[i] = i2c_readDataByte(ptrHandlerI2C);
 
-		/* 7. Generamos la condición de NoAck, para el Master no responda y el Slave solo envíe 1 byte */
-		i2c_sendNoAck(ptrHandlerI2C);
+        /* 8. El la lectura del último registro llega en numReg-1, pero debemos preparar el NoAck antes de eso */
+        if(i==numReg-2){
+            i2c_sendNoAck(ptrHandlerI2C);
+        }
+    }
 
-		/* 8. Generamos la condición Stop, para que el Slave se detenga después de 1 byte */
-		i2c_stopTransaction(ptrHandlerI2C);
-	}
+    /* 9. Generamos la condición Stop, para que el Slave se detenga después de 1 byte */
+    i2c_stopTransaction(ptrHandlerI2C);
 }
+
 
 /** Función para escribir un byte simple */
 void i2c_writeSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToWrite, uint8_t newValue){

@@ -61,7 +61,6 @@ uint8_t i2cBuffer = 0;
 #define ACCEL_YOUT_L 	62 // 0x3E
 #define ACCEL_ZOUT_H 	63 // 0x3F
 #define ACCEL_ZOUT_L 	64 // 0x40
-uint8_t arrayReg[6] = {59,60,61,62,63,64};
 uint8_t arraySaveData[6] = {0};
 
 #define PWR_MGMT_1	107

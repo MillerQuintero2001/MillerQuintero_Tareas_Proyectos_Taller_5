@@ -117,10 +117,10 @@ void pwm_Config(PWM_Handler_t *ptrPwmHandler){
 		break;
 	}
 
-	/* 6. Activamos la salida seleccionada */
-	enableOutput(ptrPwmHandler);
-
 	}// fin del switch-case
+
+//	/* 6. Activamos la salida seleccionada */
+//	enableOutput(ptrPwmHandler);
 }
 
 /* Función para activar el Timer y activar todo el módulo PWM */
@@ -161,6 +161,35 @@ void enableOutput(PWM_Handler_t *ptrPwmHandler) {
 		break;
 	}
 	}
+}
+
+void disableOutput(PWM_Handler_t *ptrPwmHandler){
+	switch (ptrPwmHandler->PWMx_Config.PWMx_Channel) {
+		case PWM_CHANNEL_1: {
+			// Activamos la salida del canal 1
+			ptrTimerPWM->CCER &= ~TIM_CCER_CC1E;
+			break;
+		}
+		case PWM_CHANNEL_2: {
+			// Activamos la salida del canal 1
+			ptrTimerPWM->CCER &= ~TIM_CCER_CC2E;
+			break;
+		}
+		case PWM_CHANNEL_3: {
+			// Activamos la salida del canal 1
+			ptrTimerPWM->CCER &= ~TIM_CCER_CC3E;
+			break;
+		}
+		case PWM_CHANNEL_4: {
+			// Activamos la salida del canal 1
+			ptrTimerPWM->CCER &= ~TIM_CCER_CC4E;
+			break;
+		}
+		default: {
+			__NOP();
+			break;
+		}
+		}
 }
 
 /*

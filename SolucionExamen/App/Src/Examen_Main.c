@@ -63,7 +63,7 @@ GPIO_Handler_t handlerPinTX = {0};	// Pin de transmisión de datos
 GPIO_Handler_t handlerPinRX = {0};	// Pin de recepción de datos
 USART_Handler_t usartComm =  {0};	// Comunicación serial
 uint8_t usartRxData = 0; 			// Variable en la que se guarda el dato transmitido
-char bufferData[64] = {0}; 			// Buffer de datos como un arreglo de caracteres
+char bufferData[128] = {0}; 			// Buffer de datos como un arreglo de caracteres
 char userMsg[] = "Funciona por comandos c: \n";
 char bufferReception[32] = {0};
 char cmd[16] = {0};
@@ -87,7 +87,7 @@ uint16_t samplingArray[2] = {ADC_SAMPLING_PERIOD_84_CYCLES, ADC_SAMPLING_PERIOD_
 uint16_t dataChannelADC0[256] = {0};
 uint16_t dataChannelADC1[256]  = {0};
 PWM_Handler_t handlerPwmEventADC = {0};
-uint8_t counterDataADC = 0;
+uint16_t counterDataADC = 0;
 uint8_t indicatorADC = 0;
 uint8_t adcComplete = 0;
 
@@ -131,7 +131,7 @@ int main(void){
 
 		if(adcComplete){
 			adcComplete = 0;
-			for(uint8_t i = 0; i<256; i++){
+			for(uint16_t i = 0; i<256; i++){
 				sprintf(bufferData, "%u\t%u\n", dataChannelADC0[i],dataChannelADC1[i]);
 				writeMsg(&usartComm, bufferData);
 			}
@@ -207,8 +207,8 @@ void initSystem(void){
 	// Pongo estado en alto
 	GPIO_WritePin(&handlerBlinkyPin, SET);
 
-	// Atributos para el Timer 2 del LED de estado
-	handlerBlinkyTimer.ptrTIMx								= TIM2;
+	// Atributos para el Timer 4 del LED de estado
+	handlerBlinkyTimer.ptrTIMx								= TIM4;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
@@ -218,8 +218,8 @@ void initSystem(void){
 
 	/*----------------------------------------------------------------------------------------*/
 
-	/* Configuración del Timer 4 para controlar el muestreo*/
-	handlerSamplingTimer.ptrTIMx							= TIM4;
+	/* Configuración del Timer 3 para controlar el muestreo*/
+	handlerSamplingTimer.ptrTIMx							= TIM3;
 	handlerSamplingTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerSamplingTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerSamplingTimer.TIMx_Config.TIMx_period			= 50;
@@ -293,22 +293,24 @@ void initSystem(void){
 	handlerDualChannelADC.resolution		= ADC_RESOLUTION_12_BIT;
 	handlerDualChannelADC.dataAlignment		= ADC_ALIGNMENT_RIGHT;
 	handlerDualChannelADC.extTriggerEnable	= ADC_EXTEN_RISING_EDGE;
-	handlerDualChannelADC.extTriggerSelect	= ADC_EXTSEL_TIM5_CC3;
+	handlerDualChannelADC.extTriggerSelect	= ADC_EXTSEL_TIM2_CC2;
 	// Paso el elemento ADC la función de configuración, indicando el número de canales
 	adc_ConfigMultichannel(&handlerDualChannelADC, 2);
 
 	/* Configuración del PWM usado como disparador de la conversión ADC */
 	// Utilizo el canal 3 para PWM del Timer 5 ya que el 1 y 2 están ocupados por ADC
-	handlerPwmEventADC.ptrTIMx						= TIM5;
-	handlerPwmEventADC.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_3;
+	handlerPwmEventADC.ptrTIMx						= TIM2;
+	handlerPwmEventADC.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_2;
 	handlerPwmEventADC.PWMx_Config.PWMx_Prescaler	= BTIMER_PLL_100MHz_SPEED_1us;
 	handlerPwmEventADC.PWMx_Config.PWMx_Period		= freqADC;
 	handlerPwmEventADC.PWMx_Config.PWMx_DuttyCicle	= freqADC/2;
 	pwm_Config(&handlerPwmEventADC);
-	enableOutput(&handlerPwmEventADC);
 
 	/* Inicio el cristal LSE como RTC activo */
 	initLSE();
+
+	/* Reset del sensor por si no toma datos */
+	i2c_writeSingleRegister(&handlerAccelerometer, PWR_MGMT_1, 0x00);
 
 	//Fin initSystem
 
@@ -381,12 +383,23 @@ void commandUSART(char* ptrBufferReception){
 	}
 	else if(strcmp(cmd, "sampling") == 0){
 			writeMsg(&usartComm, "\nCMD: sampling \n");
-			freqADC = firstParameter;
-			writeMsg(&usartComm, "The new frequency of");
+			/* Calculamos el valor a cargar en el ARR de forma que se garantize un
+			 * muestreo con el PWM, a una frecuencia 10 veces mayor a la deseada */
+			if((firstParameter>=800)&&(firstParameter<=1500)){
+			freqADC = (uint16_t)(((float)(1.0/firstParameter))*1000000)/10;
+			updatePeriod(&handlerPwmEventADC, freqADC);
+			updateDuttyCycle(&handlerPwmEventADC, freqADC/2);
+			sprintf(bufferData, "The new sampling frequency is %u Hz, because according to the sampling theorem it must be 10 times more \n", firstParameter*10);
+			writeMsg(&usartComm, bufferData);
+			}
+			else{
+				writeMsg(&usartComm, "Incorrect frequency, must be an integer value between 800 Hz and 1500 Hz \n");
+			}
 	}
 	else if(strcmp(cmd, "show") == 0){
 			writeMsg(&usartComm, "\nCMD: sampling \n");
 			startPwmSignal(&handlerPwmEventADC);
+			enableOutput(&handlerPwmEventADC);
 			writeMsg(&usartComm, "Wait... We are taking 256 data from ADC\n");
 	}
 	else{
@@ -429,13 +442,13 @@ void initLSE(void){
 
 
 /* Interrupción del timer blinky LED */
-void BasicTimer2_Callback(void){
+void BasicTimer4_Callback(void){
 	GPIOxTooglePin(&handlerStatePin);	//Cambio el estado del LED PH1
 	GPIOxTooglePin(&handlerBlinkyPin);	//Cambio el estado del LED PA5
 }
 
 /* Interrupción del timer de muestreo */
-void BasicTimer4_Callback(void){
+void BasicTimer3_Callback(void){
 	flag200HzSamplingData = 1; 	// Levanto bandera para tomar datos cada 1ms
 	counter_ms++;
 }
@@ -453,11 +466,13 @@ void adcComplete_Callback(void){
 	}
 	else{
 		dataChannelADC1[counterDataADC] = getADC();
-		counterDataADC++;
 		indicatorADC = 0;
+		counterDataADC++;
+
 	}
-	if(counterDataADC == 256){
+	if(counterDataADC > 255){
 		counterDataADC = 0;
+		disableOutput(&handlerPwmEventADC);
 		stopPwmSignal(&handlerPwmEventADC);
 		adcComplete = 1;
 	}

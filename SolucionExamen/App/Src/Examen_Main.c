@@ -385,7 +385,7 @@ void commandUSART(char* ptrBufferReception){
 			writeMsg(&usartComm, "\nCMD: sampling \n");
 			/* Calculamos el valor a cargar en el ARR de forma que se garantize un
 			 * muestreo con el PWM, a una frecuencia 10 veces mayor a la deseada */
-			if((firstParameter>=800)&&(firstParameter<=1500)){
+			if((firstParameter>=800)&&(firstParameter<=3000)){
 			freqADC = (uint16_t)(((float)(1.0/firstParameter))*1000000)/10;
 			updatePeriod(&handlerPwmEventADC, freqADC);
 			updateDuttyCycle(&handlerPwmEventADC, freqADC/2);
@@ -393,7 +393,7 @@ void commandUSART(char* ptrBufferReception){
 			writeMsg(&usartComm, bufferData);
 			}
 			else{
-				writeMsg(&usartComm, "Incorrect frequency, must be an integer value between 800 Hz and 1500 Hz \n");
+				writeMsg(&usartComm, "Incorrect frequency, must be an integer value between 800 Hz and 3000 Hz \n");
 			}
 	}
 	else if(strcmp(cmd, "show") == 0){

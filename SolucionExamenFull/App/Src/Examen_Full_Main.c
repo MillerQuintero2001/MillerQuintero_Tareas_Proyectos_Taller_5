@@ -159,7 +159,7 @@ int main(void){
 
 		// Muestreo de datos constante cada 5ms
 		if(flag200HzSamplingData){
-			// Controlo el contador de milisegundos, para controlar los datos
+			// Controlo el contador de cada 5 milisegundos, para controlar los datos
 			if(counter_ms > 1024){
 				counter_ms = 0;
 				captureAccel = 0;
@@ -192,7 +192,9 @@ int main(void){
 					maxFourierIndex = i;
 				}
 			}
-			// Calculamos el valor máximo con la fórmula: Indice * FrecMuestreo * PI * fftSize
+			/* Calculamos el valor máximo con la fórmula: Indice * FrecMuestreo * (2*fftSize)
+			 * se multiplica fftSize por 2 porque al tomar solo los indices pares del arreglo
+			 * retornado, quedo la mitad del tamaño original de la FFT*/
 			fundFrequencyFFT = (float)(maxFourierIndex* 200 /(fftSize))/2;
 			sprintf(bufferData, "La frecuencia fundamental es %#.6f Hz \n", fundFrequencyFFT);
 			writeMsg(&usartComm, bufferData);
@@ -412,7 +414,7 @@ void commandUSART(char* ptrBufferReception){
 				" -- Source: HSE = 0; LSE = 1, PLL = 3 \n"
 				" -- Pre-escaler from 1 to 5 \n");
 		writeMsg(&usartComm, "4) reset				-- Reset MCO config, as HSI with Prescaler = 1 \n");
-		writeMsg(&usartComm, "9) sampling #Freq[Hz]	-- ADC sampling config, #A indicates the sampling frequency \n");
+		writeMsg(&usartComm, "9) sampling #Freq[Hz]	-- ADC sampling 40 times more config, #A indicates the sampling frequency between 800 to 3000 Hz \n");
 		writeMsg(&usartComm, "10) show				-- Show ADC data saved in arrays \n");
 		writeMsg(&usartComm, "11) capture			-- Launch capture of Accelerometer data \n");
 		writeMsg(&usartComm, "12) fourier			-- Show frequency data with CMSIS-FFT \n");
@@ -470,9 +472,9 @@ void commandUSART(char* ptrBufferReception){
 
 	else if(strcmp(cmd, "capture") == 0){
 		writeMsg(&usartComm, "\nCMD: capture \n");
-		// Levanto la bandera para tomar 2048 datos a 200 Hz en el main, para la FFT
+		// Levanto la bandera para tomar 1024 datos a 200 Hz en el main, para la FFT
 		captureAccel = 1;
-		writeMsg(&usartComm, "Wait... We are taking 2048 data from Accelerometer with I2C\n");
+		writeMsg(&usartComm, "Wait... We are taking 1024 data from Accelerometer with I2C\n");
 	}
 
 	else if(strcmp(cmd, "fourier") == 0){

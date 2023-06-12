@@ -214,7 +214,7 @@ void updatePeriod(PWM_Handler_t *ptrPwmHandler, uint16_t newPeriod){
 	// Actualizamos el registro que manipula el periodo
 	ptrPwmHandler->PWMx_Config.PWMx_Period = newPeriod;
 
-	// Llamamos a la fucnión que cambia la frecuencia
+	// Llamamos a la función que cambia la frecuencia
 	setPeriod(ptrPwmHandler);
 }
 

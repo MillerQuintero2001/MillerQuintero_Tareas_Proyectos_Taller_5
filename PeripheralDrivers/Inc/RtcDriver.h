@@ -19,16 +19,16 @@
 #define RTC_WEEK_DAY_SATURDAY		6
 #define RTC_WEEK_DAY_SUNDAY			7
 
-#define RTC_HOUR_FORMAT_24H			0
-#define RTC_HOUR_FORMAT_AM_PM		1
+#define RTC_FORMAT_24H				0
+#define RTC_FORMAT_12H				1
 
-#define RTC_HOUR_AM		0
-#define RTC_HOUR_PM		1
+#define RTC_HOUR_FORMAT_24H			0
+#define RTC_HOUR_FORMAT_12H_AM		1
+#define RTC_HOUR_FORMAT_12H_PM		2
 
 typedef struct
 {
 	uint8_t RTC_HourFormat;
-	uint8_t RTC_HourAMxPM;
 	uint8_t RTC_Hours;
 	uint8_t RTC_Minutes;
 	uint8_t RTC_Seconds;
@@ -39,10 +39,11 @@ typedef struct
 
 /* Prototipos de Funciones */
 void configRTC(RTC_Handler_t *ptrRtcHandler);
-void updateTime(RTC_Handler_t *ptrRtcHandler, uint8_t hour, uint8_t min, uint8_t seg);
-void updateDate(RTC_Handler_t *ptrRtcHandler, uint8_t day, uint8_t month, uint16_t year);
-void changeHourFormat(RTC_Handler_t *ptrRtcHandler, uint8_t format);
-void readCalendar(uint16_t *arrayCalendarData);
-uint16_t conversionBCDtoDEC(uint16_t BCDdata);
+//void updateTime(RTC_Handler_t *ptrRtcHandler, uint8_t hour, uint8_t min, uint8_t seg, uint8_t amOrpm);
+//void updateDate(RTC_Handler_t *ptrRtcHandler, uint8_t day, uint8_t month, uint16_t year);
+//void changeHourFormat(RTC_Handler_t *ptrRtcHandler, uint8_t format);
+void readCalendar(uint8_t *arrayCalendarData);
+uint8_t conversionBCDtoDEC(uint8_t BCDdata);
+uint8_t conversionDECtoBCD(uint8_t DECdata);
 
 #endif /* RTCDRIVER_H_ */

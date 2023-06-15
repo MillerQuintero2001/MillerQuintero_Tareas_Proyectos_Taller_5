@@ -224,19 +224,19 @@ void setDuttyCycle(PWM_Handler_t *ptrPwmHandler){
 	// Seleccionamos el canal para configurar su dutty
 	switch(ptrPwmHandler->PWMx_Config.PWMx_Channel){
 	case PWM_CHANNEL_1:{
-		ptrTimerPWM->CCR1 = (ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle);
+		ptrTimerPWM->CCR1 = (ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle) -1;
 		break;
 	}
 	case PWM_CHANNEL_2:{
-		ptrTimerPWM->CCR2 = (ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle);
+		ptrTimerPWM->CCR2 = (ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle) -1;
 		break;
 	}
 	case PWM_CHANNEL_3:{
-		ptrTimerPWM->CCR3 = (ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle);
+		ptrTimerPWM->CCR3 = (ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle) -1;
 		break;
 	}
 	case PWM_CHANNEL_4:{
-		ptrTimerPWM->CCR4 = (ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle);
+		ptrTimerPWM->CCR4 = (ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle) -1;
 		break;
 	}
 	default:{

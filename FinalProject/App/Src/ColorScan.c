@@ -28,21 +28,25 @@
 
 #include "arm_math.h"
 
-/* Definición de los handlers necesarios */
+// Definiciones a emplear
 
-// Elementos para el Blinky LED
+/* Elementos para el Blinky LED */
 GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 
-// Elementos para hacer la comunicación serial
-GPIO_Handler_t handlerPinTX = {0};	// Pin de transmisión de datos
-GPIO_Handler_t handlerPinRX = {0};	// Pin de recepción de datos
-USART_Handler_t usartComm =  {0};	// Comunicación serial
-uint8_t sendMsg = 0; // Variable para controlar la comunicación
-uint8_t usartData = 0; // Variable en la que se guarda el dato transmitido
-char bufferData[128] = {0}; // Buffer de datos como un arreglo de caracteres
+/* Elementos para hacer la comunicación serial */
+GPIO_Handler_t handlerPinTX = {0};			// Pin de transmisión de datos
+GPIO_Handler_t handlerPinRX = {0};			// Pin de recepción de datos
+USART_Handler_t usartComm =  {0};			// Comunicación serial
+uint8_t usartData = 0; 						// Variable en la que se guarda el dato transmitido
+char bufferData[128] = {0}; 				// Buffer de datos como un arreglo de caracteres
+char bufferReception[32] = {0};				// Buffer para el comando recibido
+char cmd[16] = {0};
+uint16_t counterReception = 0;				// Contador de carácteres para la recepción
+bool stringComplete = false;				// Booleano que indica que se ha completado el comando
+unsigned int firstParameter = 0;			// Parámetro en los comandos
 
-// Elementos para el PWM
+/* Elementos para el PWM */
 GPIO_Handler_t handlerPinPwmStepMotor1 = {0};
 GPIO_Handler_t handlerPinDirStepMotor1 = {0};
 PWM_Handler_t handlerSignalStepMotor1 = {0};
@@ -53,16 +57,28 @@ PWM_Handler_t handlerSignalStepMotor2 = {0};
 uint16_t period = 100;
 uint16_t dutty = 50;
 
-// Elementos para comunicación I2C con el Sensor RGB
+/* Elementos para comunicación I2C con el Sensor RGB */
 
-// Elementos para comunicación I2C del sensor
+// Creamos la estructura que nos ayudará a tener la matriz con la tripleta de datos RGB
+typedef struct {
+	uint8_t red;
+	uint8_t green;
+	uint8_t blue;
+}RGB_Triple_t;
+
+uint16_t datosFila = 0;
+uint16_t datosColumna = 0;
+
+RGB_Triple_t matrixRGBdata[datosFila][datosColumna] = {0};
+
 uint8_t arraySaveData[8] = {0};
-uint8_t dataRGB[3] = {0};
+
 I2C_Handler_t handlerRGB_Sensor = {0};
 GPIO_Handler_t handlerRGB_SCL = {0};
 GPIO_Handler_t handlerRGB_SDA = {0};
 uint8_t i2cBuffer = 0;
 
+// Registros del sensor RGB
 #define RGB_SLAVE_ADDRESS	0b0101001	// 0x29
 #define ENABLE_REGISTER		0			// 0x00
 #define TIMING_REGISTER		1			// 0x01
@@ -85,10 +101,20 @@ uint8_t i2cBuffer = 0;
 #define COMMAND_BIT_AUTOINCREMENT	0b10100000
 
 
+// Variables bandera de los modos de operación
+uint8_t flagManualMove = 0;
+uint8_t flagResolution = 0;
+uint8_t flagScan = 0;
+uint8_t flagReadyPrint = 0;
+uint8_t flagPrint = 0;
+
+
 /* Definición de prototipos de funciones para el main */
 void initSystem(void); 			// Función que inicializa los periféricos básicos
 void saveData(void);			// Función encargada de guardar los datos RGB
 void initRgbSensor(void);		// Función encargada de inicializar el sensor RGB con la configuración deseada
+void commandBuild(void);							// Función que construye el string del comando USART
+void commandUSART(char* arrayCmd);					// Función encargada de gestionar el comando ingresado por USART
 void upDirection(void);			// Función encargada de configurar dirección de los motores para mover CNC arriba
 void downDirection(void);		// Función encargada de configurar dirección de los motores para mover CNC abajo
 void rightDirection(void);		// Función encargada de configurar dirección de los motores para mover CNC derecha
@@ -107,131 +133,25 @@ int main(void){
     /* Loop forever */
 	while(1){
 
-
-		if(usartData != '\0'){
+		// Hacemos un "eco" con el valor que nos llega por el serial, y que no estemos en modo de movimiento manual de la CNC
+		if((usartData != '\0')&&(flagManualMove == 0)){
 			writeChar(&usartComm, usartData);
-			if(usartData == 'w'){
-				sprintf(bufferData, "WHO_AM_I? (r)\n"); // La "(r)" en el texto es para indicar que estamos leyendo
-				writeMsg(&usartComm, bufferData);
-
-				i2cBuffer = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | ID_REGISTER));
-				sprintf(bufferData, "dataRead = 0x%x \n", (unsigned int) i2cBuffer);
-				writeMsg(&usartComm, bufferData);
-				usartData = '\0';
-			}
-//			else if(usartData == 's'){
-//
-//				// Espero toma de datos
-//				saveData();
-//				usartData = '\0';
-//			}
-//
-//			else if(usartData == 'r'){
-//				sprintf(bufferData, "Red data (r) \n");
-//				writeMsg(&usartComm, bufferData);
-//
-//				uint8_t Red_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | RED_DATA_LOW));
-//				uint8_t Red_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | RED_DATA_HIGH));
-//				uint16_t Red = ((uint16_t)Red_high) << 8 | (Red_low & 0xFF);
-//				sprintf(bufferData, "Red data = %u \n", Red);
-//				writeMsg(&usartComm, bufferData);
-//				usartData = '\0';
-//			}
-//
-//			else if(usartData == 'g'){
-//				sprintf(bufferData, "Green data (r) \n");
-//				writeMsg(&usartComm, bufferData);
-//
-//				uint8_t Green_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | GREEN_DATA_LOW));
-//				uint8_t Green_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | GREEN_DATA_HIGH));
-//				uint16_t Green = Green_high << 8 | (Green_low & 0xFF);
-//				sprintf(bufferData, "Green data = %u \n", Green);
-//				writeMsg(&usartComm, bufferData);
-//				usartData = '\0';
-//			}
-//
-//			else if(usartData == 'b'){
-//				sprintf(bufferData, "Blue data (r) \n");
-//				writeMsg(&usartComm, bufferData);
-//
-//				uint8_t Blue_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | BLUE_DATA_LOW));
-//				uint8_t Blue_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | BLUE_DATA_HIGH));
-//				uint16_t Blue = Blue_high << 8 | (Blue_low & 0xFF);
-//				sprintf(bufferData, "Blue data = %u \n", Blue);
-//				writeMsg(&usartComm, bufferData);
-//				usartData = '\0';
-//			}
-//
-//			else if(usartData == 'c'){
-//				sprintf(bufferData, "Clear data (r) \n");
-//				writeMsg(&usartComm, bufferData);
-//
-//				uint8_t Clear_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | CLEAR_DATA_LOW));
-//				uint8_t Clear_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | CLEAR_DATA_HIGH));
-//				uint16_t Clear = Clear_high << 8 | (Clear_low & 0xFF);
-//				sprintf(bufferData, "Clear data = %u \n", Clear);
-//				writeMsg(&usartComm, bufferData);
-//				usartData = '\0';
-//			}
+			commandBuild();
+		}
 
 
-			/* Down del Dutty Cycle */
-			else if(usartData == 'I'){
-				enableOutput(&handlerSignalStepMotor1);
-				startPwmSignal(&handlerSignalStepMotor1);
-				enableOutput(&handlerSignalStepMotor2);
-				startPwmSignal(&handlerSignalStepMotor2);
-				usartData = '\0';
-			}
-
-			/* Up del Dutty Cycle */
-			else if(usartData == 'P'){
-				stopPwmSignal(&handlerSignalStepMotor1);
-				stopPwmSignal(&handlerSignalStepMotor1);
-				disableOutput(&handlerSignalStepMotor2);
-				disableOutput(&handlerSignalStepMotor2);
-				usartData = '\0';
-
-			}
-
-//			// Dirección arriba
-//			else if(usartData == 'U'){
-//				upDirection();
-//				usartData = '\0';
-//			}
-//			// Dirección abajo
-//			else if(usartData == 'D'){
-//				downDirection();
-//				usartData = '\0';
-//			}
-//			// Dirección derecha
-//			else if(usartData == 'R'){
-//				rightDirection();
-//				usartData = '\0';
-//			}
-//			// Dirección izquierda
-//			else if(usartData == 'L'){
-//				leftDirection();
-//				usartData = '\0';
-//			}
+		// Verificamos si se ha dado por completado del comando
+		if(stringComplete){
+			commandUSART(bufferReception);
+			stringComplete = false;
+		}
 
 
-			else if(usartData == 'M'){
-				period = period+4;
-				dutty = period/2;
-				updatePeriod(&handlerSignalStepMotor1, period);
-				updateDuttyCycle(&handlerSignalStepMotor1, dutty);
-				updatePeriod(&handlerSignalStepMotor2, period);
-				updateDuttyCycle(&handlerSignalStepMotor2, dutty);
-				usartData = '\0';
+		if(flagManualMove){
 
-			}
-			else if(usartData == 'H'){
-				updatePeriod(&handlerSignalStepMotor1, 100);
-				updateDuttyCycle(&handlerSignalStepMotor1, 50);
-				updatePeriod(&handlerSignalStepMotor2, 100);
-				updateDuttyCycle(&handlerSignalStepMotor2, 50);
-				usartData = '\0';
+			if(usartData == '\r'){
+				flagManualMove = 0;
+				writeMsg(&usartComm, " Current point has been select has origin, ready to scan");
 			}
 
 			else if(usartData == 'W'){
@@ -243,7 +163,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(10);
+				delay_ms(2);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -261,7 +181,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(10);
+				delay_ms(2);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -280,7 +200,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(10);
+				delay_ms(2);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -299,7 +219,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(10);
+				delay_ms(2);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -312,8 +232,35 @@ int main(void){
 			else{
 				usartData = '\0';
 			}
-
 		}
+
+		if(flagScan){
+		    for (int i = 0; i < datosFila; i++) {
+		        for (int j = 0; j < datosColumna; j++) {
+		            sprintf(bufferData,"[%u, %u, %u]", matrixRGBdata[i][j].red, matrixRGBdata[i][j].green, matrixRGBdata[i][j].blue);
+		            writeMsg(&usartComm, bufferData);
+		        }
+		        writeChar(&usartComm, '\n');
+		    }
+		    flagPrint = 0;
+		}
+
+
+		if(flagPrint){
+		    for (int i = 0; i < datosFila; i++) {
+		        for (int j = 0; j < datosColumna; j++) {
+		            sprintf(bufferData,"[%u, %u, %u]", matrixRGBdata[i][j].red, matrixRGBdata[i][j].green, matrixRGBdata[i][j].blue);
+		            writeMsg(&usartComm, bufferData);
+		        }
+		        writeChar(&usartComm, '\n');
+		    }
+		    flagPrint = 0;
+		}
+
+
+
+
+
 	}
 	return 0;
 }
@@ -434,34 +381,34 @@ void initSystem(void){
 
 	/*						I2C Sensor RGB						*/
 
-//	/* Configuración del pin SCL del I2C1 */
-//	handlerRGB_SCL.pGPIOx								= GPIOB;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinNumber		= PIN_8;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
-//	GPIO_Config(&handlerRGB_SCL);
-//
-//	/* Configuración del pin SDA del I2C1 */
-//	handlerRGB_SDA.pGPIOx								= GPIOB;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinNumber		= PIN_9;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
-//	GPIO_Config(&handlerRGB_SDA);
-//
-//	/* Configuración para el I2C1 */
-//	handlerRGB_Sensor.ptrI2Cx		= I2C1;
-//	handlerRGB_Sensor.modeI2C		= I2C_MODE_FM;
-//	handlerRGB_Sensor.slaveAddress	= RGB_SLAVE_ADDRESS;
-//	i2c_config(&handlerRGB_Sensor);
+	/* Configuración del pin SCL del I2C1 */
+	handlerRGB_SCL.pGPIOx								= GPIOB;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinNumber		= PIN_8;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
+	GPIO_Config(&handlerRGB_SCL);
+
+	/* Configuración del pin SDA del I2C1 */
+	handlerRGB_SDA.pGPIOx								= GPIOB;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinNumber		= PIN_9;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
+	GPIO_Config(&handlerRGB_SDA);
+
+	/* Configuración para el I2C1 */
+	handlerRGB_Sensor.ptrI2Cx		= I2C1;
+	handlerRGB_Sensor.modeI2C		= I2C_MODE_FM;
+	handlerRGB_Sensor.slaveAddress	= RGB_SLAVE_ADDRESS;
+	i2c_config(&handlerRGB_Sensor);
 
 	/* Iniciamos el sensor */
-	//initRgbSensor();
+	initRgbSensor();
 }
 
 /** Inicialización y configuración del sensor */
@@ -485,8 +432,6 @@ void initRgbSensor(void){
 
 /** Guardar datos sensor RGB */
 void saveData(void){
-	sprintf(bufferData, "Multiple read data (r) \n");
-	writeMsg(&usartComm, bufferData);
 
 	i2c_readMultipleRegisters(&handlerRGB_Sensor, COMMAND_BIT_AUTOINCREMENT | CLEAR_DATA_LOW, 8, arraySaveData);
 
@@ -494,7 +439,6 @@ void saveData(void){
 	uint16_t Red = ((uint16_t)arraySaveData[3] << 8) | ((uint16_t)arraySaveData[2] & 0xFF);
 	uint16_t Green = ((uint16_t)arraySaveData[5] << 8) | ((uint16_t)arraySaveData[4]& 0xFF);
 	uint16_t Blue = ((uint16_t)arraySaveData[7] << 8) | ((uint16_t)arraySaveData[6] & 0xFF);
-
 
 	if(Clear == 0){
 		dataRGB[0] = 0;
@@ -520,23 +464,112 @@ void saveData(void){
 		dataRGB[1] = (uint8_t)CalibrateGreen;
 		dataRGB[2] = (uint8_t)CalibrateBlue;
 	}
-	sprintf(bufferData, "RGB data are: %u, %u, %u \n", dataRGB[0], dataRGB[1], dataRGB[2]);
-	writeMsg(&usartComm, bufferData);
-
 	delay_ms(145);
+
+}
+
+/** Función encargada de construir el string con el comando */
+void commandBuild(void){
+	bufferReception[counterReception] = usartData;
+	counterReception++;
+
+	// Aqui hacemmos la instrucción que detine la recepción del comando
+	if(usartData == '\r'){
+		stringComplete = true;
+
+		//Sustituyo el último caracter de @ por un null
+		bufferReception[counterReception] = '\0';
+		counterReception = 0;
+	}
+	if(usartData == '\b'){
+		counterReception--;
+		counterReception--;
+	}
+
+	// Volvemos a null para terminar
+	usartData = '\0';
+}
+
+
+/** Función encargada de gestionar e identificar el comando ingresado, recibe el puntero al string */
+void commandUSART(char* ptrBufferReception){
+
+	sscanf(ptrBufferReception, "%s %u %s", cmd, &firstParameter, userMsg);
+
+	/* Usamos la funcion strcmp, string compare, que me retorna un 0 si los 2 strings son iguales */
+
+	// "help" este primer comando imprime una lista con los otros comandoS que tiene el equipo
+	if(strcmp(cmd, "help") == 0){
+		writeMsg(&usartComm, "\nHelp Menu CMDs:\n");
+		writeMsg(&usartComm, "1) help				-- Print this menu \n");
+		writeMsg(&usartComm, "2) changeOrigin		-- Enable control keyboard to select origin of scan \n");
+		writeMsg(&usartComm, "4) setResolution #R	-- Select one of the following possible resolutions: \n"
+				" 1 = XX.X mm, 2 = XX.X mm \n");
+		writeMsg(&usartComm, "5) startScan			-- Start to scan area and collect RGB data \n");
+		writeMsg(&usartComm, "5) printData			-- Print all data on serial terminal \n");
+	}
+
+	// Activamos el modo de control manual con una sola tecla
+	else if(strcmp(cmd, "changeOrigin") == 0){
+		writeMsg(&usartComm, "\nCMD: changeOrigin \n");
+		writeMsg(&usartComm, "Use W is Up, S is Down, A is Left, D is Right and press Enter to set origin \n");
+		flagManualMove = 1;
+	}
+
+	else if(strcmp(cmd, "setResolution") == 0){
+		writeMsg(&usartComm, "\nCMD: setResolution \n");
+		if((firstParameter == 1)||(firstParameter == 2)){
+			writeMsg(&usartComm, "Resolution set successfully \n");
+			flagResolution = 1;
+		}
+		else{
+			writeMsg(&usartComm, "Wrong resolution, try again \n");
+		}
+	}
+
+	else if(strcmp(cmd, "startScan") == 0){
+		writeMsg(&usartComm, "\nCMD: startScan \n");
+		if((flagManualMove == 0)&&(flagResolution == 1)){
+			writeMsg(&usartComm, "Error, set an origin and resolution first \n");
+		}
+		else{
+			writeMsg(&usartComm, "Scan started \n");
+			flagScan = 1;
+		}
+	}
+
+	else if(strcmp(cmd, "printData") == 0){
+		writeMsg(&usartComm, "\nCMD: printData \n");
+		if((flagReadyPrint == 1)&&(flagScan == 0)){
+			flagReadyPrint = 0;
+			flagPrint = 1;
+		}
+		else{
+			writeChar(&usartComm, "Error, there is no data to print, please, first set the source and resolution, then launch the scan \n");
+		}
+	}
+
+
+	// En cualquier otro caso, indicamos que el comando es incorrecto
+	else{
+		writeMsg(&usartComm, "\nWrong command \n");
+	}
+
+	// Limpiamos los parámetros para evitar configuraciones accidentales
+	firstParameter = 0;
 
 }
 
 /** Configuración arriba para la CNC */
 void upDirection(void){
-	GPIO_WritePin(&handlerPinDirStepMotor1, SET);
-	GPIO_WritePin(&handlerPinDirStepMotor2, RESET);
+	GPIO_WritePin(&handlerPinDirStepMotor1, RESET);
+	GPIO_WritePin(&handlerPinDirStepMotor2, SET);
 }
 
 /** Configuración abajo para la CNC */
 void downDirection(void){
-	GPIO_WritePin(&handlerPinDirStepMotor1, RESET);
-	GPIO_WritePin(&handlerPinDirStepMotor2, SET);
+	GPIO_WritePin(&handlerPinDirStepMotor1, SET);
+	GPIO_WritePin(&handlerPinDirStepMotor2, RESET);
 }
 
 /** Configuración derecha para la CNC */

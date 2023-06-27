@@ -34,6 +34,12 @@
 GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 
+// Elementos para las EXTI
+GPIO_Handler_t handlerButtonLimit1Y = {0};			// Pin para leer el final de carrera por choque
+GPIO_Handler_t handlerButtonLimit2Y = {0};			// Pin para leer el final de carrera por libertad
+EXTI_Config_t handlerExtiButtonLimit1 = {0};		// EXTI que frena PWM
+EXTI_Config_t handlerExtiButtonLimit2 = {0};		// EXTI que activa PWM
+
 // Elementos para hacer la comunicación serial
 GPIO_Handler_t handlerPinTX = {0};	// Pin de transmisión de datos
 GPIO_Handler_t handlerPinRX = {0};	// Pin de recepción de datos
@@ -53,6 +59,8 @@ PWM_Handler_t handlerSignalStepMotor2 = {0};
 uint16_t period = 100;
 uint16_t dutty = 50;
 
+uint8_t lockRight = 0;
+
 // Elementos para comunicación I2C con el Sensor RGB
 
 // Elementos para comunicación I2C del sensor
@@ -62,6 +70,7 @@ I2C_Handler_t handlerRGB_Sensor = {0};
 GPIO_Handler_t handlerRGB_SCL = {0};
 GPIO_Handler_t handlerRGB_SDA = {0};
 uint8_t i2cBuffer = 0;
+
 
 #define RGB_SLAVE_ADDRESS	0b0101001	// 0x29
 #define ENABLE_REGISTER		0			// 0x00
@@ -119,60 +128,60 @@ int main(void){
 				writeMsg(&usartComm, bufferData);
 				usartData = '\0';
 			}
-//			else if(usartData == 's'){
-//
-//				// Espero toma de datos
-//				saveData();
-//				usartData = '\0';
-//			}
-//
-//			else if(usartData == 'r'){
-//				sprintf(bufferData, "Red data (r) \n");
-//				writeMsg(&usartComm, bufferData);
-//
-//				uint8_t Red_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | RED_DATA_LOW));
-//				uint8_t Red_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | RED_DATA_HIGH));
-//				uint16_t Red = ((uint16_t)Red_high) << 8 | (Red_low & 0xFF);
-//				sprintf(bufferData, "Red data = %u \n", Red);
-//				writeMsg(&usartComm, bufferData);
-//				usartData = '\0';
-//			}
-//
-//			else if(usartData == 'g'){
-//				sprintf(bufferData, "Green data (r) \n");
-//				writeMsg(&usartComm, bufferData);
-//
-//				uint8_t Green_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | GREEN_DATA_LOW));
-//				uint8_t Green_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | GREEN_DATA_HIGH));
-//				uint16_t Green = Green_high << 8 | (Green_low & 0xFF);
-//				sprintf(bufferData, "Green data = %u \n", Green);
-//				writeMsg(&usartComm, bufferData);
-//				usartData = '\0';
-//			}
-//
-//			else if(usartData == 'b'){
-//				sprintf(bufferData, "Blue data (r) \n");
-//				writeMsg(&usartComm, bufferData);
-//
-//				uint8_t Blue_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | BLUE_DATA_LOW));
-//				uint8_t Blue_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | BLUE_DATA_HIGH));
-//				uint16_t Blue = Blue_high << 8 | (Blue_low & 0xFF);
-//				sprintf(bufferData, "Blue data = %u \n", Blue);
-//				writeMsg(&usartComm, bufferData);
-//				usartData = '\0';
-//			}
-//
-//			else if(usartData == 'c'){
-//				sprintf(bufferData, "Clear data (r) \n");
-//				writeMsg(&usartComm, bufferData);
-//
-//				uint8_t Clear_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | CLEAR_DATA_LOW));
-//				uint8_t Clear_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | CLEAR_DATA_HIGH));
-//				uint16_t Clear = Clear_high << 8 | (Clear_low & 0xFF);
-//				sprintf(bufferData, "Clear data = %u \n", Clear);
-//				writeMsg(&usartComm, bufferData);
-//				usartData = '\0';
-//			}
+			else if(usartData == 's'){
+
+				// Espero toma de datos
+				saveData();
+				usartData = '\0';
+			}
+
+			else if(usartData == 'r'){
+				sprintf(bufferData, "Red data (r) \n");
+				writeMsg(&usartComm, bufferData);
+
+				uint8_t Red_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | RED_DATA_LOW));
+				uint8_t Red_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | RED_DATA_HIGH));
+				uint16_t Red = ((uint16_t)Red_high) << 8 | (Red_low & 0xFF);
+				sprintf(bufferData, "Red data = %u \n", Red);
+				writeMsg(&usartComm, bufferData);
+				usartData = '\0';
+			}
+
+			else if(usartData == 'g'){
+				sprintf(bufferData, "Green data (r) \n");
+				writeMsg(&usartComm, bufferData);
+
+				uint8_t Green_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | GREEN_DATA_LOW));
+				uint8_t Green_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | GREEN_DATA_HIGH));
+				uint16_t Green = Green_high << 8 | (Green_low & 0xFF);
+				sprintf(bufferData, "Green data = %u \n", Green);
+				writeMsg(&usartComm, bufferData);
+				usartData = '\0';
+			}
+
+			else if(usartData == 'b'){
+				sprintf(bufferData, "Blue data (r) \n");
+				writeMsg(&usartComm, bufferData);
+
+				uint8_t Blue_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | BLUE_DATA_LOW));
+				uint8_t Blue_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | BLUE_DATA_HIGH));
+				uint16_t Blue = Blue_high << 8 | (Blue_low & 0xFF);
+				sprintf(bufferData, "Blue data = %u \n", Blue);
+				writeMsg(&usartComm, bufferData);
+				usartData = '\0';
+			}
+
+			else if(usartData == 'c'){
+				sprintf(bufferData, "Clear data (r) \n");
+				writeMsg(&usartComm, bufferData);
+
+				uint8_t Clear_low = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | CLEAR_DATA_LOW));
+				uint8_t Clear_high = i2c_readSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | CLEAR_DATA_HIGH));
+				uint16_t Clear = Clear_high << 8 | (Clear_low & 0xFF);
+				sprintf(bufferData, "Clear data = %u \n", Clear);
+				writeMsg(&usartComm, bufferData);
+				usartData = '\0';
+			}
 
 
 			/* Down del Dutty Cycle */
@@ -193,39 +202,6 @@ int main(void){
 				usartData = '\0';
 
 			}
-
-//			// Dirección arriba
-//			else if(usartData == 'U'){
-//				upDirection();
-//				usartData = '\0';
-//			}
-//			// Dirección abajo
-//			else if(usartData == 'D'){
-//				downDirection();
-//				usartData = '\0';
-//			}
-//			// Dirección derecha
-//			else if(usartData == 'R'){
-//				rightDirection();
-//				usartData = '\0';
-//			}
-//			// Dirección izquierda
-//			else if(usartData == 'L'){
-//				leftDirection();
-//				usartData = '\0';
-//			}
-
-
-			else if(usartData == 'M'){
-				period = period+4;
-				dutty = period/2;
-				updatePeriod(&handlerSignalStepMotor1, period);
-				updateDuttyCycle(&handlerSignalStepMotor1, dutty);
-				updatePeriod(&handlerSignalStepMotor2, period);
-				updateDuttyCycle(&handlerSignalStepMotor2, dutty);
-				usartData = '\0';
-
-			}
 			else if(usartData == 'H'){
 				updatePeriod(&handlerSignalStepMotor1, 100);
 				updateDuttyCycle(&handlerSignalStepMotor1, 50);
@@ -243,7 +219,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(10);
+				delay_ms(8);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -261,7 +237,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(10);
+				delay_ms(8);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -280,7 +256,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(10);
+				delay_ms(8);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -290,7 +266,7 @@ int main(void){
 
 			}
 
-			else if(usartData == 'D'){
+			else if((usartData == 'D')&&(lockRight == 0)){
 				writeChar(&usartComm, usartData);
 				rightDirection();
 
@@ -299,7 +275,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(10);
+				delay_ms(8);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -307,6 +283,15 @@ int main(void){
 				stopPwmSignal(&handlerSignalStepMotor2);
 				usartData = '\0';
 
+			}
+			else if(usartData == 'R'){
+				uint8_t one = 0;
+				uint8_t two = 0;
+				one = GPIO_ReadPin(&handlerButtonLimit1Y);
+				two = GPIO_ReadPin(&handlerButtonLimit2Y);
+				sprintf(bufferData, "Pin C5 = %u, Pin A12 = %u", one, two);
+				writeMsg(&usartComm, bufferData);
+				usartData = '\0';
 			}
 
 			else{
@@ -405,8 +390,8 @@ void initSystem(void){
 	/*					Configuración para el Step Motor 2					*/
 
 	/* Configuración del Pin PWM */
-	handlerPinPwmStepMotor2.pGPIOx									= GPIOC;
-	handlerPinPwmStepMotor2.GPIO_PinConfig.GPIO_PinNumber			= PIN_7;
+	handlerPinPwmStepMotor2.pGPIOx									= GPIOB;
+	handlerPinPwmStepMotor2.GPIO_PinConfig.GPIO_PinNumber			= PIN_5;
 	handlerPinPwmStepMotor2.GPIO_PinConfig.GPIO_PinMode				= GPIO_MODE_ALTFN;
 	handlerPinPwmStepMotor2.GPIO_PinConfig.GPIO_PinOPType			= GPIO_OTYPE_PUSHPULL;
 	handlerPinPwmStepMotor2.GPIO_PinConfig.GPIO_PinPuPdControl		= GPIO_PUPDR_NOTHING;
@@ -434,34 +419,64 @@ void initSystem(void){
 
 	/*						I2C Sensor RGB						*/
 
-//	/* Configuración del pin SCL del I2C1 */
-//	handlerRGB_SCL.pGPIOx								= GPIOB;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinNumber		= PIN_8;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-//	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
-//	GPIO_Config(&handlerRGB_SCL);
-//
-//	/* Configuración del pin SDA del I2C1 */
-//	handlerRGB_SDA.pGPIOx								= GPIOB;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinNumber		= PIN_9;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-//	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
-//	GPIO_Config(&handlerRGB_SDA);
-//
-//	/* Configuración para el I2C1 */
-//	handlerRGB_Sensor.ptrI2Cx		= I2C1;
-//	handlerRGB_Sensor.modeI2C		= I2C_MODE_FM;
-//	handlerRGB_Sensor.slaveAddress	= RGB_SLAVE_ADDRESS;
-//	i2c_config(&handlerRGB_Sensor);
+	/* Configuración del pin SCL del I2C1 */
+	handlerRGB_SCL.pGPIOx								= GPIOB;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinNumber		= PIN_8;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerRGB_SCL.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
+	GPIO_Config(&handlerRGB_SCL);
+
+	/* Configuración del pin SDA del I2C1 */
+	handlerRGB_SDA.pGPIOx								= GPIOB;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinNumber		= PIN_9;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_OPENDRAIN;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	handlerRGB_SDA.GPIO_PinConfig.GPIO_PinAltFunMode 	= AF4;
+	GPIO_Config(&handlerRGB_SDA);
+
+	/* Configuración para el I2C1 */
+	handlerRGB_Sensor.ptrI2Cx		= I2C1;
+	handlerRGB_Sensor.modeI2C		= I2C_MODE_FM;
+	handlerRGB_Sensor.slaveAddress	= RGB_SLAVE_ADDRESS;
+	i2c_config(&handlerRGB_Sensor);
 
 	/* Iniciamos el sensor */
-	//initRgbSensor();
+	initRgbSensor();
+
+
+	/* Configuración del final de carrera */
+	handlerButtonLimit1Y.pGPIOx									= GPIOC;
+	handlerButtonLimit1Y.GPIO_PinConfig.GPIO_PinNumber			= PIN_5;
+	handlerButtonLimit1Y.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_IN;
+	handlerButtonLimit1Y.GPIO_PinConfig.GPIO_PinOPType			= GPIO_OTYPE_PUSHPULL;
+	handlerButtonLimit1Y.GPIO_PinConfig.GPIO_PinPuPdControl		= GPIO_PUPDR_NOTHING;
+	handlerButtonLimit1Y.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
+	handlerButtonLimit1Y.GPIO_PinConfig.GPIO_PinAltFunMode		= AF0;
+	GPIO_Config(&handlerButtonLimit1Y);
+
+	handlerExtiButtonLimit1.pGPIOHandler					= &handlerButtonLimit1Y;
+	handlerExtiButtonLimit1.edgeType						= EXTERNAL_INTERRUPT_RISING_EDGE;
+	extInt_Config(&handlerExtiButtonLimit1);
+
+
+	handlerButtonLimit2Y.pGPIOx									= GPIOA;
+	handlerButtonLimit2Y.GPIO_PinConfig.GPIO_PinNumber			= PIN_12;
+	handlerButtonLimit2Y.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_IN;
+	handlerButtonLimit2Y.GPIO_PinConfig.GPIO_PinOPType			= GPIO_OTYPE_PUSHPULL;
+	handlerButtonLimit2Y.GPIO_PinConfig.GPIO_PinPuPdControl		= GPIO_PUPDR_NOTHING;
+	handlerButtonLimit2Y.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
+	handlerButtonLimit2Y.GPIO_PinConfig.GPIO_PinAltFunMode		= AF0;
+	GPIO_Config(&handlerButtonLimit2Y);
+
+	handlerExtiButtonLimit2.pGPIOHandler					= &handlerButtonLimit2Y;
+	handlerExtiButtonLimit2.edgeType						= EXTERNAL_INTERRUPT_FALLING_EDGE;
+	extInt_Config(&handlerExtiButtonLimit2);
+
 }
 
 /** Inicialización y configuración del sensor */
@@ -503,9 +518,9 @@ void saveData(void){
 
 	}
 	else{
-		float CalibrateRed		= 	(((float)Red/Clear)*255.0);
-		float CalibrateGreen	= 	(((float)Green/Clear)*255.0)*1.2;
-		float CalibrateBlue		= 	(((float)Blue/Clear)*255.0)*1.25;
+		float CalibrateRed		= 	(((float)Red/Clear)*255.0)*1.12;
+		float CalibrateGreen	= 	(((float)Green/Clear)*255.0)*1.26;
+		float CalibrateBlue		= 	(((float)Blue/Clear)*255.0)*1.60;
 		if(CalibrateRed > 255.0){
 			CalibrateRed = 255.0;
 		}
@@ -560,6 +575,22 @@ void BasicTimer2_Callback(void){
 /** Interrupción del USART2 */
 void usart2Rx_Callback(void){
 	usartData = getRxData();	// Pongo en alto la variable bandera del USART2 para el main
+}
+
+/** Interrupción EXTI 5_9 que indica límite */
+void callback_extInt5(void){
+	stopPwmSignal(&handlerSignalStepMotor1);
+	stopPwmSignal(&handlerSignalStepMotor2);
+	disableOutput(&handlerSignalStepMotor1);
+	disableOutput(&handlerSignalStepMotor2);
+	lockRight = 1;
+	writeMsg(&usartComm, "Derecha bloqueada \n");
+}
+
+/** Interrupción EXTI 10_15 que índica libre */
+void callback_extInt12(void){
+	lockRight = 0;
+	writeMsg(&usartComm, "Derecha desbloqueada \n");
 }
 
 

@@ -34,55 +34,41 @@
 GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 
+/* Elementos para interrupción externa y limitar movimiento */
+GPIO_Handler_t handlerSwitchLimit = {0};			// Pin para leer el final de carrera por choque
+EXTI_Config_t handlerExtiSwitchLimit = {0};			// EXTI que frena PWM
+uint8_t flagLimit = 0;								// Bandera para detener forzosamente el escaneo
+
 /* Elementos para hacer la comunicación serial */
 GPIO_Handler_t handlerPinTX = {0};			// Pin de transmisión de datos
 GPIO_Handler_t handlerPinRX = {0};			// Pin de recepción de datos
 USART_Handler_t usartComm =  {0};			// Comunicación serial
 uint8_t usartData = 0; 						// Variable en la que se guarda el dato transmitido
 char bufferData[128] = {0}; 				// Buffer de datos como un arreglo de caracteres
-char bufferReception[32] = {0};				// Buffer para el comando recibido
-char cmd[16] = {0};
+char bufferReception[32] = {0};				// Buffer para guardar caracteres ingresados
+char cmd[16] = {0};							// Arreglo para guardar el comando ingresado y gestionarlo
+char userMsg[] = "Funciona c: \n";			// Mensaje de usuario
 uint16_t counterReception = 0;				// Contador de carácteres para la recepción
 bool stringComplete = false;				// Booleano que indica que se ha completado el comando
 unsigned int firstParameter = 0;			// Parámetro en los comandos
 
 /* Elementos para el PWM */
-GPIO_Handler_t handlerPinPwmStepMotor1 = {0};
-GPIO_Handler_t handlerPinDirStepMotor1 = {0};
-PWM_Handler_t handlerSignalStepMotor1 = {0};
-GPIO_Handler_t handlerPinPwmStepMotor2 = {0};
-GPIO_Handler_t handlerPinDirStepMotor2 = {0};
-PWM_Handler_t handlerSignalStepMotor2 = {0};
+GPIO_Handler_t handlerPinPwmStepMotor1 = {0};	// Pin que proporciona la PWM del motor paso a paso 1
+GPIO_Handler_t handlerPinDirStepMotor1 = {0};	// Pin para controlar la dirección del motor paso a paso 1
+PWM_Handler_t handlerSignalStepMotor1 = {0};	// Señal PWM para el motor paso a paso 1
+GPIO_Handler_t handlerPinPwmStepMotor2 = {0};	// Pin que proporciona la PWM del motor paso a paso 2
+GPIO_Handler_t handlerPinDirStepMotor2 = {0};	// Pin para controlar la dirección del motor paso a paso 2
+PWM_Handler_t handlerSignalStepMotor2 = {0};	// Señal PWM para el motor paso a paso 2
 
-uint16_t period = 100;
-uint16_t dutty = 50;
+uint8_t resolution = 0;		// Resolución para la CNC, con esta se calcula el delay que definite cuánto tiempo están activas las PWM
+
 
 /* Elementos para comunicación I2C con el Sensor RGB */
-
-// Creamos la estructura que nos ayudará a tener la matriz con la tripleta de datos RGB
-typedef struct {
-	uint8_t red;
-	uint8_t green;
-	uint8_t blue;
-}RGB_Triple_t;
-
-uint16_t datosFila = 0;
-uint16_t datosColumna = 0;
-
-RGB_Triple_t matrixRGBdata[datosFila][datosColumna] = {0};
-
-uint8_t arraySaveData[8] = {0};
-
-I2C_Handler_t handlerRGB_Sensor = {0};
-GPIO_Handler_t handlerRGB_SCL = {0};
-GPIO_Handler_t handlerRGB_SDA = {0};
-uint8_t i2cBuffer = 0;
 
 // Registros del sensor RGB
 #define RGB_SLAVE_ADDRESS	0b0101001	// 0x29
 #define ENABLE_REGISTER		0			// 0x00
 #define TIMING_REGISTER		1			// 0x01
-#define WAIT_TIME_REGISTER	3			// 0x03
 #define CONTROL_REGISTER	15			// 0x0F
 #define ID_REGISTER			18			// 0x12
 #define CLEAR_DATA_LOW		20			// 0x14
@@ -100,25 +86,44 @@ uint8_t i2cBuffer = 0;
 #define COMMAND_BIT		0x80
 #define COMMAND_BIT_AUTOINCREMENT	0b10100000
 
+// Creamos la estructura que nos ayudará a tener la matriz con la tripleta de datos RGB
+typedef struct {
+	uint8_t red;
+	uint8_t green;
+	uint8_t blue;
+}RGB_Triple_t;
 
-// Variables bandera de los modos de operación
-uint8_t flagManualMove = 0;
-uint8_t flagResolution = 0;
-uint8_t flagScan = 0;
-uint8_t flagReadyPrint = 0;
-uint8_t flagPrint = 0;
+uint16_t dataRows = 0;					// Número de datos por fila, se re-define más adelante según un cálculo con la resolución
+uint16_t dataColumns = 0;				// Número de datos por columna, se re-define más adelante según un cálculo con la resolución
+uint16_t counterRows = 0;				// Contador de fila, usado para iterar y guardar los datos
+uint16_t counterColumns = 0;			// Contador de clumna, usado para iterar y guardar los datos
+
+uint8_t arraySaveData[8] = {0};			// Arreglo en el que se guardan los datos leídos de forma múltiple del sensor RGB
+
+I2C_Handler_t handlerRGB_Sensor = {0};	// Handler para la configuración del I2C
+GPIO_Handler_t handlerRGB_SCL = {0};	// Pin para el Serial Clock
+GPIO_Handler_t handlerRGB_SDA = {0};	// Pin para el Serial Data
+uint8_t i2cBuffer = 0;					// Buffer del I2C
+
+
+/* Variables bandera de los modos de operación */
+uint8_t flagResolution = 0;			// Variable bandera que indica que se ha establecido una resolución
+uint8_t flagManualMove = 0;			// Variable bandera que indica si se está en modo de movimiento manual escogiendo origen
+uint8_t flagOriginSet = 0;			// Variable bandera que indica que se ha establecido un origen
+uint8_t flagScan = 0;				// Variable bandera que indica que estamos en modo de escaneo
 
 
 /* Definición de prototipos de funciones para el main */
-void initSystem(void); 			// Función que inicializa los periféricos básicos
-void saveData(void);			// Función encargada de guardar los datos RGB
-void initRgbSensor(void);		// Función encargada de inicializar el sensor RGB con la configuración deseada
-void commandBuild(void);							// Función que construye el string del comando USART
-void commandUSART(char* arrayCmd);					// Función encargada de gestionar el comando ingresado por USART
-void upDirection(void);			// Función encargada de configurar dirección de los motores para mover CNC arriba
-void downDirection(void);		// Función encargada de configurar dirección de los motores para mover CNC abajo
-void rightDirection(void);		// Función encargada de configurar dirección de los motores para mover CNC derecha
-void leftDirection(void);		// Función encargada de configurar dirección de los motores para mover CNC izquierda
+void initSystem(void); 						// Función que inicializa los periféricos básicos
+void initRgbSensor(void);					// Función encargada de inicializar el sensor RGB con la configuración deseada
+void commandBuild(void);					// Función que construye el string del comando USART
+void commandUSART(char* arrayCmd);			// Función encargada de gestionar el comando ingresado por USART
+void upDirection(void);						// Función encargada de configurar dirección de los motores para mover CNC arriba
+void downDirection(void);					// Función encargada de configurar dirección de los motores para mover CNC abajo
+void rightDirection(void);					// Función encargada de configurar dirección de los motores para mover CNC derecha
+void leftDirection(void);					// Función encargada de configurar dirección de los motores para mover CNC izquierda
+void saveData(RGB_Triple_t **matrixRGB);										// Función encargada de guardar los datos RGB
+void printData(RGB_Triple_t **matrixRGB, uint16_t rows, uint16_t columns);		// Funcíon encargada de imprimir los datos RGB
 
 
 /** Función principal del programa
@@ -134,7 +139,7 @@ int main(void){
 	while(1){
 
 		// Hacemos un "eco" con el valor que nos llega por el serial, y que no estemos en modo de movimiento manual de la CNC
-		if((usartData != '\0')&&(flagManualMove == 0)){
+		if((usartData != '\0')&&(flagManualMove == 0)&&(flagScan == 0)){
 			writeChar(&usartComm, usartData);
 			commandBuild();
 		}
@@ -149,13 +154,16 @@ int main(void){
 
 		if(flagManualMove){
 
-			if(usartData == '\r'){
+
+			if(usartData == 'R'){
+				writeMsg(&usartComm, "Current point has been select has origin, ready to scan. \n");
 				flagManualMove = 0;
-				writeMsg(&usartComm, " Current point has been select has origin, ready to scan");
+				flagOriginSet = 1;
+				usartData = '\0';
 			}
 
 			else if(usartData == 'W'){
-				writeChar(&usartComm, usartData);
+				writeMsg(&usartComm, "Up \n");
 				upDirection();
 
 				enableOutput(&handlerSignalStepMotor1);
@@ -163,7 +171,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(2);
+				delay_ms(4*resolution);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -173,7 +181,7 @@ int main(void){
 			}
 
 			else if(usartData == 'S'){
-				writeChar(&usartComm, usartData);
+				writeMsg(&usartComm, "Down \n");
 				downDirection();
 
 				enableOutput(&handlerSignalStepMotor1);
@@ -181,7 +189,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(2);
+				delay_ms(4*resolution);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -192,7 +200,7 @@ int main(void){
 			}
 
 			else if(usartData == 'A'){
-				writeChar(&usartComm, usartData);
+				writeMsg(&usartComm, "Left \n");
 				leftDirection();
 
 				enableOutput(&handlerSignalStepMotor1);
@@ -200,7 +208,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(2);
+				delay_ms(4*resolution);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -211,7 +219,7 @@ int main(void){
 			}
 
 			else if(usartData == 'D'){
-				writeChar(&usartComm, usartData);
+				writeMsg(&usartComm, "Right \n");
 				rightDirection();
 
 				enableOutput(&handlerSignalStepMotor1);
@@ -219,7 +227,7 @@ int main(void){
 				startPwmSignal(&handlerSignalStepMotor1);
 				startPwmSignal(&handlerSignalStepMotor2);
 
-				delay_ms(2);
+				delay_ms(4*resolution);
 
 				disableOutput(&handlerSignalStepMotor1);
 				disableOutput(&handlerSignalStepMotor2);
@@ -235,31 +243,96 @@ int main(void){
 		}
 
 		if(flagScan){
-		    for (int i = 0; i < datosFila; i++) {
-		        for (int j = 0; j < datosColumna; j++) {
-		            sprintf(bufferData,"[%u, %u, %u]", matrixRGBdata[i][j].red, matrixRGBdata[i][j].green, matrixRGBdata[i][j].blue);
-		            writeMsg(&usartComm, bufferData);
-		        }
-		        writeChar(&usartComm, '\n');
+
+			/* Creamos la matriz dinámica, usando la función malloc para asignar
+			 * la memoría necesaria según el nuḿero de filas(rows), la función nos
+			 * retorna un puntero, y luego a cada fila le asignamos nuevamente
+			 * con malloc la memoría necesaria según el número de datos de la fila,
+			 * o sea las columnas, y la fila "k" de la matriz queda como otro puntero */
+
+		    RGB_Triple_t **matrixRGBdata = malloc(dataRows * sizeof(RGB_Triple_t *));
+		    for (int k = 0; k < dataRows; k++) {
+		    	matrixRGBdata[k] = malloc(dataColumns * sizeof(RGB_Triple_t));
 		    }
-		    flagPrint = 0;
-		}
 
+			// Siempre empezamos el escaneo con movimiento hacia la derecha
+			rightDirection();
 
-		if(flagPrint){
-		    for (int i = 0; i < datosFila; i++) {
-		        for (int j = 0; j < datosColumna; j++) {
-		            sprintf(bufferData,"[%u, %u, %u]", matrixRGBdata[i][j].red, matrixRGBdata[i][j].green, matrixRGBdata[i][j].blue);
-		            writeMsg(&usartComm, bufferData);
+		    for (counterRows = 0; counterRows < dataRows; counterRows++) {
+		        for (counterColumns = 0; counterColumns < dataColumns; counterColumns++) {
+
+			        if(flagLimit){
+			        	break;
+			        }
+					disableOutput(&handlerSignalStepMotor1);
+					disableOutput(&handlerSignalStepMotor2);
+					stopPwmSignal(&handlerSignalStepMotor1);
+					stopPwmSignal(&handlerSignalStepMotor2);
+
+					delay_ms(121);
+					saveData(matrixRGBdata);
+
+					enableOutput(&handlerSignalStepMotor1);
+					enableOutput(&handlerSignalStepMotor2);
+					startPwmSignal(&handlerSignalStepMotor1);
+					startPwmSignal(&handlerSignalStepMotor2);
+
+					delay_ms(4*resolution);
+
+					disableOutput(&handlerSignalStepMotor1);
+					disableOutput(&handlerSignalStepMotor2);
+					stopPwmSignal(&handlerSignalStepMotor1);
+					stopPwmSignal(&handlerSignalStepMotor2);
 		        }
-		        writeChar(&usartComm, '\n');
+		        if(flagLimit){
+		        	break;
+		        }
+				// Bajamos para la siguiente fila
+				downDirection();
+
+				enableOutput(&handlerSignalStepMotor1);
+				enableOutput(&handlerSignalStepMotor2);
+				startPwmSignal(&handlerSignalStepMotor1);
+				startPwmSignal(&handlerSignalStepMotor2);
+
+				delay_ms(4*resolution);
+
+				disableOutput(&handlerSignalStepMotor1);
+				disableOutput(&handlerSignalStepMotor2);
+				stopPwmSignal(&handlerSignalStepMotor1);
+				stopPwmSignal(&handlerSignalStepMotor2);
+
+				// Si es una fila impar, cambia a dirección izquierda para la fila par que viene
+				if(((counterRows+1)%2) == 1){
+					leftDirection();
+				}
+				// Si no, es par y para la siguiente que es impar se debe mover hacia la derecha
+				else{
+					rightDirection();
+				}
 		    }
-		    flagPrint = 0;
+		    if(flagLimit){
+		    	flagLimit = 0;
+		    }
+		    else{
+				writeMsg(&usartComm, "Please clean the serial terminal, all data will be printed in 8 seconds.\n");
+				delay_ms(8000);
+				printData(matrixRGBdata, dataRows, dataColumns);
+		    }
+			// Liberamos la memoria de la matriz
+			for (int n = 0; n < dataRows; n++) {
+				free(matrixRGBdata[n]);
+			}
+			free(matrixRGBdata);
+
+			// Limpiamos la variables, el modo escaneo ha terminado y los datos se han imprimido
+			flagScan = 0;
+			flagResolution = 0;
+			dataRows = 0;
+			dataColumns = 0;
+			counterColumns = 0;
+			counterRows = 0;
 		}
-
-
-
-
 
 	}
 	return 0;
@@ -343,8 +416,8 @@ void initSystem(void){
 	/* Configuración del Timer para que genera la señal PWM */
 	handlerSignalStepMotor1.ptrTIMx								= TIM3;
 	handlerSignalStepMotor1.PWMx_Config.PWMx_Channel			= PWM_CHANNEL_3;
-	handlerSignalStepMotor1.PWMx_Config.PWMx_DuttyCicle			= dutty;
-	handlerSignalStepMotor1.PWMx_Config.PWMx_Period				= period;
+	handlerSignalStepMotor1.PWMx_Config.PWMx_DuttyCicle			= 50;
+	handlerSignalStepMotor1.PWMx_Config.PWMx_Period				= 100;
 	handlerSignalStepMotor1.PWMx_Config.PWMx_Prescaler			= BTIMER_SPEED_10us;
 	pwm_Config(&handlerSignalStepMotor1);
 
@@ -373,8 +446,8 @@ void initSystem(void){
 	/* Configurando el Timer para que genera la señal PWM */
 	handlerSignalStepMotor2.ptrTIMx								= TIM3;
 	handlerSignalStepMotor2.PWMx_Config.PWMx_Channel			= PWM_CHANNEL_2;
-	handlerSignalStepMotor2.PWMx_Config.PWMx_DuttyCicle			= dutty;
-	handlerSignalStepMotor2.PWMx_Config.PWMx_Period				= period;
+	handlerSignalStepMotor2.PWMx_Config.PWMx_DuttyCicle			= 50;
+	handlerSignalStepMotor2.PWMx_Config.PWMx_Period				= 100;
 	handlerSignalStepMotor2.PWMx_Config.PWMx_Prescaler			= BTIMER_SPEED_10us;
 	pwm_Config(&handlerSignalStepMotor2);
 
@@ -409,13 +482,28 @@ void initSystem(void){
 
 	/* Iniciamos el sensor */
 	initRgbSensor();
+
+
+	/* Configuración del final de carrera */
+	handlerSwitchLimit.pGPIOx									= GPIOC;
+	handlerSwitchLimit.GPIO_PinConfig.GPIO_PinNumber			= PIN_5;
+	handlerSwitchLimit.GPIO_PinConfig.GPIO_PinMode				= GPIO_MODE_IN;
+	handlerSwitchLimit.GPIO_PinConfig.GPIO_PinOPType			= GPIO_OTYPE_PUSHPULL;
+	handlerSwitchLimit.GPIO_PinConfig.GPIO_PinPuPdControl		= GPIO_PUPDR_NOTHING;
+	handlerSwitchLimit.GPIO_PinConfig.GPIO_PinSpeed				= GPIO_OSPEED_HIGH;
+	handlerSwitchLimit.GPIO_PinConfig.GPIO_PinAltFunMode		= AF0;
+	GPIO_Config(&handlerSwitchLimit);
+
+	handlerExtiSwitchLimit.pGPIOHandler					= &handlerSwitchLimit;
+	handlerExtiSwitchLimit.edgeType					= EXTERNAL_INTERRUPT_RISING_EDGE;
+	extInt_Config(&handlerExtiSwitchLimit);
 }
 
 /** Inicialización y configuración del sensor */
 void initRgbSensor(void){
 
-	/* 1. Configuramos el tiempo de integración ADC a X ms */
-	i2c_writeSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | TIMING_REGISTER), 0xC4);
+	/* 1. Configuramos el tiempo de integración ADC a 120 ms */
+	i2c_writeSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | TIMING_REGISTER), 0xCE);
 
 	/* 2. Configuramos la ganancia del sensor x60 */
 	i2c_writeSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | CONTROL_REGISTER), 0x03);
@@ -426,12 +514,12 @@ void initRgbSensor(void){
 
 	/* 4. Bit 1 AEN del Enable Register en 1 para activar los ADC del RGBC */
 	i2c_writeSingleRegister(&handlerRGB_Sensor, (COMMAND_BIT | ENABLE_REGISTER), 0b11);
-	delay_ms(145);
+	delay_ms(121);
 
 }
 
 /** Guardar datos sensor RGB */
-void saveData(void){
+void saveData(RGB_Triple_t **matrixRGB){
 
 	i2c_readMultipleRegisters(&handlerRGB_Sensor, COMMAND_BIT_AUTOINCREMENT | CLEAR_DATA_LOW, 8, arraySaveData);
 
@@ -441,15 +529,15 @@ void saveData(void){
 	uint16_t Blue = ((uint16_t)arraySaveData[7] << 8) | ((uint16_t)arraySaveData[6] & 0xFF);
 
 	if(Clear == 0){
-		dataRGB[0] = 0;
-		dataRGB[1] = 0;
-		dataRGB[2] = 0;
+		matrixRGB[counterRows][counterColumns].red = 0;
+		matrixRGB[counterRows][counterColumns].green = 0;
+		matrixRGB[counterRows][counterColumns].blue = 0;
 
 	}
 	else{
-		float CalibrateRed		= 	(((float)Red/Clear)*255.0);
-		float CalibrateGreen	= 	(((float)Green/Clear)*255.0)*1.2;
-		float CalibrateBlue		= 	(((float)Blue/Clear)*255.0)*1.25;
+		float CalibrateRed		= 	(((float)Red/Clear)*255.0)*1.02;
+		float CalibrateGreen	= 	(((float)Green/Clear)*255.0)*1.32;
+		float CalibrateBlue		= 	(((float)Blue/Clear)*255.0)*1.42;
 		if(CalibrateRed > 255.0){
 			CalibrateRed = 255.0;
 		}
@@ -460,12 +548,22 @@ void saveData(void){
 			CalibrateBlue = 255.0;
 		}
 
-		dataRGB[0] = (uint8_t)CalibrateRed;
-		dataRGB[1] = (uint8_t)CalibrateGreen;
-		dataRGB[2] = (uint8_t)CalibrateBlue;
+		matrixRGB[counterRows][counterColumns].red = (uint8_t)CalibrateRed;
+		matrixRGB[counterRows][counterColumns].green = (uint8_t)CalibrateGreen;
+		matrixRGB[counterRows][counterColumns].blue = (uint8_t)CalibrateBlue;
 	}
-	delay_ms(145);
 
+}
+
+/** Imprimir datos del sensor RGB */
+void printData(RGB_Triple_t **matrixRGB, uint16_t rows, uint16_t columns){
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < columns; j++) {
+            sprintf(bufferData,"[%u, %u, %u] ", matrixRGB[i][j].red, matrixRGB[i][j].green, matrixRGB[i][j].blue);
+            writeMsg(&usartComm, bufferData);
+        }
+        writeChar(&usartComm, '\n');
+    }
 }
 
 /** Función encargada de construir el string con el comando */
@@ -501,51 +599,53 @@ void commandUSART(char* ptrBufferReception){
 	// "help" este primer comando imprime una lista con los otros comandoS que tiene el equipo
 	if(strcmp(cmd, "help") == 0){
 		writeMsg(&usartComm, "\nHelp Menu CMDs:\n");
-		writeMsg(&usartComm, "1) help				-- Print this menu \n");
-		writeMsg(&usartComm, "2) changeOrigin		-- Enable control keyboard to select origin of scan \n");
-		writeMsg(&usartComm, "4) setResolution #R	-- Select one of the following possible resolutions: \n"
-				" 1 = XX.X mm, 2 = XX.X mm \n");
-		writeMsg(&usartComm, "5) startScan			-- Start to scan area and collect RGB data \n");
-		writeMsg(&usartComm, "5) printData			-- Print all data on serial terminal \n");
-	}
-
-	// Activamos el modo de control manual con una sola tecla
-	else if(strcmp(cmd, "changeOrigin") == 0){
-		writeMsg(&usartComm, "\nCMD: changeOrigin \n");
-		writeMsg(&usartComm, "Use W is Up, S is Down, A is Left, D is Right and press Enter to set origin \n");
-		flagManualMove = 1;
+		writeMsg(&usartComm, "1) help					-- Print this menu \n");
+		writeMsg(&usartComm, "4) setResolution #Option	-- Select one of the following possible resolutions: \n"
+				" Option 1: 1.2 mm \n"
+				" Option 2: 2.4 mm \n"
+				" Option 3: 3.6 mm \n"
+				" Option 4: 4.8 mm \n"
+				" Option 5: 6.0 mm \n");
+		writeMsg(&usartComm, "2) changeOrigin			-- Enable control keyboard to select origin of scan \n");
+		writeMsg(&usartComm, "5) startScan				-- Start to scan area and collect RGB data \n");
 	}
 
 	else if(strcmp(cmd, "setResolution") == 0){
 		writeMsg(&usartComm, "\nCMD: setResolution \n");
-		if((firstParameter == 1)||(firstParameter == 2)){
-			writeMsg(&usartComm, "Resolution set successfully \n");
+		if((firstParameter>=1)&&(firstParameter<=5)){
+			resolution = firstParameter;
+			dataRows = 1800/(firstParameter*12);
+			dataColumns = 1200/(firstParameter*12);
 			flagResolution = 1;
+			writeMsg(&usartComm, "Resolution set successfully \n");
 		}
 		else{
 			writeMsg(&usartComm, "Wrong resolution, try again \n");
+		}
+		// Limpio la variable
+		firstParameter = 0;
+	}
+
+	// Activamos el modo de control manual con las teclas
+	else if(strcmp(cmd, "changeOrigin") == 0){
+		writeMsg(&usartComm, "\nCMD: changeOrigin \n");
+		if(flagResolution == 1){
+			writeMsg(&usartComm, "Controls: W is Up, S is Down, A is Left, D is Right and press R to set origin \n");
+			flagManualMove = 1;
+		}
+		else{
+			writeMsg(&usartComm, "Set resolution first \n");
 		}
 	}
 
 	else if(strcmp(cmd, "startScan") == 0){
 		writeMsg(&usartComm, "\nCMD: startScan \n");
-		if((flagManualMove == 0)&&(flagResolution == 1)){
-			writeMsg(&usartComm, "Error, set an origin and resolution first \n");
-		}
-		else{
-			writeMsg(&usartComm, "Scan started \n");
+		if((flagOriginSet == 1)&&(flagResolution == 1)){
+			writeMsg(&usartComm, "¡Scan started! \n");
 			flagScan = 1;
 		}
-	}
-
-	else if(strcmp(cmd, "printData") == 0){
-		writeMsg(&usartComm, "\nCMD: printData \n");
-		if((flagReadyPrint == 1)&&(flagScan == 0)){
-			flagReadyPrint = 0;
-			flagPrint = 1;
-		}
 		else{
-			writeChar(&usartComm, "Error, there is no data to print, please, first set the source and resolution, then launch the scan \n");
+			writeMsg(&usartComm, "Error, set resolution and origin first. \n");
 		}
 	}
 
@@ -562,14 +662,14 @@ void commandUSART(char* ptrBufferReception){
 
 /** Configuración arriba para la CNC */
 void upDirection(void){
-	GPIO_WritePin(&handlerPinDirStepMotor1, RESET);
-	GPIO_WritePin(&handlerPinDirStepMotor2, SET);
+	GPIO_WritePin(&handlerPinDirStepMotor1, SET);
+	GPIO_WritePin(&handlerPinDirStepMotor2, RESET);
 }
 
 /** Configuración abajo para la CNC */
 void downDirection(void){
-	GPIO_WritePin(&handlerPinDirStepMotor1, SET);
-	GPIO_WritePin(&handlerPinDirStepMotor2, RESET);
+	GPIO_WritePin(&handlerPinDirStepMotor1, RESET);
+	GPIO_WritePin(&handlerPinDirStepMotor2, SET);
 }
 
 /** Configuración derecha para la CNC */
@@ -595,4 +695,13 @@ void usart2Rx_Callback(void){
 	usartData = getRxData();	// Pongo en alto la variable bandera del USART2 para el main
 }
 
+/** Interrupción externa que indica limites alcanzados */
+/** Interrupción EXTI 5_9 que indica límite */
+void callback_extInt5(void){
+	stopPwmSignal(&handlerSignalStepMotor1);
+	stopPwmSignal(&handlerSignalStepMotor2);
+	disableOutput(&handlerSignalStepMotor1);
+	disableOutput(&handlerSignalStepMotor2);
+	flagLimit = 1;
+}
 

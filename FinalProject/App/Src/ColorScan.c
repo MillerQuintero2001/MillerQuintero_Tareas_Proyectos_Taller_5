@@ -337,6 +337,9 @@ int main(void){
 		    }
 		    if(flagLimit){
 		    	flagLimit = 0;
+		    	writeMsg(&usartComm, "Please clean the serial terminal, all data will be printed in 12 seconds.\n");
+		    	delay_ms(12000);
+		   		printData(matrixRGBdata, dataRows, dataColumns);
 		    }
 		    else{
 				writeMsg(&usartComm, "Please clean the serial terminal, all data will be printed in 12 seconds.\n");
@@ -684,26 +687,25 @@ void commandUSART(char* ptrBufferReception){
 
 	// "help" este primer comando imprime una lista con los otros comandoS que tiene el equipo
 	if(strcmp(cmd, "help") == 0){
-		writeMsg(&usartComm, "!Attention! The scanning area is approximately 16.56 cm x 10.20 cm \n");
+		writeMsg(&usartComm, "!Attention! The moving area is approximately 15.36 cm x 10.08 cm");
 		writeMsg(&usartComm, "\nHelp Menu CMDs:\n");
 		writeMsg(&usartComm, "1) help					-- Print this menu \n");
-		writeMsg(&usartComm, "4) setResolution #Option	-- Select one of the following possible resolutions: \n"
+		writeMsg(&usartComm, "2) setResolution #Option	-- Select one of the following possible resolutions: \n"
 				" Option 1: 1.2 mm \n"
-				" Option 2: 2.4 mm \n"
-				" Option 3: 3.6 mm \n");
-		writeMsg(&usartComm, "2) setOrigin			-- Enable control keyboard to select origin of scan \n");
-		writeMsg(&usartComm, "5) startScan			-- Start to scan area and collect RGB data \n");
-		writeMsg(&usartComm, "6) returnHome			-- After finishing the scan, move the CNC to the home position (Origin Set)\n");
+				" Option 2: 2.4 mm \n");
+		writeMsg(&usartComm, "3) setOrigin			-- Enable control keyboard to select origin of scan \n");
+		writeMsg(&usartComm, "4) startScan			-- Start to scan area and collect RGB data \n");
+		writeMsg(&usartComm, "5) returnHome			-- After finishing the scan, move the CNC to the home position (Origin Set)\n");
 	}
 
 	else if(strcmp(cmd, "setResolution") == 0){
 		writeMsg(&usartComm, "\nCMD: setResolution \n");
-		if((firstParameter>=1)&&(firstParameter<=3)){
+		if((firstParameter>=1)&&(firstParameter<=2)){
 			flagLimit = 0;
 			flagManualMove = 0;
 			resolution = firstParameter;
-			dataRows = 1656/(firstParameter*12);
-			dataColumns = 1020/(firstParameter*12);
+			dataRows = 1536/(firstParameter*12);
+			dataColumns = 1008/(firstParameter*12);
 			flagResolution = 1;
 			writeMsg(&usartComm, "Resolution set successfully.\n");
 		}

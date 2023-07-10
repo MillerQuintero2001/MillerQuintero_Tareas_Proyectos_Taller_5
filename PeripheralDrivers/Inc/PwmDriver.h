@@ -9,6 +9,7 @@
 #define PWMDRIVER_H_
 
 #include "stm32f4xx.h"
+#include "SysTickDriver.h"
 
 #define PWM_CHANNEL_1	0
 #define PWM_CHANNEL_2	1

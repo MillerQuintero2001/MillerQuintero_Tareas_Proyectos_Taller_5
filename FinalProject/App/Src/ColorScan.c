@@ -121,6 +121,7 @@ void initSystem(void); 						// Función que inicializa los periféricos básico
 void initRgbSensor(void);					// Función encargada de inicializar el sensor RGB con la configuración deseada
 void commandBuild(void);					// Función que construye el string del comando USART
 void commandUSART(char* arrayCmd);			// Función encargada de gestionar el comando ingresado por USART
+void stepMotorMove(uint64_t parameter);		// Función encargada de mover motores paso a paso durante un tiempo indicado por parámetro
 void upDirection(void);						// Función encargada de configurar dirección de los motores para mover CNC arriba
 void downDirection(void);					// Función encargada de configurar dirección de los motores para mover CNC abajo
 void rightDirection(void);					// Función encargada de configurar dirección de los motores para mover CNC derecha
@@ -135,6 +136,7 @@ int main(void){
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
+	writeChar(&usartComm, ' ');
 	sprintf(bufferData, "System initialized \n");
 	writeMsg(&usartComm, bufferData);
 
@@ -166,45 +168,27 @@ int main(void){
 
 		if(flagManualMove){
 			if(flagLimit){
+				stopPwmSignal(&handlerSignalStepMotor1);
+				stopPwmSignal(&handlerSignalStepMotor2);
+				disableOutput(&handlerSignalStepMotor1);
+				disableOutput(&handlerSignalStepMotor2);
 				flagLimit = 0;
 				flagResolution = 0;
-				writeMsg(&usartComm, "Limit reached, program has been reset \n");
+				writeMsg(&usartComm, "Limit reached \n");
 				break;
 			}
 
 			else if(usartData == 'W'){
 				writeMsg(&usartComm, "Up \n");
 				upDirection();
-
-				enableOutput(&handlerSignalStepMotor1);
-				enableOutput(&handlerSignalStepMotor2);
-				startPwmSignal(&handlerSignalStepMotor1);
-				startPwmSignal(&handlerSignalStepMotor2);
-
-				delay_ms(4*resolution);
-
-				disableOutput(&handlerSignalStepMotor1);
-				disableOutput(&handlerSignalStepMotor2);
-				stopPwmSignal(&handlerSignalStepMotor1);
-				stopPwmSignal(&handlerSignalStepMotor2);
+				stepMotorMove(resolution);
 				usartData = '\0';
 			}
 
 			else if(usartData == 'S'){
 				writeMsg(&usartComm, "Down \n");
 				downDirection();
-
-				enableOutput(&handlerSignalStepMotor1);
-				enableOutput(&handlerSignalStepMotor2);
-				startPwmSignal(&handlerSignalStepMotor1);
-				startPwmSignal(&handlerSignalStepMotor2);
-
-				delay_ms(4*resolution);
-
-				disableOutput(&handlerSignalStepMotor1);
-				disableOutput(&handlerSignalStepMotor2);
-				stopPwmSignal(&handlerSignalStepMotor1);
-				stopPwmSignal(&handlerSignalStepMotor2);
+				stepMotorMove(resolution);
 				usartData = '\0';
 
 			}
@@ -212,18 +196,7 @@ int main(void){
 			else if(usartData == 'A'){
 				writeMsg(&usartComm, "Left \n");
 				leftDirection();
-
-				enableOutput(&handlerSignalStepMotor1);
-				enableOutput(&handlerSignalStepMotor2);
-				startPwmSignal(&handlerSignalStepMotor1);
-				startPwmSignal(&handlerSignalStepMotor2);
-
-				delay_ms(4*resolution);
-
-				disableOutput(&handlerSignalStepMotor1);
-				disableOutput(&handlerSignalStepMotor2);
-				stopPwmSignal(&handlerSignalStepMotor1);
-				stopPwmSignal(&handlerSignalStepMotor2);
+				stepMotorMove(resolution);
 				usartData = '\0';
 
 			}
@@ -231,18 +204,7 @@ int main(void){
 			else if(usartData == 'D'){
 				writeMsg(&usartComm, "Right \n");
 				rightDirection();
-
-				enableOutput(&handlerSignalStepMotor1);
-				enableOutput(&handlerSignalStepMotor2);
-				startPwmSignal(&handlerSignalStepMotor1);
-				startPwmSignal(&handlerSignalStepMotor2);
-
-				delay_ms(4*resolution);
-
-				disableOutput(&handlerSignalStepMotor1);
-				disableOutput(&handlerSignalStepMotor2);
-				stopPwmSignal(&handlerSignalStepMotor1);
-				stopPwmSignal(&handlerSignalStepMotor2);
+				stepMotorMove(resolution);
 				usartData = '\0';
 
 			}
@@ -278,6 +240,7 @@ int main(void){
 		    for (counterRows = 0; counterRows < dataRows; counterRows++) {
 		        for (counterColumns = 0; counterColumns < dataColumns; counterColumns++) {
 
+		        	// Prevenimos que el límite se alcance durante el escaneo
 			        if(flagLimit){
 			        	break;
 			        }
@@ -289,18 +252,9 @@ int main(void){
 					delay_ms(133);
 					saveData(matrixRGBdata);
 
-					enableOutput(&handlerSignalStepMotor1);
-					enableOutput(&handlerSignalStepMotor2);
-					startPwmSignal(&handlerSignalStepMotor1);
-					startPwmSignal(&handlerSignalStepMotor2);
-
-					delay_ms(4*resolution);
-
-					disableOutput(&handlerSignalStepMotor1);
-					disableOutput(&handlerSignalStepMotor2);
-					stopPwmSignal(&handlerSignalStepMotor1);
-					stopPwmSignal(&handlerSignalStepMotor2);
+					stepMotorMove(resolution);
 		        }
+		        // Veamos si el límite no se ha alcanzado
 		        if(flagLimit){
 		        	break;
 		        }
@@ -310,20 +264,9 @@ int main(void){
 		        }
 		        // Sino, bajamos para la siguiente fila
 		        else{
-		        	delay_ms(80);
+		        	delay_ms(40);
 					downDirection();
-
-					enableOutput(&handlerSignalStepMotor1);
-					enableOutput(&handlerSignalStepMotor2);
-					startPwmSignal(&handlerSignalStepMotor1);
-					startPwmSignal(&handlerSignalStepMotor2);
-
-					delay_ms(4*resolution);
-
-					disableOutput(&handlerSignalStepMotor1);
-					disableOutput(&handlerSignalStepMotor2);
-					stopPwmSignal(&handlerSignalStepMotor1);
-					stopPwmSignal(&handlerSignalStepMotor2);
+					stepMotorMove(resolution);
 		        }
 
 				// Si es una fila impar, cambia a dirección izquierda para la fila par que viene
@@ -362,35 +305,14 @@ int main(void){
 
 		if(flagHome){
 			upDirection();
-			enableOutput(&handlerSignalStepMotor1);
-			enableOutput(&handlerSignalStepMotor2);
-			startPwmSignal(&handlerSignalStepMotor1);
-			startPwmSignal(&handlerSignalStepMotor2);
-
-			delay_ms(4*resolution*dataRows);
-
-			disableOutput(&handlerSignalStepMotor1);
-			disableOutput(&handlerSignalStepMotor2);
-			stopPwmSignal(&handlerSignalStepMotor1);
-			stopPwmSignal(&handlerSignalStepMotor2);
+			stepMotorMove(resolution*dataRows);
 
 			// Si la fila es impar, significa que termino en el borde derecho, por tanto para regresar se mueve a la izquierda
 			if(dataRows%2 == 1){
 				leftDirection();
-
-				enableOutput(&handlerSignalStepMotor1);
-				enableOutput(&handlerSignalStepMotor2);
-				startPwmSignal(&handlerSignalStepMotor1);
-				startPwmSignal(&handlerSignalStepMotor2);
-
-				delay_ms(4*resolution*dataColumns);
-
-				disableOutput(&handlerSignalStepMotor1);
-				disableOutput(&handlerSignalStepMotor2);
-				stopPwmSignal(&handlerSignalStepMotor1);
-				stopPwmSignal(&handlerSignalStepMotor2);
+				stepMotorMove(resolution*dataColumns);
 			}
-			// Sino, con la subida basta
+			// Sino, con el movimiento de subida basta
 			else{
 				__NOP();
 			}
@@ -759,6 +681,21 @@ void commandUSART(char* ptrBufferReception){
 	// Limpiamos los parámetros para evitar configuraciones accidentales
 	firstParameter = 0;
 
+}
+
+/** Tiempo de movimiento de los motores según parámetro ingresado en función */
+void stepMotorMove(uint64_t parameter){
+	enableOutput(&handlerSignalStepMotor1);
+	enableOutput(&handlerSignalStepMotor2);
+	startPwmSignal(&handlerSignalStepMotor1);
+	startPwmSignal(&handlerSignalStepMotor2);
+
+	delay_ms(4*parameter);
+
+	disableOutput(&handlerSignalStepMotor1);
+	disableOutput(&handlerSignalStepMotor2);
+	stopPwmSignal(&handlerSignalStepMotor1);
+	stopPwmSignal(&handlerSignalStepMotor2);
 }
 
 /** Configuración arriba para la CNC */

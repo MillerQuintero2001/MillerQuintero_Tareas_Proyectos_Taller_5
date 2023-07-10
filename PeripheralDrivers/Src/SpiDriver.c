@@ -76,7 +76,7 @@ void spi_config(SPI_Handler_t ptrHandlerSPI){
 	}
 
 	/* 6. Modo de transferencia en MSB-first */
-	if(ptrHandlerSPI.SPI_Config.SPI_frameFormat == SPI_LSB_FIRST){
+	if(ptrHandlerSPI.SPI_Config.SPI_frameFormat == SPI_FRAME_FORMAT_LSB){
 		ptrHandlerSPI.ptrSPIx->CR1 |= SPI_CR1_LSBFIRST;
 	}
 	else{

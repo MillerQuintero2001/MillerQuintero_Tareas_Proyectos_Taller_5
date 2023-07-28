@@ -34,7 +34,7 @@ void spi_config(SPI_Handler_t ptrHandlerSPI){
 	/* 3. Configuramos la velocidad a la que se maneja el reloj del SPI */
 	ptrHandlerSPI.ptrSPIx->CR1 |= (ptrHandlerSPI.SPI_Config.SPI_baudrate << SPI_CR1_BR_Pos);
 
-	/* 4. Configuramos la velocidad a la que se maneja el reloj del SPI */
+	/* 4. Configuramos el modo del SPI */
 	switch(ptrHandlerSPI.SPI_Config.SPI_mode){
 	case 0:
 		ptrHandlerSPI.ptrSPIx->CR1 &= ~(SPI_CR1_CPHA);

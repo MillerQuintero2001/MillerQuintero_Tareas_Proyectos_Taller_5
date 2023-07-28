@@ -97,12 +97,11 @@ void initSystem(void){
 
 	/* GPIO y Timer del Blinky Led de Estado */
 	handlerBlinkyPin.pGPIOx								= GPIOH;
-	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_0;
+	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_1;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_OUT;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed 		= GPIO_OSPEED_MEDIUM;
-	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinAltFunMode	= AF14;
+	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed 		= GPIO_OSPEED_HIGH;
 
 	// Cargo la configuración
 	GPIO_Config(&handlerBlinkyPin);

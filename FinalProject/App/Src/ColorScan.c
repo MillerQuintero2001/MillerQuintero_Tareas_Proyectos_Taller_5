@@ -26,7 +26,6 @@
 #include "PwmDriver.h"
 #include "I2CDriver.h"
 
-#include "arm_math.h"
 
 // Definiciones a emplear
 
@@ -55,11 +54,17 @@ bool stringComplete = false;				// Booleano que indica que se ha completado el c
 unsigned int firstParameter = 0;			// Parámetro en los comandos
 
 /* Elementos para el PWM */
-GPIO_Handler_t handlerPinPwmStepMotor1 = {0};	// Pin que proporciona la PWM del motor paso a paso 1
-GPIO_Handler_t handlerPinDirStepMotor1 = {0};	// Pin para controlar la dirección del motor paso a paso 1
-PWM_Handler_t handlerSignalStepMotor1 = {0};	// Señal PWM para el motor paso a paso 1
+#define STEP_MOTOR_ON 	0
+#define STEP_MOTOR_OFF	1
+
+GPIO_Handler_t handlerPinPwmStepMotor1 = {0};		// Pin que proporciona la PWM del motor paso a paso 1
+GPIO_Handler_t handlerPinDirStepMotor1 = {0};		// Pin para controlar la dirección del motor paso a paso 1
+GPIO_Handler_t handlerPinEnableStepMotor1 = {0};	// Pin para controlar el driver del motor paso a paso 1
+PWM_Handler_t handlerSignalStepMotor1 = {0};		// Señal PWM para el motor paso a paso 1
+
 GPIO_Handler_t handlerPinPwmStepMotor2 = {0};	// Pin que proporciona la PWM del motor paso a paso 2
 GPIO_Handler_t handlerPinDirStepMotor2 = {0};	// Pin para controlar la dirección del motor paso a paso 2
+GPIO_Handler_t handlerPinEnableStepMotor2 = {0};	// Pin para controlar el driver del motor paso a paso 2
 PWM_Handler_t handlerSignalStepMotor2 = {0};	// Señal PWM para el motor paso a paso 2
 
 uint8_t resolution = 0;		// Resolución para la CNC, con esta se calcula el delay que definite cuánto tiempo están activas las PWM
@@ -174,6 +179,7 @@ int main(void){
 				disableOutput(&handlerSignalStepMotor2);
 				flagLimit = 0;
 				flagResolution = 0;
+				flagManualMove = 0;
 				writeMsg(&usartComm, "Limit reached \n");
 				break;
 			}
@@ -280,7 +286,7 @@ int main(void){
 		    }
 		    if(flagLimit){
 		    	flagLimit = 0;
-		    	writeMsg(&usartComm, "Please clean the serial terminal, all data will be printed in 12 seconds.\n");
+		    	writeMsg(&usartComm, "!Limit! Clean the serial terminal, all data will be printed in 12 seconds.\n");
 		    	delay_ms(12000);
 		   		printData(matrixRGBdata, dataRows, dataColumns);
 		    }
@@ -402,6 +408,15 @@ void initSystem(void){
 	GPIO_Config(&handlerPinDirStepMotor1);
 	GPIO_WritePin(&handlerPinDirStepMotor1, RESET);
 
+	// Pin del enable
+	handlerPinEnableStepMotor1.pGPIOx							= GPIOA;
+	handlerPinEnableStepMotor1.GPIO_PinConfig.GPIO_PinNumber	= PIN_12;
+	handlerPinEnableStepMotor1.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_OUT;
+	handlerPinEnableStepMotor1.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+	handlerPinEnableStepMotor1.GPIO_PinConfig.GPIO_PinOPType	= GPIO_OTYPE_PUSHPULL;
+	GPIO_Config(&handlerPinEnableStepMotor1);
+	GPIO_WritePin(&handlerPinEnableStepMotor1, STEP_MOTOR_OFF);
+
 	/* Configuración del Timer para que genera la señal PWM */
 	handlerSignalStepMotor1.ptrTIMx								= TIM3;
 	handlerSignalStepMotor1.PWMx_Config.PWMx_Channel			= PWM_CHANNEL_3;
@@ -413,7 +428,7 @@ void initSystem(void){
 
 	/*					Configuración para el Step Motor 2					*/
 
-	/* Configuración del Pin PWM */
+	// Pin de PWM
 	handlerPinPwmStepMotor2.pGPIOx									= GPIOB;
 	handlerPinPwmStepMotor2.GPIO_PinConfig.GPIO_PinNumber			= PIN_5;
 	handlerPinPwmStepMotor2.GPIO_PinConfig.GPIO_PinMode				= GPIO_MODE_ALTFN;
@@ -431,6 +446,15 @@ void initSystem(void){
 	handlerPinDirStepMotor2.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
 	GPIO_Config(&handlerPinDirStepMotor2);
 	GPIO_WritePin(&handlerPinDirStepMotor2, RESET);
+
+	// Pin del enable
+	handlerPinEnableStepMotor2.pGPIOx							= GPIOA;
+	handlerPinEnableStepMotor2.GPIO_PinConfig.GPIO_PinNumber	= PIN_10;
+	handlerPinEnableStepMotor2.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_OUT;
+	handlerPinEnableStepMotor2.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+	handlerPinEnableStepMotor2.GPIO_PinConfig.GPIO_PinOPType	= GPIO_OTYPE_PUSHPULL;
+	GPIO_Config(&handlerPinEnableStepMotor2);
+	GPIO_WritePin(&handlerPinEnableStepMotor2, STEP_MOTOR_OFF);
 
 	/* Configurando el Timer para que genera la señal PWM */
 	handlerSignalStepMotor2.ptrTIMx								= TIM3;
@@ -685,6 +709,9 @@ void commandUSART(char* ptrBufferReception){
 
 /** Tiempo de movimiento de los motores según parámetro ingresado en función */
 void stepMotorMove(uint64_t parameter){
+	GPIO_WritePin(&handlerPinEnableStepMotor1, STEP_MOTOR_ON);
+	GPIO_WritePin(&handlerPinEnableStepMotor2, STEP_MOTOR_ON);
+
 	enableOutput(&handlerSignalStepMotor1);
 	enableOutput(&handlerSignalStepMotor2);
 	startPwmSignal(&handlerSignalStepMotor1);
@@ -696,6 +723,9 @@ void stepMotorMove(uint64_t parameter){
 	disableOutput(&handlerSignalStepMotor2);
 	stopPwmSignal(&handlerSignalStepMotor1);
 	stopPwmSignal(&handlerSignalStepMotor2);
+
+	GPIO_WritePin(&handlerPinEnableStepMotor1, STEP_MOTOR_OFF);
+	GPIO_WritePin(&handlerPinEnableStepMotor2, STEP_MOTOR_OFF);
 }
 
 /** Configuración arriba para la CNC */
@@ -742,6 +772,5 @@ void callback_extInt5(void){
 void callback_extInt9(void){
 	flagLimit = 1;
 	flagManualMove = 0;
-
 }
 

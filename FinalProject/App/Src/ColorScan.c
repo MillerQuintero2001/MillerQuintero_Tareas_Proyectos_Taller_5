@@ -53,10 +53,6 @@ uint16_t counterReception = 0;				// Contador de carácteres para la recepción
 bool stringComplete = false;				// Booleano que indica que se ha completado el comando
 unsigned int firstParameter = 0;			// Parámetro en los comandos
 
-/* Elementos para el PWM */
-#define STEP_MOTOR_ON 	0
-#define STEP_MOTOR_OFF	1
-
 GPIO_Handler_t handlerPinPwmStepMotor1 = {0};		// Pin que proporciona la PWM del motor paso a paso 1
 GPIO_Handler_t handlerPinDirStepMotor1 = {0};		// Pin para controlar la dirección del motor paso a paso 1
 GPIO_Handler_t handlerPinEnableStepMotor1 = {0};	// Pin para controlar el driver del motor paso a paso 1
@@ -141,7 +137,6 @@ int main(void){
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
-	writeChar(&usartComm, ' ');
 	sprintf(bufferData, "System initialized \n");
 	writeMsg(&usartComm, bufferData);
 
@@ -415,7 +410,7 @@ void initSystem(void){
 	handlerPinEnableStepMotor1.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
 	handlerPinEnableStepMotor1.GPIO_PinConfig.GPIO_PinOPType	= GPIO_OTYPE_PUSHPULL;
 	GPIO_Config(&handlerPinEnableStepMotor1);
-	GPIO_WritePin(&handlerPinEnableStepMotor1, STEP_MOTOR_OFF);
+	GPIO_WritePin(&handlerPinEnableStepMotor1, RESET);
 
 	/* Configuración del Timer para que genera la señal PWM */
 	handlerSignalStepMotor1.ptrTIMx								= TIM3;
@@ -454,7 +449,7 @@ void initSystem(void){
 	handlerPinEnableStepMotor2.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
 	handlerPinEnableStepMotor2.GPIO_PinConfig.GPIO_PinOPType	= GPIO_OTYPE_PUSHPULL;
 	GPIO_Config(&handlerPinEnableStepMotor2);
-	GPIO_WritePin(&handlerPinEnableStepMotor2, STEP_MOTOR_OFF);
+	GPIO_WritePin(&handlerPinEnableStepMotor2, RESET);
 
 	/* Configurando el Timer para que genera la señal PWM */
 	handlerSignalStepMotor2.ptrTIMx								= TIM3;
@@ -633,12 +628,13 @@ void commandUSART(char* ptrBufferReception){
 
 	// "help" este primer comando imprime una lista con los otros comandoS que tiene el equipo
 	if(strcmp(cmd, "help") == 0){
-		writeMsg(&usartComm, "!Attention! The moving area is approximately 15.36 cm x 10.08 cm");
+		writeMsg(&usartComm, "!Attention! The moving area is approximately 13.92 cm x 10.08 cm");
 		writeMsg(&usartComm, "\nHelp Menu CMDs:\n");
 		writeMsg(&usartComm, "1) help					-- Print this menu \n");
 		writeMsg(&usartComm, "2) setResolution #Option	-- Select one of the following possible resolutions: \n"
-				" Option 1: 1.2 mm \n"
-				" Option 2: 2.4 mm \n");
+				" Option 1: 1.2 mm, 22 minutes of scan aprox. \n"
+				" Option 2: 2.4 mm, 6 minutes of scan aprox. \n"
+				" Option 3: 3.6 mm, only to manual move. \n");
 		writeMsg(&usartComm, "3) setOrigin			-- Enable control keyboard to select origin of scan \n");
 		writeMsg(&usartComm, "4) startScan			-- Start to scan area and collect RGB data \n");
 		writeMsg(&usartComm, "5) returnHome			-- After finishing the scan, move the CNC to the home position (Origin Set)\n");
@@ -646,11 +642,11 @@ void commandUSART(char* ptrBufferReception){
 
 	else if(strcmp(cmd, "setResolution") == 0){
 		writeMsg(&usartComm, "\nCMD: setResolution \n");
-		if((firstParameter>=1)&&(firstParameter<=2)){
+		if((firstParameter>=1)&&(firstParameter<=3)){
 			flagLimit = 0;
 			flagManualMove = 0;
 			resolution = firstParameter;
-			dataRows = 1536/(firstParameter*12);
+			dataRows = 1392/(firstParameter*12);
 			dataColumns = 1008/(firstParameter*12);
 			flagResolution = 1;
 			writeMsg(&usartComm, "Resolution set successfully.\n");
@@ -676,12 +672,12 @@ void commandUSART(char* ptrBufferReception){
 
 	else if(strcmp(cmd, "startScan") == 0){
 		writeMsg(&usartComm, "\nCMD: startScan \n");
-		if((flagOriginSet == 1)&&(flagResolution == 1)){
+		if((flagOriginSet == 1)&&(flagResolution == 1)&&(resolution < 3)){
 			writeMsg(&usartComm, "¡Scan started! \n");
 			flagScan = 1;
 		}
 		else{
-			writeMsg(&usartComm, "Error, set resolution and origin first.\n");
+			writeMsg(&usartComm, "Error, set resolution (res<3) and origin first.\n");
 		}
 	}
 
@@ -709,23 +705,23 @@ void commandUSART(char* ptrBufferReception){
 
 /** Tiempo de movimiento de los motores según parámetro ingresado en función */
 void stepMotorMove(uint64_t parameter){
-	GPIO_WritePin(&handlerPinEnableStepMotor1, STEP_MOTOR_ON);
-	GPIO_WritePin(&handlerPinEnableStepMotor2, STEP_MOTOR_ON);
+	GPIO_WritePin(&handlerPinEnableStepMotor1, SET);
+	GPIO_WritePin(&handlerPinEnableStepMotor2, SET);
 
 	enableOutput(&handlerSignalStepMotor1);
 	enableOutput(&handlerSignalStepMotor2);
 	startPwmSignal(&handlerSignalStepMotor1);
 	startPwmSignal(&handlerSignalStepMotor2);
 
-	delay_ms(4*parameter);
+	delay_ms(8*parameter);
 
 	disableOutput(&handlerSignalStepMotor1);
 	disableOutput(&handlerSignalStepMotor2);
 	stopPwmSignal(&handlerSignalStepMotor1);
 	stopPwmSignal(&handlerSignalStepMotor2);
 
-	GPIO_WritePin(&handlerPinEnableStepMotor1, STEP_MOTOR_OFF);
-	GPIO_WritePin(&handlerPinEnableStepMotor2, STEP_MOTOR_OFF);
+	GPIO_WritePin(&handlerPinEnableStepMotor1, RESET);
+	GPIO_WritePin(&handlerPinEnableStepMotor2, RESET);
 }
 
 /** Configuración arriba para la CNC */

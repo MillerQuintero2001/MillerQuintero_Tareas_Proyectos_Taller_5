@@ -274,6 +274,7 @@ uint8_t i2c_readSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToRead){
 	return auxRead;
 }
 
+/** Función para leer múltiples registro, usando propiedad de autoincremento */
 void i2c_readMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t startReg, uint8_t numReg, uint8_t* arraySaveValues){
 
 	/* 1. Generamos la condición de Start */
@@ -327,6 +328,27 @@ void i2c_writeSingleRegister(I2C_Handler_t *ptrHandlerI2C, uint8_t regToWrite, u
 
 	/* 5. Generamos la condición de Stop, para que el slave se detenga después de 1 byte */
 	i2c_stopTransaction(ptrHandlerI2C);
+}
+
+/** Función para escribir múltiples bytes en registros */
+void i2c_writeMultipleRegisters(I2C_Handler_t *ptrHandlerI2C, uint8_t startRegToWrite,uint8_t numReg, uint8_t* arrayWithValues){
+	/* 1. Generamos la condición de Start */
+	i2c_startTransaction(ptrHandlerI2C);
+
+	/* 2. Enviamos la dirección del esclavo y la indicación de ESCRIBIR */
+	i2c_sendSlaveAddressRW(ptrHandlerI2C, ptrHandlerI2C->slaveAddress, I2C_WRITE_DATA);
+
+	/* 3. Enviamos la dirección de memoria que deseamos escribir */
+	i2c_sendMemoryAddress(ptrHandlerI2C, startRegToWrite);
+
+	for(uint16_t i = 0; i < numReg; i++){
+		/* 4. Enviamos el valor que deseamos escribir en el registro seleccionado */
+		i2c_sendDataByte(ptrHandlerI2C, arrayWithValues[i]);
+	}
+
+	/* 5. Generamos la condición de Stop, para que el slave se detenga después de 1 byte */
+	i2c_stopTransaction(ptrHandlerI2C);
+
 }
 
 

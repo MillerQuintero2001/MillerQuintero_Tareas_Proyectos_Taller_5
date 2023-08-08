@@ -26,17 +26,6 @@
 #define LINE_3			0x14
 #define LINE_4			0x54
 
-
-/* Como la LCD va a ser controlada por medio de del PCF*/
-//typedef struct
-//{
-//	I2C_TypeDef		*ptrI2Cx;
-//	uint8_t			slaveAddress;
-////	uint8_t			modeI2C;
-////	uint8_t			dutyFastModeI2C;
-////	uint8_t			dataI2C;
-//}LCD_Handler_t
-
 /* Después de 2 horas perdidas, simplemente la mejor forma era usar puntero
  * a la estructura handler del I2C, para emplear eficientemente todo */
 

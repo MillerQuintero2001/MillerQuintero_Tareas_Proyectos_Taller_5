@@ -26,10 +26,6 @@
 #include "PwmDriver.h"
 #include "I2CDriver.h"
 
-#define HSI_CLOCK_CONFIGURED	0;	// 16MHz
-#define HSE_CLOCK_CONFIGURED	1;
-#define PLL_CLOCK_CONFIGURED	2;
-
 /* Definición de los handlers necesarios */
 
 // Elementos para el Blinky LED

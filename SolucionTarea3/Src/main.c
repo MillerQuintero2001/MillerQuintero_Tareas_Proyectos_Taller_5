@@ -25,7 +25,6 @@ BasicTimer_Handler_t handlerLedStateTimer = {0}; // Timer del LED de estado
 GPIO_Handler_t handlerTransistorUnd = {0}; // Transistor que controla alimentación para las unidades del display
 GPIO_Handler_t handlerTransistorDec = {0}; // Transistor que controla alimentación para las decenas del display
 BasicTimer_Handler_t handlerSwitching = {0}; //Timer para el suicheo de transistores en el display
-BasicTimer_Handler_t handlerWait = {0}; //Timer para el reposo de transistores en el display
 
 // GPIO's LED's 7 segmentos
 GPIO_Handler_t handlerSegmentA = {0}; // Handler para el segmento 'a' del display con el Pin B12
@@ -47,12 +46,11 @@ EXTI_Config_t handlerExtiSwitch = {0};	// EXTI 4 handler para la interrupción d
 /* Inicializo variables a emplear */
 uint8_t flagLedState = 0;		// Variable bandera timer del LED de estado
 uint8_t flagSwitch = 0;			// Variable bandera suicheo de transistores
-uint8_t flagWait = 0;			// Variable bandera reposo de transistores
 uint8_t contador = 0;			// Variable contador para el display
 uint8_t signo_culebrita = 1;	// Variable que indica que segmento encender en modo culebrita
 uint8_t modo = 0b1;				// Binario que indica modo, en 0 es culebrita, en 1 es contador
-uint8_t pantalla_1 = 0b0;		// Variable que guarda el estado del display de unidades
-uint8_t pantalla_2 = 0b1;		// Variable que guarda el estado del display de decenas
+uint8_t pantalla_1 = 0b1;		// Variable que guarda el estado del display de unidades
+uint8_t pantalla_2 = 0b0;		// Variable que guarda el estado del display de decenas
 uint8_t dataEncoder = 0; 		// Variable que guarda el estado de pin Data del encoder
 
 /* Definición de prototipos de función */
@@ -82,10 +80,10 @@ int main(void){
 			pantalla_1 ^= 0b1;
 			pantalla_2 ^= 0b1;
 			//Alterno el estado de los transistores
-			if((~pantalla_1)&&(pantalla_2)){
+			if((pantalla_1)&&(~pantalla_2)){
 				GPIO_WritePin(&handlerTransistorUnd, RESET);
 			}
-			else if((pantalla_1)&&(~pantalla_2)){
+			else if((~pantalla_1)&&(pantalla_2)){
 				GPIO_WritePin(&handlerTransistorDec, RESET);
 			}
 			else{
@@ -116,8 +114,6 @@ int main(void){
 		else{
 			__NOP();
 		}
-		//estado_Transistor1 = GPIO_ReadPin(&handlerTransistorUnd);
-		//estado_Transistor2 = GPIO_ReadPin(&handlerTransistorDec);
 		display_Control(modo, contador, signo_culebrita, pantalla_1, pantalla_2); // Función que enciende leds
 
 	}
@@ -157,7 +153,7 @@ void init_Hardware(void){
 	// Cargo la configuración
 	GPIO_Config(&handlerTransistorUnd);
 	// Pongo estado en alto para comenzar con unidades, con transistores PNP esto es poner en alto
-	GPIO_WritePin(&handlerTransistorUnd, SET);
+	GPIO_WritePin(&handlerTransistorUnd, RESET);
 
 	// Transistor Decenas
 	handlerTransistorDec.pGPIOx								= GPIOC;
@@ -177,14 +173,6 @@ void init_Hardware(void){
 	handlerSwitching.TIMx_Config.TIMx_period			= 10; // Con este periodo tenemos una frecuencia de 50 Hz
 	handlerSwitching.TIMx_Config.TIMx_interruptEnable 	= 1;
 	BasicTimer_Config(&handlerSwitching);
-
-	// Atributos para el Timer 4 reposo de transistores
-	handlerWait.ptrTIMx								= TIM4;
-	handlerWait.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-	handlerWait.TIMx_Config.TIMx_speed				= BTIMER_SPEED_1ms;
-	handlerWait.TIMx_Config.TIMx_period				= 5;
-	handlerWait.TIMx_Config.TIMx_interruptEnable 	= 1;
-	BasicTimer_Config(&handlerWait);
 
 	/* Fin del GPIO's Transistores y Timer's del suicheo
 	 * ----------------------------------------------*/
@@ -281,9 +269,6 @@ void BasicTimer3_Callback(void){
 	flagSwitch = 1; // Pongo en alto la variable bandera del timer 3 para el main
 }
 
-void BasicTimer4_Callback(void){
-	flagWait = 1; // Pongo en alto la variable bandera del timer 4 para el main
-}
 
 /** Interrupción clock del encoder */
 void callback_extInt2(void){
@@ -428,8 +413,8 @@ void display_Segun_Digito(uint8_t digito){
 void display_Culebrita(uint8_t contador_culebrita){
 	switch(contador_culebrita){
 	case 1: {
-		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		GPIO_WritePin(&handlerTransistorDec, SET);
+		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		// Encendemos display A de unidades
 		GPIO_WritePin(&handlerSegmentA, RESET);
 		GPIO_WritePin(&handlerSegmentB, SET);
@@ -493,8 +478,8 @@ void display_Culebrita(uint8_t contador_culebrita){
 		break;
 	}
 	case 6: {
-		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		GPIO_WritePin(&handlerTransistorDec, SET);
+		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		// Encendemos display E de unidades
 		GPIO_WritePin(&handlerSegmentA, SET);
 		GPIO_WritePin(&handlerSegmentB, SET);
@@ -506,8 +491,8 @@ void display_Culebrita(uint8_t contador_culebrita){
 		break;
 	}
 	case 7: {
-		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		GPIO_WritePin(&handlerTransistorDec, SET);
+		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		// Encendemos display F de unidades
 		GPIO_WritePin(&handlerSegmentA, SET);
 		GPIO_WritePin(&handlerSegmentB, SET);
@@ -545,8 +530,8 @@ void display_Culebrita(uint8_t contador_culebrita){
 		break;
 	}
 	case 10: {
-		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		GPIO_WritePin(&handlerTransistorDec, SET);
+		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		// Encendemos display D de unidades
 		GPIO_WritePin(&handlerSegmentA, SET);
 		GPIO_WritePin(&handlerSegmentB, SET);
@@ -558,8 +543,8 @@ void display_Culebrita(uint8_t contador_culebrita){
 		break;
 	}
 	case 11: {
-		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		GPIO_WritePin(&handlerTransistorDec, SET);
+		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		// Encendemos display C de unidades
 		GPIO_WritePin(&handlerSegmentA, SET);
 		GPIO_WritePin(&handlerSegmentB, SET);
@@ -571,8 +556,8 @@ void display_Culebrita(uint8_t contador_culebrita){
 		break;
 	}
 	case 12: {
-		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		GPIO_WritePin(&handlerTransistorDec, SET);
+		GPIO_WritePin(&handlerTransistorUnd, RESET);
 		// Encendemos display B de unidades
 		GPIO_WritePin(&handlerSegmentA, SET);
 		GPIO_WritePin(&handlerSegmentB, RESET);
@@ -598,10 +583,10 @@ void display_Control(uint8_t modo, uint8_t contador, uint8_t signo_culebrita, ui
 		break;
 	}
 	case 1:{ //Contador
-		if((~estadoUnidades)&&(estadoDecenas)){
+		if((estadoUnidades)&&(~estadoDecenas)){
 			display_Segun_Digito(contador%10); // Mostrar digito unidades
 		}
-		else if((~estadoDecenas)&&(estadoUnidades)){
+		else if((estadoDecenas)&&(~estadoUnidades)){
 			display_Segun_Digito(contador/10); // Mostrar digito decenas
 		}
 		else{

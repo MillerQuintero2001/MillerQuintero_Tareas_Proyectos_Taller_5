@@ -51,13 +51,12 @@ uint8_t signo_culebrita = 1;	// Variable que indica que segmento encender en mod
 uint8_t modo = 0b1;				// Binario que indica modo, en 0 es culebrita, en 1 es contador
 uint8_t pantalla_1 = 0b1;		// Variable que guarda el estado del display de unidades
 uint8_t pantalla_2 = 0b0;		// Variable que guarda el estado del display de decenas
-uint8_t dataEncoder = 0; 		// Variable que guarda el estado de pin Data del encoder
 
 /* Definición de prototipos de función */
 void init_Hardware(void); 							// Función que inicializa los periféricos
 void display_Segun_Digito(uint8_t digito);			// Función encargada de encender los leds del display según el número
 void display_Culebrita(uint8_t contador_culebrita);	// Función encargada de encender los leds del display en modo culebrita
-void display_Control(uint8_t modo, uint8_t contador, uint8_t signo_culebrita, uint8_t estadoUnidades, uint8_t estadoDecenas); // Función controlar display según el modo
+void display_Control(uint8_t modo, uint8_t contador, uint8_t signo_culebrita); // Función controlar display según el modo
 
 /** Funcion principal del programa */
 int main(void){
@@ -72,24 +71,18 @@ int main(void){
 			GPIOxTooglePin(&handlerLedState); //Cambio el estado del LED PA5 cada que se lanza interrup. del Timer 2
 			flagLedState = 0;
 		}
+		else{
+			__NOP();
+		}
 
 		// Suicheo transistores
 		if(flagSwitch&&modo){
-			GPIO_WritePin(&handlerTransistorUnd, SET);
-			GPIO_WritePin(&handlerTransistorDec, SET);
 			pantalla_1 ^= 0b1;
 			pantalla_2 ^= 0b1;
-			//Alterno el estado de los transistores
-			if((pantalla_1)&&(~pantalla_2)){
-				GPIO_WritePin(&handlerTransistorUnd, RESET);
-			}
-			else if((~pantalla_1)&&(pantalla_2)){
-				GPIO_WritePin(&handlerTransistorDec, RESET);
-			}
-			else{
-				__NOP();
-			}
 			flagSwitch = 0;
+		}
+		else{
+			__NOP();
 		}
 
 		/* Control Segmentos del Display */
@@ -114,7 +107,7 @@ int main(void){
 		else{
 			__NOP();
 		}
-		display_Control(modo, contador, signo_culebrita, pantalla_1, pantalla_2); // Función que enciende leds
+		display_Control(modo, contador, signo_culebrita); // Función que enciende leds
 
 	}
 }
@@ -272,9 +265,9 @@ void BasicTimer3_Callback(void){
 
 /** Interrupción clock del encoder */
 void callback_extInt2(void){
-	dataEncoder = GPIO_ReadPin(&handlerData);
+	//dataEncoder = GPIO_ReadPin(&handlerData);
 	// Con flanco de subida en Clock, si Data es diferente de 0, va en sentido anti-horario
-	if(dataEncoder != 0){
+	if(GPIO_ReadPin(&handlerData) != 0){
 		if(modo){ //Verifico si estoy en modo contador
 			contador--;
 		}else{ // Sino en culebrita
@@ -282,7 +275,7 @@ void callback_extInt2(void){
 		}
 	}
 	// Sino, va en sentido horario
-	else if (dataEncoder == 0){
+	else if (GPIO_ReadPin(&handlerData) == 0){
 		if(modo){ //Verifico si estoy en modo contador
 			contador++;
 		}else{ // Sino en culebrita
@@ -576,18 +569,23 @@ void display_Culebrita(uint8_t contador_culebrita){
 }
 
 /** Función que controla el display según el modo en que se encuentre*/
-void display_Control(uint8_t modo, uint8_t contador, uint8_t signo_culebrita, uint8_t estadoUnidades, uint8_t estadoDecenas){
+void display_Control(uint8_t modo, uint8_t contador, uint8_t signo_culebrita){
 	switch(modo){
 	case 0:{ //Culebrita
 		display_Culebrita(signo_culebrita);
 		break;
 	}
 	case 1:{ //Contador
-		if((estadoUnidades)&&(~estadoDecenas)){
+		//Alterno el estado de los transistores
+		if((pantalla_1)&&(~pantalla_2)){
+			GPIO_WritePin(&handlerTransistorDec, SET);
 			display_Segun_Digito(contador%10); // Mostrar digito unidades
+			GPIO_WritePin(&handlerTransistorUnd, RESET);
 		}
-		else if((estadoDecenas)&&(~estadoUnidades)){
+		else if((~pantalla_1)&&(pantalla_2)){
+			GPIO_WritePin(&handlerTransistorUnd, SET);
 			display_Segun_Digito(contador/10); // Mostrar digito decenas
+			GPIO_WritePin(&handlerTransistorDec, RESET);
 		}
 		else{
 			__NOP();

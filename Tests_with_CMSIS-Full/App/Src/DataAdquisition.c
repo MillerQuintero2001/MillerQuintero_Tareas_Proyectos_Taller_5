@@ -1,10 +1,13 @@
-/*
- * MultiTest.c
- *
- *  Created on: 7/06/2023
- *      Author: miller
+/**
+ ******************************************************************************
+ * @file           : BasicProject_Main.c
+ * @author         : Miller Quintero - miquinterog@unal.edu.co
+ * @brief          : Solución básica de un proyecto con librerías externas
+ ******************************************************************************
+ * Generación del archivo de configuración por defecto
+ * como plantilla para los proyectos funcionales
+ ******************************************************************************
  */
-
 
 #include <stdlib.h>
 #include <string.h>
@@ -21,9 +24,7 @@
 #include "USARTxDriver.h"
 #include "SysTickDriver.h"
 #include "PwmDriver.h"
-#include "I2CDriver.h"
 #include "AdcDriver.h"
-
 
 /* Definición de los handlers necesarios */
 
@@ -41,14 +42,24 @@ uint8_t usart2RxData = 0; // Variable en la que se guarda el dato transmitido
 char bufferMsg[64] = {0}; // Buffer de datos como un arreglo de caracteres
 char bufferData[64] = "Mensaje para enviar";
 
+// Elementoss para el ADC
 ADC_Multichannel_Config_t handlerDualADC = {0};
 uint8_t adcIsComplete = 0;
-uint8_t adcCounter = 0;
+uint8_t adcIndicator = 0;
+uint16_t adcCounter = 0;
+uint16_t dataQuantity = 1024;
+uint16_t dataADC1[1024] = {0};
+uint16_t dataADC4[1024] = {0};
 uint16_t dataADC[2] = {0};
-uint8_t channelOrder[2] = {ADC_CHANNEL_0, ADC_CHANNEL_1};
+uint8_t channelOrder[2] = {ADC_CHANNEL_1, ADC_CHANNEL_4};
 uint16_t samplingOrder[2] = {ADC_SAMPLING_PERIOD_84_CYCLES, ADC_SAMPLING_PERIOD_84_CYCLES};
 uint8_t numberOfChannels = 2;
 PWM_Handler_t handlerPwmEventADC = {0};
+
+// Elementos del SysTick
+uint32_t systemTicks = 0;
+uint32_t systemTicksStart = 0;
+uint32_t systemTicksEnd = 0;
 
 
 /* Definición de las cabeceras de funciones del main */
@@ -60,7 +71,6 @@ int main(void){
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
-	writeMsg(&usart2Comm, "Iniciando sistema...");
 
     /* Loop forever */
 	while(1){
@@ -70,15 +80,17 @@ int main(void){
 				// Iniciamos una conversion ADC
 				adcCounter = 0;
 				startPwmSignal(&handlerPwmEventADC);
+				enableOutput(&handlerPwmEventADC);
 			}
 			usart2RxData = '\0';
 		}
 
 		if(adcIsComplete == 1){
-			stopPwmSignal(&handlerPwmEventADC);
-			sprintf(bufferData, "%u\t%u\n", dataADC[0],dataADC[1]);
-			writeMsg(&usart2Comm, bufferData);
 			adcIsComplete = 0;
+			for (uint16_t i = 0; i < dataQuantity; i++){
+				sprintf(bufferData, "#%u\t%u\t%u\n",i+1,dataADC1[i],dataADC4[i]);
+				writeMsg(&usart2Comm, bufferData);
+			}
 		}
 	}
 	return 0;
@@ -101,7 +113,7 @@ void initSystem(void){
 	// Pongo estado en alto
 	GPIO_WritePin(&handlerBlinkyPin, SET);
 	// Atributos para el Timer 2 del LED de estado
-	handlerBlinkyTimer.ptrTIMx								= TIM2;
+	handlerBlinkyTimer.ptrTIMx								= TIM4;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_SPEED_1ms;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 250;
@@ -145,14 +157,13 @@ void initSystem(void){
 	handlerDualADC.resolution			= ADC_RESOLUTION_12_BIT;
 	handlerDualADC.dataAlignment		= ADC_ALIGNMENT_RIGHT;
 	handlerDualADC.extTriggerEnable		= ADC_EXTEN_RISING_EDGE;
-	handlerDualADC.extTriggerSelect		= ADC_EXTSEL_TIM5_CC3;
-	adc_ConfigMultichannel(&handlerDualADC, 2);
-
+	handlerDualADC.extTriggerSelect		= ADC_EXTSEL_TIM2_CC2;
+	adc_ConfigMultichannel(&handlerDualADC, numberOfChannels);
 
 	/* Configuración del PWM usado como disparador de la conversión ADC */
 	// Utilizo el canal 3 para PWM del Timer 5 ya que el 1 y 2 están ocupados por ADC
-	handlerPwmEventADC.ptrTIMx						= TIM5;
-	handlerPwmEventADC.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_3;
+	handlerPwmEventADC.ptrTIMx						= TIM2;
+	handlerPwmEventADC.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_2;
 	handlerPwmEventADC.PWMx_Config.PWMx_Prescaler	= BTIMER_SPEED_10us;
 	handlerPwmEventADC.PWMx_Config.PWMx_Period		= 10;
 	handlerPwmEventADC.PWMx_Config.PWMx_DuttyCicle	= 5;
@@ -161,7 +172,7 @@ void initSystem(void){
 }
 
 /** Interrupción del timer blinky LED*/
-void BasicTimer2_Callback(void){
+void BasicTimer4_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
 }
 
@@ -171,12 +182,25 @@ void usart2Rx_Callback(void){
 }
 
 void adcComplete_Callback(void){
-	dataADC[adcCounter] = getADC();
-	if(adcCounter < (numberOfChannels-1)){
-		adcCounter++;
+	// Con el indicador verifico a que arreglo le corresponde el dato
+	if(adcIndicator == 0){
+		dataADC1[adcCounter] = getADC();
+		adcIndicator++;
 	}
 	else{
-		adcIsComplete = 1;
+		dataADC4[adcCounter] = getADC();
+		adcIndicator = 0;
+		adcCounter++;
+
+	}
+	// Control del contador de datos
+	if(adcCounter > (dataQuantity-1)){
 		adcCounter = 0;
+		disableOutput(&handlerPwmEventADC);
+		stopPwmSignal(&handlerPwmEventADC);
+		adcIsComplete = 1;
 	}
 }
+
+
+

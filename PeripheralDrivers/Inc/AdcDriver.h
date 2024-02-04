@@ -27,7 +27,6 @@
 #define ADC_CHANNEL_13		13
 #define ADC_CHANNEL_14		14
 #define ADC_CHANNEL_15		15
-#define ADC_CHANNEL_16		16
 
 #define ADC_RESOLUTION_12_BIT	0
 #define ADC_RESOLUTION_10_BIT	1
@@ -77,7 +76,7 @@ typedef struct
 
 typedef struct
 {
-	uint8_t		*orderADC;		// Arreglo con el orden de operación de los canales
+	uint8_t		*orderADC;			// Arreglo con el orden de operación de los canales
 	uint8_t 	resolution;			// Precisión con la que el ADC hace la adquisición del dato
 	uint16_t 	*samplingPeriod;	// Tiempo deseado para hacer la adquisición del dato
 	uint8_t		dataAlignment;		// Alineación a la izquierda o a la derecha

@@ -217,7 +217,7 @@ void initSystem(void){
 	// Activamos el Coprocesador Matemático - FPU
 	SCB->CPACR |= (0XF << 20);
 
-	// Configuramos el equipo a 8MHz, usando el driver del PLL
+	// Configuramos el equipo a 80MHz, usando el driver del PLL
 	configPLL(clock80);
 
 	// Configuramos el Systick con el reloj PLL de 80MHz

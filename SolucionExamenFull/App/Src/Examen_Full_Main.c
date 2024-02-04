@@ -479,8 +479,8 @@ void commandUSART(char* ptrBufferReception){
 		// Verificamos si es formato de 24H
 		if(lastFormatHour == RTC_FORMAT_24H){
 			// Filtro para solo parámetros válidos
-			if(((1<=firstParameter)&&(firstParameter<=24)) && ((0<=secondParameter)&&(secondParameter<=60)) &&
-					((0<=thirdParameter)&&(thirdParameter<=60))){
+			if(((1<=firstParameter)&&(firstParameter<24)) && ((0<=secondParameter)&&(secondParameter<60)) &&
+					((0<=thirdParameter)&&(thirdParameter<60))){
 				handlerRTC.RTC_Hours = (uint8_t)firstParameter;
 				handlerRTC.RTC_Minutes = (uint8_t)secondParameter;
 				handlerRTC.RTC_Seconds = (uint8_t)thirdParameter;
@@ -496,8 +496,8 @@ void commandUSART(char* ptrBufferReception){
 		}
 		// Verificamos si es formato de 12H
 		else if(lastFormatHour == RTC_FORMAT_12H){
-			if(((1<=firstParameter)&&(firstParameter<=12)) && ((0<=secondParameter)&&(secondParameter<=60)) &&
-					((0<=thirdParameter)&&(thirdParameter<=60)) && ((fourthParameter==1)||(fourthParameter==2))){
+			if(((1<=firstParameter)&&(firstParameter<=12)) && ((0<=secondParameter)&&(secondParameter<60)) &&
+					((0<=thirdParameter)&&(thirdParameter<60)) && ((fourthParameter==1)||(fourthParameter==2))){
 				// Verificamos si es AM
 				if(fourthParameter == RTC_HOUR_FORMAT_12H_AM){
 					handlerRTC.RTC_Hours = (uint8_t)firstParameter;

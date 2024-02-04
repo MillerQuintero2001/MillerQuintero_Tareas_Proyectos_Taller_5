@@ -85,11 +85,11 @@
 							<tool id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.objcopy.symbolsrec.1201754357" name="MCU Output Converter Motorola S-rec with symbols" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.objcopy.symbolsrec"/>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1765075102.2092157470" name="BasicProject_Main.c" rcbsApplicability="disable" resourcePath="App/Src/BasicProject_Main.c" toolsToInvoke="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.1217377869.2119081725">
-						<tool id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.1217377869.2119081725" name="MCU GCC Compiler" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.1217377869"/>
+					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1765075102.871663197" name="TestOLED.c" rcbsApplicability="disable" resourcePath="App/Src/TestOLED.c" toolsToInvoke="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.1217377869.968030075">
+						<tool id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.1217377869.968030075" name="MCU GCC Compiler" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.1217377869"/>
 					</fileInfo>
 					<sourceEntries>
-						<entry excluding="Src/BasicProject_Main.c|Src/TestSpi.c|Src/TestFourier.c|Src/TestMotor.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="App"/>
+						<entry excluding="Src/TestOLED.c|Src/BasicProject_Main.c|Src/TestSpi.c|Src/TestFourier.c|Src/TestMotor.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="App"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 					</sourceEntries>
 				</configuration>

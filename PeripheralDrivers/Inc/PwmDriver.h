@@ -16,6 +16,9 @@
 #define PWM_CHANNEL_3	2
 #define PWM_CHANNEL_4	3
 
+#define PWM_POLARITY_ACTIVE_HIGH 	0
+#define PWM_POLARITY_ACTIVE_LOW		1
+
 #define PWM_DUTTY_0_PERCENT		0
 #define PWM_DUTTY_5_PERCENT		5
 #define PWM_DUTTY_10_PERCENT	10
@@ -36,12 +39,13 @@ typedef struct
 	uint32_t	PWMx_Prescaler;		// A qué velocidad se incrementa el Timer
 	uint16_t	PWMx_Period;		// Indica el número de veces que el Timer se incrementa, el periodo de la frecuencia viene dado por Time_Fosc * PSC * ARR
 	uint16_t	PWMx_DuttyCicle;	// Valor en porcentaje (%) del tiempo que la señal está en alto
+	uint8_t 	PWMx_Polarity;		// Establecemos la polaridad deseada para la señal PWM
 }PWM_Config_t;
 
 /**/
 typedef struct
 {
-	TIM_TypeDef		*ptrTIMx;	// Timer al que esta asociado el PWM
+	TIM_TypeDef		*ptrTIMx;		// Timer al que esta asociado el PWM
 	PWM_Config_t	PWMx_Config;	// Configuración inicial del PWM
 }PWM_Handler_t;
 
@@ -55,5 +59,7 @@ void enableOutput(PWM_Handler_t *ptrPwmHandler);
 void disableOutput(PWM_Handler_t *ptrPwmHandler);
 void startPwmSignal(PWM_Handler_t *ptrPwmHandler);
 void stopPwmSignal(PWM_Handler_t *ptrPwmHandler);
+void setPolarity(PWM_Handler_t *ptrPwmHandler, uint8_t polarity);
+void tooglePolarity(PWM_Handler_t *ptrPwmHandler);
 
 #endif /* PWMDRIVER_H_ */

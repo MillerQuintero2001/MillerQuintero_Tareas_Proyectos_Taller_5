@@ -67,6 +67,8 @@ void pwm_Config(PWM_Handler_t *ptrPwmHandler){
 		ptrTimerPWM->CCMR1 |= TIM_CCMR1_OC1PE;
 		// Seleccionamos polaridad convencional (no invertida)
 		ptrTimerPWM->CCER &= ~TIM_CCER_CC1P;
+		// Configuramos la polaridad
+		setPolarity(ptrPwmHandler, ptrPwmHandler->PWMx_Config.PWMx_Polarity);
 		break;
 	}
 
@@ -81,6 +83,8 @@ void pwm_Config(PWM_Handler_t *ptrPwmHandler){
 		ptrTimerPWM->CCMR1 |= TIM_CCMR1_OC2PE;
 		// Seleccionamos polaridad convencional (no invertida)
 		ptrTimerPWM->CCER &= ~TIM_CCER_CC2P;
+		// Configuramos la polaridad
+		setPolarity(ptrPwmHandler, ptrPwmHandler->PWMx_Config.PWMx_Polarity);
 		break;
 	}
 
@@ -95,6 +99,8 @@ void pwm_Config(PWM_Handler_t *ptrPwmHandler){
 		ptrTimerPWM->CCMR2 |= TIM_CCMR2_OC3PE;
 		// Seleccionamos polaridad convencional (no invertida)
 		ptrTimerPWM->CCER &= ~TIM_CCER_CC3P;
+		// Configuramos la polaridad
+		setPolarity(ptrPwmHandler, ptrPwmHandler->PWMx_Config.PWMx_Polarity);
 		break;
 	}
 
@@ -109,6 +115,8 @@ void pwm_Config(PWM_Handler_t *ptrPwmHandler){
 		ptrTimerPWM->CCMR2 |= TIM_CCMR2_OC4PE;
 		// Seleccionamos polaridad convencional (no invertida)
 		ptrTimerPWM->CCER &= ~TIM_CCER_CC4P;
+		// Configuramos la polaridad
+		setPolarity(ptrPwmHandler, ptrPwmHandler->PWMx_Config.PWMx_Polarity);
 		break;
 	}
 
@@ -119,21 +127,23 @@ void pwm_Config(PWM_Handler_t *ptrPwmHandler){
 
 	}// fin del switch-case
 
+
+
 //	/* 6. Activamos la salida seleccionada */
 //	enableOutput(ptrPwmHandler);
 }
 
-/* Función para activar el Timer y activar todo el módulo PWM */
+/** Función para activar el Timer y activar todo el módulo PWM */
 void startPwmSignal(PWM_Handler_t *ptrPwmHandler) {
 	ptrTimerPWM->CR1 |= TIM_CR1_CEN;
 }
 
-/* Función para desactivar el Timer y detener todo el módulo PWM*/
+/** Función para desactivar el Timer y detener todo el módulo PWM*/
 void stopPwmSignal(PWM_Handler_t *ptrPwmHandler) {
 	ptrTimerPWM->CR1 &= ~TIM_CR1_CEN;
 }
 
-/* Función encargada de activar cada uno de los canales con los que cuenta el TimerX */
+/** Función encargada de activar cada uno de los canales con los que cuenta el TimerX */
 void enableOutput(PWM_Handler_t *ptrPwmHandler) {
 	switch (ptrPwmHandler->PWMx_Config.PWMx_Channel) {
 	case PWM_CHANNEL_1: {
@@ -192,7 +202,7 @@ void disableOutput(PWM_Handler_t *ptrPwmHandler){
 		}
 }
 
-/*
+/**
  * La frecuencia es definida por el conjunto formado por el preescaler (PSC)
  * y el valor límite al que llega el Timer (ARR), con estos dos se establece
  * la frecuencia.
@@ -209,7 +219,7 @@ void setPeriod(PWM_Handler_t *ptrPwmHandler){
 }
 
 
-/* Función para actualizar la frecuencia, funciona de la mano con setFrequency */
+/** Función para actualizar la frecuencia, funciona de la mano con setFrequency */
 void updatePeriod(PWM_Handler_t *ptrPwmHandler, uint16_t newPeriod){
 	// Actualizamos el registro que manipula el periodo
 	ptrPwmHandler->PWMx_Config.PWMx_Period = newPeriod;
@@ -218,7 +228,7 @@ void updatePeriod(PWM_Handler_t *ptrPwmHandler, uint16_t newPeriod){
 	setPeriod(ptrPwmHandler);
 }
 
-/* El valor del dutty debe estar dado en valores de %, entre 0% y 100%*/
+/** El valor del dutty debe estar dado en valores de %, entre 0% y 100%*/
 void setDuttyCycle(PWM_Handler_t *ptrPwmHandler){
 
 	// Seleccionamos el canal para configurar su dutty
@@ -248,13 +258,71 @@ void setDuttyCycle(PWM_Handler_t *ptrPwmHandler){
 }
 
 
-/* Función para actualizar el Dutty, funciona de la mano con setDuttyCycle */
+/** Función para actualizar el Dutty, funciona de la mano con setDuttyCycle */
 void updateDuttyCycle(PWM_Handler_t *ptrPwmHandler, uint16_t newDutty){
 	// Actualizamos el registro que manipula el dutty
 	ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle = newDutty;
 
 	// Llamamos a la fucnión que cambia el dutty y cargamos el nuevo valor
 	setDuttyCycle(ptrPwmHandler);
+}
+
+/** Función encargada de establecer la polaridad deseada */
+void setPolarity(PWM_Handler_t *ptrPwmHandler, uint8_t polarity){
+
+	// Seleccionamos el canal para cambiar la polaridad
+	switch(ptrPwmHandler->PWMx_Config.PWMx_Channel){
+	case PWM_CHANNEL_1:{
+		ptrTimerPWM->CCER &= (~TIM_CCER_CC1P);	// Limpio
+		ptrTimerPWM->CCER |= (TIM_CCER_CC1P);	// Escribo
+		break;
+	}
+	case PWM_CHANNEL_2:{
+		ptrTimerPWM->CCER &= (~TIM_CCER_CC2P); 	// Limpio
+		ptrTimerPWM->CCER |= (TIM_CCER_CC2P);	// Escribo
+		break;
+	}
+	case PWM_CHANNEL_3:{
+		ptrTimerPWM->CCER &= (~TIM_CCER_CC3P);	// Limpio
+		ptrTimerPWM->CCER |= (TIM_CCER_CC3P);	// Escribo
+		break;
+	}
+	case PWM_CHANNEL_4:{
+		ptrTimerPWM->CCER &= (~TIM_CCER_CC4P);	// Limpio
+		ptrTimerPWM->CCER |= (TIM_CCER_CC4P);	// Escribo
+		break;
+	}
+	default:{
+		break;
+	}
+	}
+}
+
+/** Función para invertir la polaridad de la señal */
+void tooglePolarity(PWM_Handler_t *ptrPwmHandler){
+
+	// Seleccionamos el canal para cambiar la polaridad
+	switch(ptrPwmHandler->PWMx_Config.PWMx_Channel){
+	case PWM_CHANNEL_1:{
+		ptrTimerPWM->CCER ^= (TIM_CCER_CC1P);
+		break;
+	}
+	case PWM_CHANNEL_2:{
+		ptrTimerPWM->CCER ^= (TIM_CCER_CC2P);
+		break;
+	}
+	case PWM_CHANNEL_3:{
+		ptrTimerPWM->CCER ^= (TIM_CCER_CC3P);
+		break;
+	}
+	case PWM_CHANNEL_4:{
+		ptrTimerPWM->CCER ^= (TIM_CCER_CC4P);
+		break;
+	}
+	default:{
+		break;
+	}
+	}
 }
 
 

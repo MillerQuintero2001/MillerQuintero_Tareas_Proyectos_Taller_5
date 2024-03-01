@@ -8,13 +8,14 @@
 #include <stdint.h>
 #include "CMDxDriver.h"
 #include "GPIOxDriver.h"
+#include "USARTxDriver.h"
 
 // Inicializo variables y elementos propios del driver
 
 /* Esto para configurar el USART2 */
-GPIO_Handler_t handlerPinTX2 = {0};			// Pin de transmisión de datos
-GPIO_Handler_t handlerPinRX2 = {0};			// Pin de recepción de datos
-USART_Handler_t usartComm2 =  {0};			// Comunicación serial
+GPIO_Handler_t handlerPinTX = {0};			// Pin de transmisión de datos
+GPIO_Handler_t handlerPinRX = {0};			// Pin de recepción de datos
+USART_Handler_t usartComm =  {0};			// Comunicación serial
 
 uint8_t usartData = 0; 				// Variable en la que se guarda el dato transmitido
 char bufferReception[64] = {0};		// Buffer para guardar caracteres ingresados
@@ -26,117 +27,138 @@ unsigned int secondParameter = 0;
 unsigned int thirdParameter = 0;
 unsigned int fourthParameter = 0;
 
+/** Función necesaria para prepara el USART1 para comandos del robot */
 void commandConfig(void){
 
-	/* Configuración de pines para el USART2 */
-	handlerPinTX2.pGPIOx								= GPIOA;
-	handlerPinTX2.GPIO_PinConfig.GPIO_PinNumber 		= PIN_2;
-	handlerPinTX2.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-	handlerPinTX2.GPIO_PinConfig.GPIO_PinAltFunMode		= AF7;
-	GPIO_Config(&handlerPinTX2);
+	/* Configuración de pines para el USART1 */
+	handlerPinTX.pGPIOx									= GPIOA;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinNumber 			= PIN_9;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode		= AF7;
+	GPIO_Config(&handlerPinTX);
 
-	handlerPinRX2.pGPIOx								= GPIOA;
-	handlerPinRX2.GPIO_PinConfig.GPIO_PinNumber 		= PIN_3;
-	handlerPinRX2.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-	handlerPinRX2.GPIO_PinConfig.GPIO_PinAltFunMode		= AF7;
-	GPIO_Config(&handlerPinRX2);
+	handlerPinRX.pGPIOx									= GPIOA;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinNumber 			= PIN_10;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode		= AF7;
+	GPIO_Config(&handlerPinRX);
 
 	/* Configuración de la comunicación serial */
-	usartComm2.ptrUSARTx						= USART2;
-	usartComm2.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
-	usartComm2.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-	usartComm2.USART_Config.USART_parity		= USART_PARITY_NONE;
-	usartComm2.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-	usartComm2.USART_Config.USART_mode			= USART_MODE_RXTX;
-	usartComm2.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
-	usartComm2.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
-	USART_Config(&usartComm2);
+	usartComm.ptrUSARTx						= USART2;
+	usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+	usartComm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
+	usartComm.USART_Config.USART_parity		= USART_PARITY_NONE;
+	usartComm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
+	usartComm.USART_Config.USART_mode			= USART_MODE_RXTX;
+	usartComm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
+	usartComm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
+	USART_Config(&usartComm);
 
 }
 
 
-/** Función encargada de construir el string con el comando */
-void commandBuild(void){
-	bufferReception[counterReception] = usartData;
+/** Función encargada de construir el string con el comando y ejecutarlo */
+void commandBuild(uint8_t usartRxData){
+	bufferReception[counterReception] = usartRxData;
 	counterReception++;
 
 	// Aqui hacemmos la instrucción que detine la recepción del comando
-	if(usartData == '\r'){
+	if(usartRxData == '\r'){
 		stringComplete = true;
 
 		//Sustituyo el último caracter de @ por un null
 		bufferReception[counterReception] = '\0';
 		counterReception = 0;
 	}
-	if(usartData == '\b'){
+	else{
+		__NOP();
+	}
+
+	// Para borrar lo que se haya digitado en la terminal
+	if(usartRxData == '\b'){
 		counterReception--;
 		counterReception--;
+	}
+	else{
+		__NOP();
 	}
 
 	// Volvemos a null para terminar
-	usartData = '\0';
-}
+	usartRxData = '\0';
 
 
+	// Sección de ejecución del comando
+	if(stringComplete){
 
-void commandUSART(char* ptrBufferReception){
+		/* El funcionamiento es de la siguiente forma: Empleamos el puntero al buffer para
+		 * acceder a los elementos del string, y por medio de la función sscanf se almacena
+		 * en 3 elemetos diferentes, el string del comando "cmd", y dos números enteros llamados
+		 * "firstParameter" y "SecondParameter". De esta froma, podemos introducir información
+		 * al micro desde el puerto serial */
+		sscanf(bufferReception, "%s %u %u %u %u", cmd, &firstParameter, &secondParameter, &thirdParameter, &fourthParameter);
 
-	/* El funcionamiento es de la siguiente forma: Empleamos el puntero al buffer para
-	 * acceder a los elementos del string, y por medio de la función sscanf se almacena
-	 * en 3 elemetos diferentes, el string del comando "cmd", y dos números enteros llamados
-	 * "firstParameter" y "SecondParameter". De esta froma, podemos introducir información
-	 * al micro desde el puerto serial */
-	sscanf(ptrBufferReception, "%s %u %u %u %u", cmd, &firstParameter, &secondParameter, &thirdParameter, &fourthParameter);
+		/* Usamos la funcion strcmp, string compare, que me retorna un 0 si los 2 strings son iguales */
 
-	/* Usamos la funcion strcmp, string compare, que me retorna un 0 si los 2 strings son iguales */
+		// "help" este primer comando imprime una lista con los otros comandos que tiene el equipo
+		if(strcmp(cmd, "Help") == 0){
+			writeMsg(&usartComm, "\nHelp Menu CMDs:\n");
+			writeMsg(&usartComm, "0) Help				-- Print this menu \n");
+			writeMsg(&usartComm, "1) Commandx1			-- \n");
+			writeMsg(&usartComm, "2) Commandx2			-- \n");
+			writeMsg(&usartComm, "3) Commandx3			-- \n");
+			writeMsg(&usartComm, "4) Commandx4			-- \n");
+			writeMsg(&usartComm, "5) Commandx5			-- \n");
+			writeMsg(&usartComm, "6) Commandx6			-- \n");
+		}
 
-	// "help" este primer comando imprime una lista con los otros comandos que tiene el equipo
-	if(strcmp(cmd, "Help") == 0){
-		writeMsg(&usartComm2, "\nHelp Menu CMDs:\n");
-		writeMsg(&usartComm2, "0) Help				-- Print this menu \n");
-		writeMsg(&usartComm2, "1) Commandx1			-- \n");
-		writeMsg(&usartComm2, "2) Commandx2			-- \n");
-		writeMsg(&usartComm2, "3) Commandx3			-- \n");
-		writeMsg(&usartComm2, "4) Commandx4			-- \n");
-		writeMsg(&usartComm2, "5) Commandx5			-- \n");
-		writeMsg(&usartComm2, "6) Commandx6			-- \n");
+		// "Commandx1"
+		else if(strcmp(cmd, "Commandx1") == 0){
+			writeMsg(&usartComm, "\nCMD: Commandx1 \n");
+			command_1();
+		}
+
+		// "Commandx2"
+		else if(strcmp(cmd, "Commandx2") == 0){
+			writeMsg(&usartComm, "\nCMD: Commandx2 \n");
+			command_2();
+		}
+
+		// "Commandx3"
+		else if(strcmp(cmd, "Commandx3") == 0){
+			writeMsg(&usartComm, "\nCMD: Commandx3 \n");
+			command_3();
+		}
+
+		// "Commandx4"
+		else if(strcmp(cmd, "Commandx4") == 0){
+			writeMsg(&usartComm, "\nCMD: Commandx4 \n");
+			command_4();
+		}
+
+		// "Commandx5"
+		else if(strcmp(cmd, "Commandx5") == 0){
+			writeMsg(&usartComm, "\nCMD: Commandx5 \n");
+			command_5();
+		}
+
+		// "Commandx6"
+		else if(strcmp(cmd, "Commandx6") == 0){
+			writeMsg(&usartComm, "\nCMD: Commandx6 \n");
+			command_6();
+		}
+
+		// En cualquier otro caso, indicamos que el comando es incorrecto
+		else{
+			writeMsg(&usartComm, "\nWrong command \n");
+		}
 	}
 
-	// "Commandx1"
-	else if(strcmp(cmd, "Commandx1") == 0){
-		writeMsg(&usartComm2, "\nCMD: Commandx1 \n");
-	}
-
-	// "Commandx2"
-	else if(strcmp(cmd, "Commandx1") == 0){
-		writeMsg(&usartComm2, "\nCMD: Commandx1 \n");
-	}
-
-	// "Commandx3"
-	else if(strcmp(cmd, "Commandx1") == 0){
-		writeMsg(&usartComm2, "\nCMD: Commandx1 \n");
-	}
-
-	// "Commandx4"
-	else if(strcmp(cmd, "Commandx1") == 0){
-		writeMsg(&usartComm2, "\nCMD: Commandx1 \n");
-	}
-
-	// "Commandx5"
-	else if(strcmp(cmd, "Commandx1") == 0){
-		writeMsg(&usartComm2, "\nCMD: Commandx1 \n");
-	}
-
-	// "Commandx6"
-	else if(strcmp(cmd, "Commandx1") == 0){
-		writeMsg(&usartComm2, "\nCMD: Commandx1 \n");
-	}
-
-	// En cualquier otro caso, indicamos que el comando es incorrecto
 	else{
-		writeMsg(&usartComm2, "\nWrong command \n");
+		__NOP();
 	}
 }
+
+
 
 /** Funciones command weak, que pueden ser sobre-escritas y modificadas en el main*/
 __attribute__ ((weak)) void commandx1(void){

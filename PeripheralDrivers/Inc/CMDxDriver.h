@@ -19,8 +19,7 @@
 #include "USARTxDriver.h"
 
 void commandConfig(void);
-void commandBuild(void);
-void commandUSART(char* ptrBufferReception);
+void commandBuild(uint8_t usartRxData);
 void command_1(void);
 void command_2(void);
 void command_3(void);

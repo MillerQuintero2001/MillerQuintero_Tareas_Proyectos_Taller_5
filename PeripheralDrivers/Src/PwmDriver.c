@@ -274,22 +274,22 @@ void setPolarity(PWM_Handler_t *ptrPwmHandler, uint8_t polarity){
 	switch(ptrPwmHandler->PWMx_Config.PWMx_Channel){
 	case PWM_CHANNEL_1:{
 		ptrTimerPWM->CCER &= (~TIM_CCER_CC1P);	// Limpio
-		ptrTimerPWM->CCER |= (TIM_CCER_CC1P);	// Escribo
+		ptrTimerPWM->CCER |= (polarity << TIM_CCER_CC1P_Pos);	// Escribo
 		break;
 	}
 	case PWM_CHANNEL_2:{
 		ptrTimerPWM->CCER &= (~TIM_CCER_CC2P); 	// Limpio
-		ptrTimerPWM->CCER |= (TIM_CCER_CC2P);	// Escribo
+		ptrTimerPWM->CCER |= (polarity << TIM_CCER_CC2P_Pos);	// Escribo
 		break;
 	}
 	case PWM_CHANNEL_3:{
 		ptrTimerPWM->CCER &= (~TIM_CCER_CC3P);	// Limpio
-		ptrTimerPWM->CCER |= (TIM_CCER_CC3P);	// Escribo
+		ptrTimerPWM->CCER |= (polarity << TIM_CCER_CC3P_Pos);	// Escribo
 		break;
 	}
 	case PWM_CHANNEL_4:{
 		ptrTimerPWM->CCER &= (~TIM_CCER_CC4P);	// Limpio
-		ptrTimerPWM->CCER |= (TIM_CCER_CC4P);	// Escribo
+		ptrTimerPWM->CCER |= (polarity << TIM_CCER_CC4P_Pos);	// Escribo
 		break;
 	}
 	default:{

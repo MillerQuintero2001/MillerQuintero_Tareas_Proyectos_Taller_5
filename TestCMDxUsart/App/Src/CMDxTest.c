@@ -40,7 +40,7 @@ char bufferData[64] = "Mensaje para enviar";
 // Elementos para PWM
 PWM_Handler_t handlerPwmTest = {0};
 GPIO_Handler_t handlerPinPwm = {0};
-uint16_t freq = 5000;
+uint16_t freq = 100;
 
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 			// Función que inicializa los periféricos básicos
@@ -104,7 +104,7 @@ void initSystem(void){
 	handlerPwmTest.PWMx_Config.PWMx_Channel 		= PWM_CHANNEL_1;
 	handlerPwmTest.PWMx_Config.PWMx_Prescaler 		= BTIMER_SPEED_1ms;
 	handlerPwmTest.PWMx_Config.PWMx_Period 			= freq;
-	handlerPwmTest.PWMx_Config.PWMx_DuttyCicle 		= 4900;
+	handlerPwmTest.PWMx_Config.PWMx_DuttyCicle 		= 90;
 	handlerPwmTest.PWMx_Config.PWMx_Polarity 		= PWM_POLARITY_ACTIVE_HIGH;
 	pwm_Config(&handlerPwmTest);
 

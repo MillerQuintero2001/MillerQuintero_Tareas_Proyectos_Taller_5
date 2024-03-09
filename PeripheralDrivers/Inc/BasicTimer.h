@@ -13,6 +13,7 @@
 #define BTIMER_MODE_UP		0
 #define BTIMER_MODE_DOWN	1
 
+#define BTIMER_SPEED_1us	16
 #define BTIMER_SPEED_10us	160
 #define BTIMER_SPEED_100us	1600
 #define BTIMER_SPEED_1ms	16000

@@ -17,7 +17,7 @@
 #define MCO1_HSI_CLOCK 	0
 #define MCO1_LSE_CLOCK 	1
 #define MCO1_HSE_CLOCK	2
-#define MC01_PLL_CLOCK 	3
+#define MCO1_PLL_CLOCK 	3
 
 #define MCO1_DIVIDED_BY_1	0
 #define MCO1_DIVIDED_BY_2	0b100

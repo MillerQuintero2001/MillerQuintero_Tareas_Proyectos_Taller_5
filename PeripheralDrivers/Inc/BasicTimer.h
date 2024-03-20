@@ -19,8 +19,8 @@
 #define BTIMER_SPEED_1ms	16000
 
 // Cuando tengo el micro a 80 MHz, al APB1 de los Timers 2 al 5 le llegan 40 MHz
-#define BTIMER_PLL_80MHz_SPEED_10us		807
-#define BTIMER_PLL_80MHz_SPEED_100us	8078
+#define BTIMER_PLL_80MHz_SPEED_10us		800
+#define BTIMER_PLL_80MHz_SPEED_100us	8000
 
 #define BTIMER_PLL_100MHz_SPEED_1us		100
 #define BTIMER_PLL_100MHz_SPEED_10us	1000
@@ -33,10 +33,11 @@
 /* Estructura que contiene la configuración mínima necesaria para el manejo del Timer.*/
 typedef struct
 {
-	uint8_t		TIMx_mode; 		// Up or dowm
-	uint32_t	TIMx_speed;		// A qué velocidad se incrementa el Timer
-	uint32_t	TIMx_period;	// Valor en ms del periodo del Timer
-	uint8_t		TIMx_interruptEnable;	// Activa o desactiva el modo interrupción del timer.
+	uint8_t		TIMx_mode; 					// Up or dowm
+	uint32_t	TIMx_speed;					// A qué velocidad se incrementa el Timer
+	uint32_t	TIMx_period;				// Valor en ms del periodo del Timer
+	uint8_t		TIMx_interruptEnable;		// Activa o desactiva el modo interrupción del timer.
+	uint8_t		TIMx_priorityInterrupt;		// Prioridad de la interrupción
 }BasicTimer_Config_t;
 
 /* Handler para el Timer*/

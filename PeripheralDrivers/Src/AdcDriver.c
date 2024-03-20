@@ -135,7 +135,7 @@ void adc_ConfigMultichannel (ADC_Multichannel_Config_t *adcMultiConfig, uint8_t 
 	__NVIC_EnableIRQ(ADC_IRQn);
 
 	/* 11b. Configuramos la prioridad para la interrupción ADC */
-	__NVIC_SetPriority(ADC_IRQn, 4);
+	__NVIC_SetPriority(ADC_IRQn, adcMultiConfig->priorityInterrupt);
 
 	/* 12. Activamos el modulo ADC */
 	ADC1->CR2 |= ADC_CR2_ADON;
@@ -236,7 +236,7 @@ void adc_Config(ADC_Config_t *adcConfig){
 	__NVIC_EnableIRQ(ADC_IRQn);
 
 	/* 11b. Configuramos la prioridad para la interrupción ADC */
-	__NVIC_SetPriority(ADC_IRQn, 4);
+	__NVIC_SetPriority(ADC_IRQn, adcConfig->priorityInterrupt);
 
 	/* 12. Activamos el modulo ADC */
 	ADC1->CR2 |= ADC_CR2_ADON;

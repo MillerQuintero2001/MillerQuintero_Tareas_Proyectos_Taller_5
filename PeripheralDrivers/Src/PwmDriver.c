@@ -199,7 +199,7 @@ void disableOutput(PWM_Handler_t *ptrPwmHandler){
 			__NOP();
 			break;
 		}
-		}
+	}
 }
 
 /**

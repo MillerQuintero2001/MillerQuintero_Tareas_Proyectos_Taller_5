@@ -360,10 +360,13 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 	// Matriculamos en el NVIC para el USART correspondiente
 	if(ptrUsartHandler->ptrUSARTx == USART1){
 		__NVIC_EnableIRQ(USART1_IRQn);
+		__NVIC_SetPriority(USART1_IRQn, ptrUsartHandler->USART_Config.USART_priorityInterrupt);
 	}else if(ptrUsartHandler->ptrUSARTx == USART2){
 		__NVIC_EnableIRQ(USART2_IRQn);
+		__NVIC_SetPriority(USART2_IRQn, ptrUsartHandler->USART_Config.USART_priorityInterrupt);
 	}else if(ptrUsartHandler->ptrUSARTx == USART6){
 		__NVIC_EnableIRQ(USART6_IRQn);
+		__NVIC_SetPriority(USART6_IRQn, ptrUsartHandler->USART_Config.USART_priorityInterrupt);
 	}
 
 	__enable_irq();	// Activo nuevamente las interrupciones globales
@@ -374,6 +377,7 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 		ptrUsartHandler->ptrUSARTx->CR1 |= USART_CR1_UE; //Activo USART
 	}
 }
+
 
 /** Función para escribir un solo char */
 int writeChar(USART_Handler_t *ptrUsartHandler, char dataToSend ){

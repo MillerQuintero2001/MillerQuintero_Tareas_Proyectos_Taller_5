@@ -59,6 +59,7 @@ typedef struct
 	uint8_t USART_stopbits;
 	uint8_t USART_enableIntRX;
 	uint8_t USART_enableIntTX;
+	uint8_t USART_priorityInterrupt;
 }USART_Config_t;
 
 /*

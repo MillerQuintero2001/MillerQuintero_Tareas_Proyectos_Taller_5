@@ -16,8 +16,9 @@
 
 typedef struct
 {
-	GPIO_Handler_t *pGPIOHandler;	// Canal ADC que será utilizado para la conversión ADC
-	uint8_t			edgeType;		// Se selecciona si se desea un tipo de flanco subiendo o bajando
+	GPIO_Handler_t *pGPIOHandler;				// Canal ADC que será utilizado para la conversión ADC
+	uint8_t			edgeType;					// Se selecciona si se desea un tipo de flanco subiendo o bajando
+	uint8_t 		priorityInterrupt;			// Prioridad de la interrupción
 }EXTI_Config_t;
 
 

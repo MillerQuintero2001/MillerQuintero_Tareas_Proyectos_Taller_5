@@ -107,18 +107,22 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 	if(ptrTimerUsed == TIM2){
 		// Activando en NVIC para la interrupción del TIM2
 		NVIC_EnableIRQ(TIM2_IRQn);
+		__NVIC_SetPriority(TIM2_IRQn, ptrBTimerHandler->TIMx_Config.TIMx_priorityInterrupt);
 	}
 	else if(ptrTimerUsed == TIM3){
 		// Activando en NVIC para la interrupción del TIM3
 		NVIC_EnableIRQ(TIM3_IRQn);
+		__NVIC_SetPriority(TIM3_IRQn, ptrBTimerHandler->TIMx_Config.TIMx_priorityInterrupt);
 	}
 	else if(ptrTimerUsed == TIM4){
 		// Activando en NVIC para la interrupción del TIM3
 		NVIC_EnableIRQ(TIM4_IRQn);
+		__NVIC_SetPriority(TIM4_IRQn, ptrBTimerHandler->TIMx_Config.TIMx_priorityInterrupt);
 	}
 	else if(ptrTimerUsed == TIM5){
 		// Activando en NVIC para la interrupción del TIM3
 		NVIC_EnableIRQ(TIM5_IRQn);
+		__NVIC_SetPriority(TIM5_IRQn, ptrBTimerHandler->TIMx_Config.TIMx_priorityInterrupt);
 	}
 	else{
 		__NOP();
@@ -127,6 +131,7 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 	/* 7. Volvemos a activar las interrupciones del sistema */
 	__enable_irq();
 }
+
 
 __attribute__((weak)) void BasicTimer2_Callback(void){
 	  /* NOTE : Esta función no debe ser modificada, cuando el callback la necesite,

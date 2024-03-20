@@ -845,30 +845,37 @@ void extInt_Config(EXTI_Config_t *extiConfig){
 	switch (extiConfig->pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber) {
 	case 0: {
 		__NVIC_EnableIRQ(EXTI0_IRQn);
+		__NVIC_SetPriority(EXTI0_IRQn, extiConfig->priorityInterrupt);
 		break;
 	}
 	case 1: {
 		__NVIC_EnableIRQ(EXTI1_IRQn);
+		__NVIC_SetPriority(EXTI1_IRQn, extiConfig->priorityInterrupt);
 		break;
 	}
 	case 2: {
 		__NVIC_EnableIRQ(EXTI2_IRQn);
+		__NVIC_SetPriority(EXTI2_IRQn, extiConfig->priorityInterrupt);
 		break;
 	}
 	case 3: {
 		__NVIC_EnableIRQ(EXTI3_IRQn);
+		__NVIC_SetPriority(EXTI3_IRQn, extiConfig->priorityInterrupt);
 		break;
 	}
 	case 4: {
 		__NVIC_EnableIRQ(EXTI4_IRQn);
+		__NVIC_SetPriority(EXTI4_IRQn, extiConfig->priorityInterrupt);
 		break;
 	}
 	case 5 ... 9: {
 		__NVIC_EnableIRQ(EXTI9_5_IRQn);
+		__NVIC_SetPriority(EXTI9_5_IRQn, extiConfig->priorityInterrupt);
 		break;
 	}
 	case 10 ... 15: {
 		__NVIC_EnableIRQ(EXTI15_10_IRQn);
+		__NVIC_SetPriority(EXTI15_10_IRQn, extiConfig->priorityInterrupt);
 		break;
 	}
 	default: {
@@ -876,9 +883,10 @@ void extInt_Config(EXTI_Config_t *extiConfig){
 	}
 	}
 
-	/* 7.0 Volvemos a activar las interrupciones globales */
+	/* 7. Volvemos a activar las interrupciones globales */
 	__enable_irq();
 }
+
 
 /** Funciones callback weak, que pueden ser sobre-escritas*/
 __attribute__ ((weak)) void callback_extInt0(void){

@@ -30,7 +30,7 @@
  * las frecuencias deseadas deben ser ingresadas en MHz, y no pueden exceder los 100MHz, ya que eso
  * es lo máximo permitido por el MCU, si se ingresa un valor superior a 100, el sistema queda con el HSI */
 
-void configPLL(uint16_t PLLFreqMHz);
+void configPLL(uint8_t PLLFreqMHz);
 uint64_t getConfigPLL(void);
 void changeMCO1(uint8_t sourceClock, uint8_t preEscaler);
 

@@ -26,31 +26,109 @@ unsigned int firstParameter = 0;
 unsigned int secondParameter = 0;
 
 /** Función necesaria para prepara el USART1 para comandos del robot */
-void commandConfig(void){
+void commandConfig(uint8_t USARTport){
 
-	/* Configuración de pines para el USART1 */
-	handlerPinTX.pGPIOx									= GPIOA;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinNumber 			= PIN_2;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode		= AF7;
-	GPIO_Config(&handlerPinTX);
+	if(USARTport == CMD_USART1){
 
-	handlerPinRX.pGPIOx									= GPIOA;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinNumber 			= PIN_3;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_ALTFN;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode		= AF7;
-	GPIO_Config(&handlerPinRX);
+		/* Configuración de pines para el USART1 */
+		handlerPinTX.pGPIOx								= GPIOA;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_9;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
+		GPIO_Config(&handlerPinTX);
 
-	/* Configuración de la comunicación serial */
-	usartComm.ptrUSARTx							= USART2;
-	usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
-	usartComm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-	usartComm.USART_Config.USART_parity			= USART_PARITY_NONE;
-	usartComm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-	usartComm.USART_Config.USART_mode			= USART_MODE_RXTX;
-	usartComm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
-	usartComm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
-	USART_Config(&usartComm);
+		handlerPinRX.pGPIOx								= GPIOA;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_10;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
+		GPIO_Config(&handlerPinRX);
+
+		/* Configuración de la comunicación serial */
+		usartComm.ptrUSARTx							= USART1;
+		usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+		usartComm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
+		usartComm.USART_Config.USART_parity			= USART_PARITY_NONE;
+		usartComm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
+		usartComm.USART_Config.USART_mode			= USART_MODE_RXTX;
+		usartComm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
+		usartComm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
+		USART_Config(&usartComm);
+	}
+
+	else if(USARTport == CMD_USART2){
+
+		/* Configuración de pines para el USART2 */
+		handlerPinTX.pGPIOx								= GPIOA;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_2;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
+		GPIO_Config(&handlerPinTX);
+
+		handlerPinRX.pGPIOx								= GPIOA;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_3;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
+		GPIO_Config(&handlerPinRX);
+
+		/* Configuración de la comunicación serial */
+		usartComm.ptrUSARTx							= USART2;
+		usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+		usartComm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
+		usartComm.USART_Config.USART_parity			= USART_PARITY_NONE;
+		usartComm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
+		usartComm.USART_Config.USART_mode			= USART_MODE_RXTX;
+		usartComm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
+		usartComm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
+		USART_Config(&usartComm);
+	}
+
+	else if(USARTport == CMD_USART6){
+		/* Configuración de pines para el USART2 */
+		handlerPinTX.pGPIOx								= GPIOA;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_11;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+		handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF8;
+		GPIO_Config(&handlerPinTX);
+
+		handlerPinRX.pGPIOx								= GPIOA;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinNumber 		= PIN_12;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+		handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF8;
+		GPIO_Config(&handlerPinRX);
+
+		/* Configuración de la comunicación serial */
+		usartComm.ptrUSARTx							= USART6;
+		usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+		usartComm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
+		usartComm.USART_Config.USART_parity			= USART_PARITY_NONE;
+		usartComm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
+		usartComm.USART_Config.USART_mode			= USART_MODE_RXTX;
+		usartComm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
+		usartComm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
+		USART_Config(&usartComm);
+	}
+
+	else{
+		__NOP();
+	}
 
 }
 

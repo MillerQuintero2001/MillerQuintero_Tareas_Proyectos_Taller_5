@@ -19,6 +19,10 @@
 #include "USARTxDriver.h"
 #include "GPIOxDriver.h"
 
+#define CMD_USART1	1
+#define CMD_USART2	2
+#define CMD_USART6	6
+
 /* Esto para configurar el USART */
 extern GPIO_Handler_t handlerPinTX;			// Pin de transmisión de datos
 extern GPIO_Handler_t handlerPinRX;			// Pin de recepción de datos
@@ -33,7 +37,7 @@ extern unsigned int firstParameter;
 extern unsigned int secondParameter;
 
 
-void commandConfig(void);
+void commandConfig(uint8_t USARTport);
 void commandBuild(uint8_t usartRxData);
 void commandx1(void);
 void commandx2(void);

@@ -14,7 +14,7 @@
 
 
 /** Función de configuración del PLL según la frecuencia en MHz*/
-void configPLL(uint16_t PLLFreqMHz){
+void configPLL(uint8_t PLLFreqMHz){
 
 	// 0. Se verifica antes que todo que el HSI sea el oscilador usado por el PLL
 	RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLSRC);

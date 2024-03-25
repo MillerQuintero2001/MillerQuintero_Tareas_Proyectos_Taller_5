@@ -23,6 +23,7 @@
 #include "USARTxDriver.h"
 #include "CMDxDriver.h"
 #include "PwmDriver.h"
+#include "PLLDriver.h"
 
 
 /* Definición de los handlers necesarios */
@@ -50,9 +51,28 @@ void initSystem(void); 			// Función que inicializa los periféricos básicos
  * ¡Esta función es el corazón del programa! */
 int main(void){
 
+	/* Configuramos el equipo a 100MHz, usando el driver del PLL */
+	configPLL(100);
+
+	/* Calibración manual del HSI para tener mayor precisión:
+	 * Midiendo con el LED de estado y haciendo cálculos, considerando el pre-escaler y auto-reload escogidos
+	 * para el timer que controla el blinky, se llegó a una frecuencia real de 101044394,86532803052349080092 Hz
+	 * según la bibliografía consultada, los bits HSITRIM[4:0] que son los del 3 al 7 del RCC_CR, están por
+	 * defecto en un valor de 16, incrementar en 1 binario aumenta X% del HSI la frecuencia real, y decrementar
+	 * en 1 binario, disminuye X% del HSI la frecuencia real.
+	 * Haciendo pruebas se llego a que este es el valor con el que queda mejor calibrado */
+	RCC->CR &= ~(0b11111 << RCC_CR_HSITRIM_Pos); 	// Limpio
+	RCC->CR |= (13 << RCC_CR_HSITRIM_Pos);			// Escribo
+
+	//Esperamos hasta que el HSI vuelva a ser estable
+	while(!(RCC->CR & RCC_CR_HSIRDY)){
+		__NOP();
+	}
+	// Fin de la calibración
+
 	// Inicializamos todos los elementos del sistema
 	initSystem();
-	commandConfig();
+	commandConfig(CMD_USART1);
 
     /* Loop forever */
 	while(1){
@@ -90,8 +110,8 @@ void initSystem(void){
 	// Atributos para el Timer 2 del LED de estado
 	handlerBlinkyTimer.ptrTIMx								= TIM2;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_SPEED_1ms;
-	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 250;
+	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
+	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerBlinkyTimer);
 	/* Fin del GPIO y Timer del LED de estado
@@ -127,18 +147,26 @@ void initSystem(void){
 
 /** Interrupción del timer blinky LED*/
 void BasicTimer2_Callback(void){
-	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
+	__NOP();
 }
 
 
 /** Interrupción del USART2 */
-void usart2Rx_Callback(void){
+void usart1Rx_Callback(void){
 	usartData = getRxData();
 }
 
 void commandx1(void){
-	tooglePolarity(&handlerPwmTest);
+	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
 }
+
+//void commandx2(void){
+//	setPolarity(&handlerPwmTest, PWM_POLARITY_ACTIVE_HIGH);
+//}
+//
+//void commandx3(void){
+//	setPolarity(&handlerPwmTest, PWM_POLARITY_ACTIVE_LOW);
+//}
 
 
 

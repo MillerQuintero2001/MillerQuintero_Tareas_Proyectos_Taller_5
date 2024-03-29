@@ -117,6 +117,26 @@ void configPLL(uint8_t PLLFreqMHz){
 		__NOP();
 	}
 
+
+	/* 7. Hacemos la calibración, por ahora solo está para 100MHz, hay que configurar un MCO para verificar */
+	if(PLLFreqMHz == 100){
+		/* Calibración manual del HSI para tener mayor precisión:
+		 * Midiendo con el LED de estado y haciendo cálculos, considerando el pre-escaler y auto-reload escogidos
+		 * para el timer que controla el blinky, se llegó a una frecuencia real de 101044394,86532803052349080092 Hz
+		 * según la bibliografía consultada, los bits HSITRIM[4:0] que son los del 3 al 7 del RCC_CR, están por
+		 * defecto en un valor de 16, incrementar en 1 binario aumenta X% del HSI la frecuencia real, y decrementar
+		 * en 1 binario, disminuye X% del HSI la frecuencia real.
+		 * Haciendo pruebas se llego a que este es el valor con el que queda mejor calibrado */
+		RCC->CR &= ~(0b11111 << RCC_CR_HSITRIM_Pos); 	// Limpio
+		RCC->CR |= (13 << RCC_CR_HSITRIM_Pos);			// Escribo
+
+		//Esperamos hasta que el HSI vuelva a ser estable
+		while(!(RCC->CR & RCC_CR_HSIRDY)){
+			__NOP();
+		}
+		// Fin de la calibración
+	}
+
 }
 
 /** Función que retorna la frecuencia configurada calculada con la frecuencia del HSI y los pre-escaler */

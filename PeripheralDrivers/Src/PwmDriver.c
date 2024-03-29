@@ -127,19 +127,17 @@ void pwm_Config(PWM_Handler_t *ptrPwmHandler){
 
 	}// fin del switch-case
 
-
-
-//	/* 6. Activamos la salida seleccionada */
-//	enableOutput(ptrPwmHandler);
 }
 
 /** Función para activar el Timer y activar todo el módulo PWM */
 void startPwmSignal(PWM_Handler_t *ptrPwmHandler) {
 	ptrTimerPWM->CR1 |= TIM_CR1_CEN;
+	enableOutput(ptrPwmHandler);
 }
 
 /** Función para desactivar el Timer y detener todo el módulo PWM*/
 void stopPwmSignal(PWM_Handler_t *ptrPwmHandler) {
+	disableOutput(ptrPwmHandler);
 	ptrTimerPWM->CR1 &= ~TIM_CR1_CEN;
 }
 

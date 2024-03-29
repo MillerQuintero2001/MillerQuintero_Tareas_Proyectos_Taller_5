@@ -23,22 +23,15 @@
 #define CMD_USART2	2
 #define CMD_USART6	6
 
-/* Esto para configurar el USART */
-extern GPIO_Handler_t handlerPinTX;			// Pin de transmisión de datos
-extern GPIO_Handler_t handlerPinRX;			// Pin de recepción de datos
-extern USART_Handler_t usartComm;			// Comunicación serial
 
-//extern uint8_t usartData; 				// Variable en la que se guarda el dato transmitido
-extern char bufferReception[64];			// Buffer para guardar caracteres ingresados
-extern char cmd[16];					// Arreglo para guardar el comando ingresado y gestionarlo
-extern uint8_t counterReception;		// Contador de carácteres para la recepción
-extern bool stringComplete;
-extern unsigned int firstParameter;
-extern unsigned int secondParameter;
-
+extern USART_Handler_t usartCmd;		// Comunicación serial
+extern uint8_t usartData; 				// Variable en la que se guarda el dato transmitido
+extern unsigned int firstParameter;		// Primer Parámetro global para trabajar comandos
+extern unsigned int secondParameter;	// Segundo Parámetro global para trabajar comandos
+extern uint16_t calPWM;
 
 void commandConfig(uint8_t USARTport);
-void commandBuild(uint8_t usartRxData);
+void commandBuild(void);
 void commandx1(void);
 void commandx2(void);
 void commandx3(void);

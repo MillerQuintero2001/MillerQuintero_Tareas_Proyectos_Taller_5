@@ -6,20 +6,25 @@
  */
 
 #include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
 #include "CMDxDriver.h"
 #include "GPIOxDriver.h"
 #include "USARTxDriver.h"
+
 
 // Inicializo variables y elementos propios del driver
 
 /* Esto para configurar el USART */
 GPIO_Handler_t handlerPinTX = {0};			// Pin de transmisión de datos
 GPIO_Handler_t handlerPinRX = {0};			// Pin de recepción de datos
-USART_Handler_t usartComm =  {0};			// Comunicación serial
+USART_Handler_t usartCmd =  {0};			// Comunicación serial
 
-//uint8_t usartData = 0; 				// Variable en la que se guarda el dato transmitido
+uint8_t usartData = 0; 				// Variable en la que se guarda el dato transmitido
+char userMsg[] = "Menu de comandos:\nIngresando por consola el comando 'Help' se puede ver la lista de todos los comandos.\n";
 char bufferReception[64] = {0};		// Buffer para guardar caracteres ingresados
-char cmd[16] = {0};					// Arreglo para guardar el comando ingresado y gestionarlo
+char cmd[32] = {0};					// Arreglo para guardar el comando ingresado y gestionarlo
 uint8_t counterReception = 0;		// Contador de carácteres para la recepción
 bool stringComplete = false;
 unsigned int firstParameter = 0;
@@ -50,15 +55,15 @@ void commandConfig(uint8_t USARTport){
 		GPIO_Config(&handlerPinRX);
 
 		/* Configuración de la comunicación serial */
-		usartComm.ptrUSARTx							= USART1;
-		usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
-		usartComm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-		usartComm.USART_Config.USART_parity			= USART_PARITY_NONE;
-		usartComm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-		usartComm.USART_Config.USART_mode			= USART_MODE_RXTX;
-		usartComm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
-		usartComm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
-		USART_Config(&usartComm);
+		usartCmd.ptrUSARTx							= USART1;
+		usartCmd.USART_Config.USART_baudrate 		= USART_BAUDRATE_19200;
+		usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
+		usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
+		usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
+		usartCmd.USART_Config.USART_mode			= USART_MODE_RXTX;
+		usartCmd.USART_Config.USART_enableIntRX		= USART_RX_INTERRUP_ENABLE;
+		usartCmd.USART_Config.USART_enableIntTX		= USART_TX_INTERRUP_DISABLE;
+		USART_Config(&usartCmd);
 	}
 
 	else if(USARTport == CMD_USART2){
@@ -83,15 +88,15 @@ void commandConfig(uint8_t USARTport){
 		GPIO_Config(&handlerPinRX);
 
 		/* Configuración de la comunicación serial */
-		usartComm.ptrUSARTx							= USART2;
-		usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
-		usartComm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-		usartComm.USART_Config.USART_parity			= USART_PARITY_NONE;
-		usartComm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-		usartComm.USART_Config.USART_mode			= USART_MODE_RXTX;
-		usartComm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
-		usartComm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
-		USART_Config(&usartComm);
+		usartCmd.ptrUSARTx							= USART2;
+		usartCmd.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+		usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
+		usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
+		usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
+		usartCmd.USART_Config.USART_mode			= USART_MODE_RXTX;
+		usartCmd.USART_Config.USART_enableIntRX		= USART_RX_INTERRUP_ENABLE;
+		usartCmd.USART_Config.USART_enableIntTX		= USART_TX_INTERRUP_DISABLE;
+		USART_Config(&usartCmd);
 	}
 
 	else if(USARTport == CMD_USART6){
@@ -115,53 +120,60 @@ void commandConfig(uint8_t USARTport){
 		GPIO_Config(&handlerPinRX);
 
 		/* Configuración de la comunicación serial */
-		usartComm.ptrUSARTx							= USART6;
-		usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
-		usartComm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-		usartComm.USART_Config.USART_parity			= USART_PARITY_NONE;
-		usartComm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-		usartComm.USART_Config.USART_mode			= USART_MODE_RXTX;
-		usartComm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
-		usartComm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
-		USART_Config(&usartComm);
+		usartCmd.ptrUSARTx							= USART6;
+		usartCmd.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+		usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
+		usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
+		usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
+		usartCmd.USART_Config.USART_mode			= USART_MODE_RXTX;
+		usartCmd.USART_Config.USART_enableIntRX		= USART_RX_INTERRUP_ENABLE;
+		usartCmd.USART_Config.USART_enableIntTX		= USART_TX_INTERRUP_DISABLE;
+		USART_Config(&usartCmd);
 	}
 
 	else{
 		__NOP();
 	}
+
+	writeMsg(&usartCmd, userMsg);
 
 }
 
 
 /** Función encargada de construir el string con el comando y ejecutarlo */
-void commandBuild(uint8_t usartRxData){
-	bufferReception[counterReception] = usartRxData;
-	counterReception++;
+void commandBuild(void){
 
-	// Aqui hacemmos la instrucción que detine la recepción del comando
-	if(usartRxData == '\r'){
-		stringComplete = true;
+	if(usartData != '\0'){
+		bufferReception[counterReception] = usartData;
+		counterReception++;
 
-		//Sustituyo el último caracter de @ por un null
-		bufferReception[counterReception] = '\0';
-		counterReception = 0;
+		// Aqui hacemmos la instrucción que detine la recepción del comando
+		if(usartData == '\r'){
+			stringComplete = true;
+
+			//Sustituyo el último caracter de \r por un null
+			bufferReception[counterReception] = '\0';
+			counterReception = 0;
+		}
+		else{
+			__NOP();
+		}
+
+		// Para borrar lo que se haya digitado en la terminal
+		if(usartData == '\b'){
+			counterReception--;
+			counterReception--;
+		}
+		else{
+			__NOP();
+		}
+
+		// Volvemos a null para terminar
+		usartData = '\0';
 	}
 	else{
 		__NOP();
 	}
-
-	// Para borrar lo que se haya digitado en la terminal
-	if(usartRxData == '\b'){
-		counterReception--;
-		counterReception--;
-	}
-	else{
-		__NOP();
-	}
-
-	// Volvemos a null para terminar
-	usartRxData = '\0';
-
 
 	// Sección de ejecución del comando
 	if(stringComplete){
@@ -177,55 +189,55 @@ void commandBuild(uint8_t usartRxData){
 
 		// "help" este primer comando imprime una lista con los otros comandos que tiene el equipo
 		if(strcmp(cmd, "Help") == 0){
-			writeMsg(&usartComm, "\nHelp Menu CMDs:\n");
-			writeMsg(&usartComm, "0) Help				-- Print this menu \n");
-			writeMsg(&usartComm, "1) Commandx1			-- \n");
-			writeMsg(&usartComm, "2) Commandx2			-- \n");
-			writeMsg(&usartComm, "3) Commandx3			-- \n");
-			writeMsg(&usartComm, "4) Commandx4			-- \n");
-			writeMsg(&usartComm, "5) Commandx5			-- \n");
-			writeMsg(&usartComm, "6) Commandx6			-- \n");
+			writeMsg(&usartCmd, "\nHelp Menu CMDs:\n");
+			writeMsg(&usartCmd, "0) Help				-- Print this menu \n");
+			writeMsg(&usartCmd, "1) Commandx1			-- \n");
+			writeMsg(&usartCmd, "2) Commandx2			-- \n");
+			writeMsg(&usartCmd, "3) Commandx3			-- \n");
+			writeMsg(&usartCmd, "4) Commandx4			-- \n");
+			writeMsg(&usartCmd, "5) Commandx5			-- \n");
+			writeMsg(&usartCmd, "6) Commandx6			-- \n");
 		}
 
 		// "Commandx1"
 		else if(strcmp(cmd, "Commandx1") == 0){
-			writeMsg(&usartComm, "\nCMD: Commandx1 \n");
+			writeMsg(&usartCmd, "\nCMD: Commandx1 \n");
 			commandx1();
 		}
 
 		// "Commandx2"
 		else if(strcmp(cmd, "Commandx2") == 0){
-			writeMsg(&usartComm, "\nCMD: Commandx2 \n");
+			writeMsg(&usartCmd, "\nCMD: Commandx2 \n");
 			commandx2();
 		}
 
 		// "Commandx3"
 		else if(strcmp(cmd, "Commandx3") == 0){
-			writeMsg(&usartComm, "\nCMD: Commandx3 \n");
+			writeMsg(&usartCmd, "\nCMD: Commandx3 \n");
 			commandx3();
 		}
 
 		// "Commandx4"
 		else if(strcmp(cmd, "Commandx4") == 0){
-			writeMsg(&usartComm, "\nCMD: Commandx4 \n");
+			writeMsg(&usartCmd, "\nCMD: Commandx4 \n");
 			commandx4();
 		}
 
 		// "Commandx5"
 		else if(strcmp(cmd, "Commandx5") == 0){
-			writeMsg(&usartComm, "\nCMD: Commandx5 \n");
+			writeMsg(&usartCmd, "\nCMD: Commandx5 \n");
 			commandx5();
 		}
 
 		// "Commandx6"
 		else if(strcmp(cmd, "Commandx6") == 0){
-			writeMsg(&usartComm, "\nCMD: Commandx6 \n");
+			writeMsg(&usartCmd, "\nCMD: Commandx6 \n");
 			commandx6();
 		}
 
 		// En cualquier otro caso, indicamos que el comando es incorrecto
 		else{
-			writeMsg(&usartComm, "\nWrong command \n");
+			writeMsg(&usartCmd, "\nWrong command \n");
 		}
 		stringComplete = 0;
 	}
@@ -234,7 +246,6 @@ void commandBuild(uint8_t usartRxData){
 		__NOP();
 	}
 }
-
 
 
 /** Funciones command weak, que pueden ser sobre-escritas y modificadas en el main*/
@@ -256,3 +267,4 @@ __attribute__ ((weak)) void commandx5(void){
 __attribute__ ((weak)) void commandx6(void){
 	__NOP();
 }
+

@@ -469,7 +469,7 @@ void commandUSART(char* ptrBufferReception){
 	else if(strcmp(cmd, "resetMCO") == 0){
 		writeMsg(&usartComm, "\nCMD: resetMCO \n");
 		// Esta es con el HSI y pre-escaler de 1
-		changeMCO1(MCO1_HSI_CLOCK, MCO1_DIVIDED_BY_1);
+		changeMCO1(MCO_HSI_CLOCK, MCO_DIVIDED_BY_1);
 		writeMsg(&usartComm, "The MCO1 source is HSI with prescaler of 1 \n");
 	}
 

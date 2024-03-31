@@ -5,7 +5,7 @@
  *      Author: MillerQuintero2001
  *
  * 	Este driver permite manipular la frecuencia de la señal de reloj del microncontrolador,
- * 	obtener información de esta, y emplear el pin MC01 para medir las señales.
+ * 	obtener información de esta, y emplear el pin MCO1 y MCO2 para medir las señales.
  */
 
 #include <stm32f4xx.h>
@@ -127,7 +127,7 @@ void configPLL(uint8_t PLLFreqMHz){
 		 * defecto en un valor de 16, incrementar en 1 binario aumenta X% del HSI la frecuencia real, y decrementar
 		 * en 1 binario, disminuye X% del HSI la frecuencia real.
 		 * Haciendo pruebas se llego a que este es el valor con el que queda mejor calibrado */
-		RCC->CR &= ~(0b11111 << RCC_CR_HSITRIM_Pos); 	// Limpio
+		RCC->CR &= ~(RCC_CR_HSITRIM);					// Limpio
 		RCC->CR |= (13 << RCC_CR_HSITRIM_Pos);			// Escribo
 
 		//Esperamos hasta que el HSI vuelva a ser estable
@@ -164,4 +164,12 @@ void changeMCO1(uint8_t sourceClock, uint8_t preEscaler){
 		RCC->CFGR |= (sourceClock << RCC_CFGR_MCO1_Pos); 	// Selecciona el reloj
 		RCC->CFGR &= ~RCC_CFGR_MCO1PRE; 					// Limpio
 		RCC->CFGR |= (preEscaler << RCC_CFGR_MCO1PRE_Pos); 	// Selecciono el pre-escaler para el MCO1
+}
+
+/** Función para definir la fuente de reloj y el pre-escaler para el pin usado como Microcontroller Clock Output 2*/
+void changeMCO2(uint8_t sourceClock, uint8_t preEscaler){
+		RCC->CFGR &= ~RCC_CFGR_MCO2; 						// Limpio
+		RCC->CFGR |= (sourceClock << RCC_CFGR_MCO2_Pos); 	// Selecciona el reloj
+		RCC->CFGR &= ~RCC_CFGR_MCO2PRE; 					// Limpio
+		RCC->CFGR |= (preEscaler << RCC_CFGR_MCO2PRE_Pos); 	// Selecciono el pre-escaler para el MCO1
 }

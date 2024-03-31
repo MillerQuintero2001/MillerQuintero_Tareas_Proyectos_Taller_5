@@ -4,7 +4,7 @@
  *  Created on: 26/04/2023
  *      Author: MillerQuintero2001
  *
- * 	Este driver controla el TImer que trae por defecto todo procesador ARM Cortex Mx,
+ * 	Este driver controla el Timer que trae por defecto todo procesador ARM Cortex Mx,
  * 	el cual hace parte del sistema independiente de la empresa fabricante del MCU.
  *
  * 	Para encontrar cuál es su registro de configuración, debemos utilizar el manuel
@@ -17,7 +17,6 @@
 
 #include <stm32f4xx.h>
 #include "SysTickDriver.h"
-#include "PLLDriver.h"
 
 uint64_t ticks = 0;
 uint64_t ticks_start = 0;
@@ -47,7 +46,13 @@ void config_SysTick_ms(uint8_t systemClock){
 
 	// Caso para el reloj PLL 80MHz
 	case 2: {
-		SysTick->LOAD = SYSTICK_LOAD_VALUE_80MHz_1ms; //Este valor particular es para tener verdaderamente delay de
+		SysTick->LOAD = SYSTICK_LOAD_VALUE_80MHz_1ms;
+		break;
+	}
+
+	// Caso para el reloj PLL 100MHz
+	case 3: {
+		SysTick->LOAD = SYSTICK_LOAD_VALUE_100MHz_1ms;
 		break;
 	}
 	// Caso por defecto
@@ -62,8 +67,14 @@ void config_SysTick_ms(uint8_t systemClock){
 	// Limpiamos el valor actual de SysTick
 	SysTick->VAL = 0;
 
-	// Configuramos el reloj interno como el reloj para el Timer
-	SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk;
+	if(systemClock != HSE_CLOCK_CONFIGURED){
+		// Configuramos el reloj interno como el reloj para el Timer (es el AHB)
+		SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk;
+	}
+	else{
+		// COnfiguramos el reloj externo como el reloj para el Timer (en realidad es el AHB/8)
+		SysTick->CTRL &= ~(SysTick_CTRL_CLKSOURCE_Msk);
+	}
 
 	// Desactivamos las interrupciones globales
 	__disable_irq();

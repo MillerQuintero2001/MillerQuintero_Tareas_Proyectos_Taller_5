@@ -23,6 +23,7 @@
 #include "CMDxDriver.h"
 #include "PwmDriver.h"
 #include "PLLDriver.h"
+#include "SysTickDriver.h"
 
 
 /* Definición de los handlers necesarios */
@@ -44,7 +45,6 @@ int main(void){
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
-	commandConfig(CMD_USART2);
 
     /* Loop forever */
 	while(1){
@@ -60,6 +60,9 @@ void initSystem(void){
 
 	/* Activamos el Coprocesador Matemático - FPU */
 	SCB->CPACR |= (0XF << 20);
+
+	/* Configuramos el SysTick */
+	config_SysTick_ms(PLL_CLOCK_100_CONFIGURED);
 
 	/* GPIO y Timer del Blinky Led de Estado */
 	handlerBlinkyPin.pGPIOx								= GPIOA;
@@ -104,6 +107,8 @@ void initSystem(void){
 
 	startPwmSignal(&handlerPwmTest);
 
+	commandConfig(CMD_USART1);
+
 }
 
 /** Interrupción del timer blinky LED*/
@@ -111,7 +116,7 @@ void BasicTimer2_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
 }
 
-void usart2Rx_Callback(void){
+void usart1Rx_Callback(void){
 	usartData = getRxData();
 	writeChar(&usartCmd, usartData);
 }
@@ -131,6 +136,7 @@ void commandx3(void){
 void commandx5(void){
 	startPwmSignal(&handlerPwmTest);
 }
+
 
 
 

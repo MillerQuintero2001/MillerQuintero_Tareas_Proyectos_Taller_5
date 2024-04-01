@@ -640,7 +640,7 @@ void extInt_Config(EXTI_Config_t *extiConfig){
 	}
 
 	else{
-		/* Rising trigget selection register */
+		/* Rising trigger selection register */
 		switch(extiConfig->pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber){
 		case 0: {
 			EXTI->FTSR &= ~EXTI_FTSR_TR0; //Limpio el falling ya que no me interesa en esta posición

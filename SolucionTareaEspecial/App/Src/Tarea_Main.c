@@ -221,7 +221,7 @@ void initSystem(void){
 	configPLL(clock80);
 
 	// Configuramos el Systick con el reloj PLL de 80MHz
-	config_SysTick_ms(PLL_CLOCK_CONFIGURED);
+	config_SysTick_ms(PLL_CLOCK_80_CONFIGURED);
 
 	/* GPIO y Timer del Blinky Led de Estado */
 	handlerBlinkyPin.pGPIOx								= GPIOA;

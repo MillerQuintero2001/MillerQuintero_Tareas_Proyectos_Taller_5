@@ -21,7 +21,7 @@ int main(void){
 	uint8_t valorDato = *pDato;
 
 	// Casteo básico, cambio el tipo de variable de dato, de 8 a 16 bits
-	uint16_t casteoDato = (uint8_t) dato;
+	uint16_t casteoDato = (uint16_t) dato;
 
 	// Crear un puntero en una dirección específica
 	uint16_t *punteroDireccion = (uint16_t *) 0x20000001; //Poniendo el (uint16_t) sirve para decirle al puntero que apunte a una varibale de 16 bits que está en esa dirección

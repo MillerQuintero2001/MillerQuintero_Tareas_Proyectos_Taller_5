@@ -20,10 +20,11 @@
 #include "GPIOxDriver.h"
 #include "BasicTimer.h"
 #include "USARTxDriver.h"
-#include "CMDxDriver.h"
 #include "PwmDriver.h"
 #include "PLLDriver.h"
 #include "SysTickDriver.h"
+#include "CMDxDriver.h"
+#include "MotorDriver.h"
 
 
 /* Definición de los handlers necesarios */
@@ -48,7 +49,7 @@ int main(void){
 
     /* Loop forever */
 	while(1){
-		commandBuild();
+		commandBuild(USE_OPPY);
 	}
 	return 0;
 }
@@ -74,8 +75,8 @@ void initSystem(void){
 	GPIO_Config(&handlerBlinkyPin);
 	// Pongo estado en alto
 	GPIO_WritePin(&handlerBlinkyPin, SET);
-	// Atributos para el Timer 2 del LED de estado
-	handlerBlinkyTimer.ptrTIMx								= TIM2;
+	// Atributos para el Timer 5 del LED de estado
+	handlerBlinkyTimer.ptrTIMx								= TIM5;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
@@ -107,12 +108,13 @@ void initSystem(void){
 
 	startPwmSignal(&handlerPwmTest);
 
-	commandConfig(CMD_USART1);
+	commandConfig(CMD_USART1, USART_BAUDRATE_19200);
 
+	configMotors();
 }
 
 /** Interrupción del timer blinky LED*/
-void BasicTimer2_Callback(void){
+void BasicTimer5_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
 }
 
@@ -135,6 +137,11 @@ void commandx3(void){
 
 void commandx5(void){
 	startPwmSignal(&handlerPwmTest);
+}
+
+void commandx6(void){
+	tooglePolarity(&handlerPwmTest);
+	writeMsg(&usartCmd, "Toogle Polarity realizado");
 }
 
 

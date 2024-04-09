@@ -5,22 +5,12 @@
  *      Author: MillerQuintero2001
  */
 
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdbool.h>
 #include "CMDxDriver.h"
-#include "GPIOxDriver.h"
-#include "USARTxDriver.h"
 
-
-// Inicializo variables y elementos propios del driver
-
-/* Esto para configurar el USART */
-GPIO_Handler_t handlerPinTX = {0};			// Pin de transmisión de datos
-GPIO_Handler_t handlerPinRX = {0};			// Pin de recepción de datos
-USART_Handler_t usartCmd =  {0};			// Comunicación serial
-
+/* Inicializo variables y elmentos del driver */
+GPIO_Handler_t handlerPinTX = {0};	// Pin de transmisión de datos
+GPIO_Handler_t handlerPinRX = {0};	// Pin de recepción de datos
+USART_Handler_t usartCmd =  {0};	// Comunicación serial
 uint8_t usartData = 0; 				// Variable en la que se guarda el dato transmitido
 char userMsg[] = "Menu de comandos:\nIngresando por consola el comando 'Help' se puede ver la lista de todos los comandos.\n";
 char bufferReception[64] = {0};		// Buffer para guardar caracteres ingresados
@@ -31,7 +21,7 @@ unsigned int firstParameter = 0;
 unsigned int secondParameter = 0;
 
 /** Función necesaria para prepara el USART1 para comandos del robot */
-void commandConfig(uint8_t USARTport){
+void commandConfig(uint8_t USARTport, uint8_t baudrate){
 
 	if(USARTport == CMD_USART1){
 
@@ -56,7 +46,7 @@ void commandConfig(uint8_t USARTport){
 
 		/* Configuración de la comunicación serial */
 		usartCmd.ptrUSARTx							= USART1;
-		usartCmd.USART_Config.USART_baudrate 		= USART_BAUDRATE_19200;
+		usartCmd.USART_Config.USART_baudrate 		= baudrate;
 		usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
 		usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
 		usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
@@ -89,7 +79,7 @@ void commandConfig(uint8_t USARTport){
 
 		/* Configuración de la comunicación serial */
 		usartCmd.ptrUSARTx							= USART2;
-		usartCmd.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+		usartCmd.USART_Config.USART_baudrate 		= baudrate;
 		usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
 		usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
 		usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
@@ -121,7 +111,7 @@ void commandConfig(uint8_t USARTport){
 
 		/* Configuración de la comunicación serial */
 		usartCmd.ptrUSARTx							= USART6;
-		usartCmd.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+		usartCmd.USART_Config.USART_baudrate 		= baudrate;
 		usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
 		usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
 		usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
@@ -141,7 +131,7 @@ void commandConfig(uint8_t USARTport){
 
 
 /** Función encargada de construir el string con el comando y ejecutarlo */
-void commandBuild(void){
+void commandBuild(bool use){
 
 	if(usartData != '\0'){
 		bufferReception[counterReception] = usartData;
@@ -175,13 +165,13 @@ void commandBuild(void){
 		__NOP();
 	}
 
-	// Sección de ejecución del comando
-	if(stringComplete){
+	// Sección de ejecución del comando para uso por defecto (no motores)
+	if((stringComplete)&&(use == USE_DEFAULT)){
 
 		/* El funcionamiento es de la siguiente forma: Empleamos el puntero al buffer para
 		 * acceder a los elementos del string, y por medio de la función sscanf se almacena
 		 * en 3 elemetos diferentes, el string del comando "cmd", y dos números enteros llamados
-		 * "firstParameter" y "SecondParameter". De esta froma, podemos introducir información
+		 * "firstParameter" y "secondParameter". De esta forma, podemos introducir información
 		 * al micro desde el puerto serial */
 		sscanf(bufferReception, "%s %u %u", cmd, &firstParameter, &secondParameter);
 
@@ -239,7 +229,123 @@ void commandBuild(void){
 		else{
 			writeMsg(&usartCmd, "\nWrong command \n");
 		}
+		// Limpiamos los párametros
 		stringComplete = 0;
+		firstParameter = 0;
+		secondParameter = 0;
+	}
+
+
+	// Sección de ejecución del comando para uso por defecto (no motores)
+	else if((stringComplete)&&(use == USE_OPPY)){
+
+		/* El funcionamiento es de la siguiente forma: Empleamos el puntero al buffer para
+		 * acceder a los elementos del string, y por medio de la función sscanf se almacena
+		 * en 3 elemetos diferentes, el string del comando "cmd", y dos números enteros llamados
+		 * "firstParameter" y "secondParameter". De esta forma, podemos introducir información
+		 * al micro desde el puerto serial */
+		sscanf(bufferReception, "%s %u %u", cmd, &firstParameter, &secondParameter);
+
+		/* Usamos la funcion strcmp, string compare, que me retorna un 0 si los 2 strings son iguales */
+
+		// "Help" este primer comando imprime una lista con los otros comandos que tiene el equipo
+		if(strcmp(cmd, "Help") == 0){
+			writeMsg(&usartCmd, "\nHelp Menu with Oppy Commands CMDs:\n");
+			writeMsg(&usartCmd, "1) Help				-- Print this menu\n");
+			writeMsg(&usartCmd, "2) SetMotorSignals #Frequency[Hz] #%DuttyCycle \n"
+					"-- Frequency[Hz] should be a positive integer between 1 and 100 \n"
+					"-- %DuttyCycle should be a positive integer between 1 and 100 \n");
+			writeMsg(&usartCmd, "3) DefaultMove			-- Set polarity of signals in active high and direction in forward \n");
+			writeMsg(&usartCmd, "4) StartMove			-- Start the movement of the Oppy \n");
+			writeMsg(&usartCmd, "5) StopMove			-- Stop the movement of the Oppy \n");
+			writeMsg(&usartCmd, "6) StraightLine #Distance[mm] \n"
+					"-- Distance should be a positive integer between 1 and 65535 \n");
+			writeMsg(&usartCmd, "7) Rotation #Direction #°Degrees \n"
+					"-- Direction: ClockWise(CW) = 0; CounterClockWise(CCW) = 1 \n"
+					"-- °Degrees should be a positive integer between 1 and 360 \n");
+			writeMsg(&usartCmd, "8) Square #Direction #Side(mm) \n"
+					"-- Direction: CW = 0; CCW = 1 \n"
+					"-- Side should be in mm, a positive integer between 1 and 65535 \n");
+		}
+
+		// "SetMotorSignals" configura la frecuencia y el dutty de la PWM de los motores
+		else if(strcmp(cmd, "SetMotorSignals") == 0){
+			writeMsg(&usartCmd, "\nCMD: SetMotorSignals \n");
+			if(((1 <= firstParameter)&&(firstParameter <= 100))&&((1 <= secondParameter)&&(secondParameter <= 100))){
+				setMotorSignals(firstParameter, secondParameter);
+				writeMsg(&usartCmd, "Configuration succesfull \n");
+			}
+			else{
+				writeMsg(&usartCmd, "Wrong frequency or dutty, remember, only positive integers between 1 and 100 \n");
+			}
+		}
+
+		// "DefaultMove" establece la configuración por defecto de las polaridades y las direcciones
+		else if(strcmp(cmd, "DefaultMove") == 0){
+			writeMsg(&usartCmd, "\nCMD: DefaultMove \n");
+			defaultMove();
+			writeMsg(&usartCmd, "Oppy has returned to his default movement \n");
+		}
+
+		// "StartMove" activa las señales PWM y los enable del Puente H, iniciando así el movimiento
+		else if(strcmp(cmd, "StartMove") == 0){
+			writeMsg(&usartCmd, "\nCMD: StartMove \n");
+			startMove();
+			writeMsg(&usartCmd, "Oppy is moving \n");
+		}
+
+		// "StopMove" desactiva los enable del Puente H y las señales PWM, deteniendo así el movimiento
+		else if(strcmp(cmd, "StopMove") == 0){
+			writeMsg(&usartCmd, "\nCMD: StopMove \n");
+			stopMove();
+			writeMsg(&usartCmd, "Oppy has been stoped \n");
+		}
+
+		// "StraightLine" inicia un recorrido en línea recta con control, según la distancia indicada
+		else if(strcmp(cmd, "StraightLine") == 0){
+			writeMsg(&usartCmd, "\nCMD: StraightLine \n");
+			if((1 <= firstParameter)&&(firstParameter <= 65535)){
+				straightLine(firstParameter);
+				writeMsg(&usartCmd, "Oppy is doing a straight line \n");
+			}
+			else{
+				writeMsg(&usartCmd, "Wrong distance, remember, only positive integers between 1 and 65535 \n");
+			}
+		}
+
+		// "Rotation" realiza una rotación en el sentido y grados indicados
+		else if(strcmp(cmd, "Rotation") == 0){
+			writeMsg(&usartCmd, "\nCMD: Rotation \n");
+			if(((0 <= firstParameter)&&(firstParameter <= 1))&&((1 <= secondParameter)&&(secondParameter <= 360))){
+				rotation(firstParameter, secondParameter);
+				writeMsg(&usartCmd, "Oppy is doing a rotation \n");
+			}
+			else{
+				writeMsg(&usartCmd, "Wrong values, remember, rotation between 0 and 1 and degrees between 1 and 360 \n");
+			}
+		}
+
+		// "Square" realiza un cuadrado con el Oppy
+		else if(strcmp(cmd, "Square") == 0){
+			writeMsg(&usartCmd, "\nCMD: Square \n");
+			if(((0 <= firstParameter)&&(firstParameter <= 1))&&((1 <= secondParameter)&&(secondParameter <= 65535))){
+				square(firstParameter, secondParameter);
+				writeMsg(&usartCmd, "Oppy is doing a square \n");
+			}
+			else{
+				writeMsg(&usartCmd, "Wrong values, remember, rotation between 0 and 1 and side between 1 and 65535 \n");
+			}
+		}
+
+		// En cualquier otro caso, indicamos que el comando es incorrecto
+		else{
+			writeMsg(&usartCmd, "\nWrong command \n");
+		}
+
+		// Limpiamos los párametros
+		stringComplete = 0;
+		firstParameter = 0;
+		secondParameter = 0;
 	}
 
 	else{

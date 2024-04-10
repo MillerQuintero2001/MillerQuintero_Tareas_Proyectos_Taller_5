@@ -252,13 +252,13 @@ void commandBuild(bool use){
 		if(strcmp(cmd, "Help") == 0){
 			writeMsg(&usartCmd, "\nHelp Menu with Oppy Commands CMDs:\n");
 			writeMsg(&usartCmd, "1) Help				-- Print this menu\n");
-			writeMsg(&usartCmd, "2) SetMotorSignals #Frequency[Hz] #%DuttyCycle \n"
+			writeMsg(&usartCmd, "2) SetSignals #Frequency[Hz] #%DuttyCycle \n"
 					"-- Frequency[Hz] should be a positive integer between 1 and 100 \n"
 					"-- %DuttyCycle should be a positive integer between 1 and 100 \n");
-			writeMsg(&usartCmd, "3) DefaultMove			-- Set polarity of signals in active high and direction in forward \n");
-			writeMsg(&usartCmd, "4) StartMove			-- Start the movement of the Oppy \n");
-			writeMsg(&usartCmd, "5) StopMove			-- Stop the movement of the Oppy \n");
-			writeMsg(&usartCmd, "6) StraightLine #Distance[mm] \n"
+			writeMsg(&usartCmd, "3) Default			-- Set polarity of signals in active high and direction in forward \n");
+			writeMsg(&usartCmd, "4) Start			-- Start the movement of the Oppy \n");
+			writeMsg(&usartCmd, "5) Stop			-- Stop the movement of the Oppy \n");
+			writeMsg(&usartCmd, "6) Line #Distance[mm] \n"
 					"-- Distance should be a positive integer between 1 and 65535 \n");
 			writeMsg(&usartCmd, "7) Rotation #Direction #°Degrees \n"
 					"-- Direction: ClockWise(CW) = 0; CounterClockWise(CCW) = 1 \n"
@@ -269,10 +269,10 @@ void commandBuild(bool use){
 		}
 
 		// "SetMotorSignals" configura la frecuencia y el dutty de la PWM de los motores
-		else if(strcmp(cmd, "SetMotorSignals") == 0){
-			writeMsg(&usartCmd, "\nCMD: SetMotorSignals \n");
+		else if(strcmp(cmd, "SetSignals") == 0){
+			writeMsg(&usartCmd, "\nCMD: SetSignals \n");
 			if(((1 <= firstParameter)&&(firstParameter <= 100))&&((1 <= secondParameter)&&(secondParameter <= 100))){
-				setMotorSignals(firstParameter, secondParameter);
+				setSignals(firstParameter, secondParameter);
 				writeMsg(&usartCmd, "Configuration succesfull \n");
 			}
 			else{
@@ -281,29 +281,29 @@ void commandBuild(bool use){
 		}
 
 		// "DefaultMove" establece la configuración por defecto de las polaridades y las direcciones
-		else if(strcmp(cmd, "DefaultMove") == 0){
-			writeMsg(&usartCmd, "\nCMD: DefaultMove \n");
+		else if(strcmp(cmd, "Default") == 0){
+			writeMsg(&usartCmd, "\nCMD: Default \n");
 			defaultMove();
 			writeMsg(&usartCmd, "Oppy has returned to his default movement \n");
 		}
 
 		// "StartMove" activa las señales PWM y los enable del Puente H, iniciando así el movimiento
-		else if(strcmp(cmd, "StartMove") == 0){
-			writeMsg(&usartCmd, "\nCMD: StartMove \n");
+		else if(strcmp(cmd, "Start") == 0){
+			writeMsg(&usartCmd, "\nCMD: Start \n");
 			startMove();
 			writeMsg(&usartCmd, "Oppy is moving \n");
 		}
 
 		// "StopMove" desactiva los enable del Puente H y las señales PWM, deteniendo así el movimiento
-		else if(strcmp(cmd, "StopMove") == 0){
-			writeMsg(&usartCmd, "\nCMD: StopMove \n");
+		else if(strcmp(cmd, "Stop") == 0){
+			writeMsg(&usartCmd, "\nCMD: Stop \n");
 			stopMove();
 			writeMsg(&usartCmd, "Oppy has been stoped \n");
 		}
 
 		// "StraightLine" inicia un recorrido en línea recta con control, según la distancia indicada
-		else if(strcmp(cmd, "StraightLine") == 0){
-			writeMsg(&usartCmd, "\nCMD: StraightLine \n");
+		else if(strcmp(cmd, "Line") == 0){
+			writeMsg(&usartCmd, "\nCMD: Line \n");
 			if((1 <= firstParameter)&&(firstParameter <= 65535)){
 				straightLine(firstParameter);
 				writeMsg(&usartCmd, "Oppy is doing a straight line \n");

@@ -30,9 +30,11 @@ uint32_t counterIntRight = 0;
 uint32_t counterIntLeft = 0;
 uint16_t period = 400;
 uint16_t dutty = 80;
-uint8_t interruptsRev = 72;	// Interrupciones por revolución del encoder
-float wheelDiameter = 51.55;	// Diámetro promedio de las ruedas en milímetros
-float duttyChange = 8;			// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
+uint8_t interruptsRev = 72;			// Interrupciones por revolución del encoder
+float duttyChange = 8;				// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
+float wheelDiameter = 51.55;		// Diámetro promedio de las ruedas
+float wheelPerimeter = M_PI*51.55;	// Perímetro con promedio diámetro de las ruedas en milímetros
+float distanceAxis = 110.15;		// Distance entre ruedas (eje)
 
 
 /** Función de hacer una configuración por defecto de todo, esta es con motores en off, frecuencia 25Hz y Dutty de 20% */
@@ -150,10 +152,10 @@ void configMotors(void){
 
 
 /** Función encargada de modificar la frecuencia y %duttyCycle de ambos motores */
-void setMotorSignals(uint8_t freqHz, uint8_t duttyPer){
+void setSignals(uint8_t freqHz, uint8_t duttyPer){
 	period = (uint16_t)(10000.0*(1.0/freqHz));
 	dutty = (uint16_t)(period*(duttyPer/100.0));
-	duttyChange = period*0.02;
+	duttyChange = (float)period*0.02;
 	updatePeriod(&handlerPwmRight, period);
 	updatePeriod(&handlerPwmLeft, period);
 	updateDuttyCycle(&handlerPwmRight, dutty);
@@ -192,7 +194,7 @@ void stopMove(void){
 /** Función para realizar un recorrido en linea recta con control */
 void straightLine(uint16_t distance_in_mm){
 	defaultMove();
-	uint32_t goalInterrupts = interruptsRev*((float)(distance_in_mm)/wheelDiameter);
+	uint32_t goalInterrupts = interruptsRev*((float)(distance_in_mm)/wheelPerimeter);
 	uint32_t ticksRight = 0;
 	uint32_t ticksLeft = 0;
 	uint32_t differenceRight = 0;
@@ -219,19 +221,19 @@ void straightLine(uint16_t distance_in_mm){
 		previousTicksLeft = ticksLeft;
 
 		if(differenceLeft > differenceRight){
-			duttyRight += duttyChange;
-			duttyLeft -= duttyChange;
+			duttyRight += (uint16_t)duttyChange;
+			duttyLeft -= (uint16_t)duttyChange;
 		}
 		else if(differenceRight > differenceLeft){
-			duttyRight -= duttyChange;
-			duttyLeft += duttyChange;
+			duttyRight -= (uint16_t)duttyChange;
+			duttyLeft += (uint16_t)duttyChange;
 		}
 	}
 	stopMove();
 }
 
 /** Función para rotar */
-void rotation(uint8_t direction, uint16_t degress){
+void rotation(uint8_t direction, uint16_t degrees){
 	stopMove();
 	defaultMove();
 	if(direction == MOVEMENT_CW){
@@ -247,7 +249,16 @@ void rotation(uint8_t direction, uint16_t degress){
 	else{
 		__NOP();
 	}
-	// Falta hacer lo demás
+	// Calculamos la cantidad de interrupciones para conseguir la rotación
+	uint16_t goalInterrupts = interruptsRev*(((float)(degrees))/360.0)*(distanceAxis/wheelDiameter);
+	counterIntRight = 0;
+	counterIntLeft = 0;
+	startMove();
+	// Hacemos un ciclo que no haga nada hasta alcanzar las interrupciones
+	while((counterIntRight < goalInterrupts)&&(counterIntLeft < goalInterrupts)){
+		__NOP();
+	}
+	stopMove();
 }
 
 /** Función para realizar el cuadrado en la dirección y con la medida indicada */

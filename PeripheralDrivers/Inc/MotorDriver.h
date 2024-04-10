@@ -18,6 +18,7 @@
 #include "BasicTimer.h"
 #include "ExtiDriver.h"
 #include "PwmDriver.h"
+#include "math.h"
 
 /* Macrodefiniciones para las configuraciones */
 #define MOTOR_ON		0		// Debido a que los optoacopladores tienen resistencia Pull-Up la señal se invierte para el enable
@@ -33,12 +34,12 @@ extern uint32_t counterIntLeft;		// Variable que guarda el número de interrupci
 
 /* Prototipos de las funciones */
 void configMotors(void);
-void setMotorSignals(uint8_t freqHz, uint8_t dutty);
+void setSignals(uint8_t freqHz, uint8_t dutty);
 void defaultMove(void);
 void startMove(void);
 void stopMove(void);
 void straightLine(uint16_t distance_in_mm);
-void rotation(uint8_t direction, uint16_t degress);
+void rotation(uint8_t direction, uint16_t degrees);
 //void rotationCW(uint16_t degrees);
 //void rotationCCW(uint16_t degrees);
 void square(uint8_t direction, uint16_t side_in_mm);

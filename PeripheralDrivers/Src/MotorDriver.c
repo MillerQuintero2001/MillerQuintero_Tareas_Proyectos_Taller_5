@@ -32,12 +32,12 @@ uint32_t counterIntRight = 0;
 uint32_t counterIntLeft = 0;
 uint16_t period = 40000;
 uint16_t dutty = 8000;
-uint8_t interruptsRev = 72;			// Interrupciones por revolución del encoder (Depende de las aberturas del encoder y los flancos)
+uint8_t interruptsRev = 120;			// Interrupciones por revolución del encoder (Depende de las aberturas del encoder y los flancos)
 float duttyChange = 800.00;
 //float duttyChangeRight = 10.00;	// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
 //float duttyChangeLeft = 2.00;		// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
-float wheelDiameter = 51.55;		// Diámetro promedio de las ruedas
-float wheelPerimeter = M_PI*51.55;	// Perímetro con promedio diámetro de las ruedas en milímetros
+float wheelDiameter = 51.60;		// Diámetro promedio de las ruedas
+float wheelPerimeter = M_PI*51.60;	// Perímetro con promedio diámetro de las ruedas en milímetros
 float distanceAxis = 109.00;		// Distance entre ruedas (eje)
 
 
@@ -91,7 +91,7 @@ void configMotors(void){
 	// Señal inicial PWM
 	handlerPwmLeft.ptrTIMx			    			= TIM2;
 	handlerPwmLeft.PWMx_Config.PWMx_Channel	   		= PWM_CHANNEL_2;
-	handlerPwmLeft.PWMx_Config.PWMx_Prescaler		= BTIMER_PLL_100MHz_SPEED_100us;
+	handlerPwmLeft.PWMx_Config.PWMx_Prescaler		= BTIMER_PLL_100MHz_SPEED_1us;
 	handlerPwmLeft.PWMx_Config.PWMx_Period	    	= period;
 	handlerPwmLeft.PWMx_Config.PWMx_DuttyCicle		= dutty;
 	handlerPwmLeft.PWMx_Config.PWMx_Polarity		= PWM_POLARITY_ACTIVE_HIGH;
@@ -156,7 +156,7 @@ void configMotors(void){
 
 /** Función encargada de modificar la frecuencia y %duttyCycle de ambos motores */
 void setSignals(uint8_t freqHz, uint8_t duttyPer){
-	period = (uint16_t)(10000.0*(1.0/freqHz));
+	period = (uint16_t)(1000000.0*(1.0/freqHz));
 	dutty = (uint16_t)(period*(((float)duttyPer)/100.0));
 	duttyChange = ((float)period)*0.02;
 //	duttyChangeRight = (float)period*0.025;
@@ -194,8 +194,8 @@ void stopMove(void){
 	GPIO_WritePin(&handlerEnableLeft, MOTOR_OFF);
 	stopPwmSignal(&handlerPwmRight);
 	stopPwmSignal(&handlerPwmLeft);
-//	counterIntRight = 0;
-//	counterIntLeft = 0;
+	counterIntRight = 0;
+	counterIntLeft = 0;
 }
 
 /** Función para realizar un recorrido en linea recta con control */
@@ -228,13 +228,13 @@ void straightLine(uint16_t distance_in_mm){
 		previousTicksLeft = ticksLeft;
 
 		if(differenceLeft > differenceRight){
-			duttyRight += (uint16_t)duttyChange;
+			duttyRight += (uint16_t)(duttyChange-((float)period)*0.001);
 			duttyLeft -= (uint16_t)duttyChange;
 //			duttyRight += (uint16_t)duttyChangeRight;
 //			duttyLeft -= (uint16_t)duttyChangeLeft;
 		}
 		else if(differenceRight > differenceLeft){
-			duttyRight -= (uint16_t)duttyChange;
+			duttyRight -= (uint16_t)(duttyChange-((float)period)*0.001);
 			duttyLeft += (uint16_t)duttyChange;
 //			duttyRight -= (uint16_t)duttyChangeRight;
 //			duttyLeft += (uint16_t)duttyChangeLeft;

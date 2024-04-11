@@ -34,7 +34,11 @@
 // Elementos para el Blinky LED
 GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
-
+//bool flag = false;
+//BasicTimer_Handler_t handlerSampleTimer = {0};
+//uint8_t counter = 1;
+//float duttyPer = 15.00;
+//char bufferMandar[64] = "";
 
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 			// Función que inicializa los periféricos básicos
@@ -49,6 +53,23 @@ int main(void){
     /* Loop forever */
 	while(1){
 		commandBuild(USE_OPPY);
+//		if(flag){
+//			stopMove();
+//			counter++;
+//			if(duttyPer < 41){
+//				sprintf(bufferMandar,"%.2f%% %u \t %u \t \n",duttyPer, (unsigned int)counterIntRight, (unsigned int)counterIntLeft);
+//				startMove();
+//				counterIntRight = 0;
+//				counterIntLeft = 0;
+//				writeMsg(&usartCmd, bufferMandar);
+//			}
+//			if(counter == 11){
+//				duttyPer++;
+//				setSignals(25, (uint8_t)duttyPer);
+//				counter = 1;
+//			}
+//			flag = false;
+//		}
 	}
 	return 0;
 }
@@ -87,12 +108,24 @@ void initSystem(void){
 	commandConfig(CMD_USART1, USART_BAUDRATE_19200);
 
 	configMotors();
+	//setSignals(25, (uint8_t)duttyPer);
+
+//	handlerSampleTimer.ptrTIMx								= TIM4;
+//	handlerSampleTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
+//	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
+//	handlerSampleTimer.TIMx_Config.TIMx_period				= 10000;
+//	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
+//	BasicTimer_Config(&handlerSampleTimer);
 }
 
 /** Interrupción del timer blinky LED*/
 void BasicTimer5_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin); //Cambio el estado del LED PA5
 }
+
+//void BasicTimer4_Callback(void){
+//	flag = true;
+//}
 
 void usart1Rx_Callback(void){
 	usartData = getRxData();

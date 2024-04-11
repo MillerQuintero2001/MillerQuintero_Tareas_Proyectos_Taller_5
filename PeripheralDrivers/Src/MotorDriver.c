@@ -6,6 +6,7 @@
  */
 
 #include "MotorDriver.h"
+#include "CMDxDriver.h"
 
 /* Inicializo variables y elementos propios del driver */
 
@@ -26,18 +27,21 @@ EXTI_Config_t handlerIntLeft  		= {0};
 GPIO_Handler_t handlerPinIntLeft   	= {0};
 
 // Variables generales
+bool flagMove = false;
 uint32_t counterIntRight = 0;
 uint32_t counterIntLeft = 0;
-uint16_t period = 400;
-uint16_t dutty = 80;
-uint8_t interruptsRev = 72;			// Interrupciones por revolución del encoder
-float duttyChange = 8;				// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
+uint16_t period = 40000;
+uint16_t dutty = 8000;
+uint8_t interruptsRev = 72;			// Interrupciones por revolución del encoder (Depende de las aberturas del encoder y los flancos)
+float duttyChange = 800.00;
+//float duttyChangeRight = 10.00;	// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
+//float duttyChangeLeft = 2.00;		// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
 float wheelDiameter = 51.55;		// Diámetro promedio de las ruedas
 float wheelPerimeter = M_PI*51.55;	// Perímetro con promedio diámetro de las ruedas en milímetros
-float distanceAxis = 110.15;		// Distance entre ruedas (eje)
+float distanceAxis = 109.00;		// Distance entre ruedas (eje)
 
 
-/** Función de hacer una configuración por defecto de todo, esta es con motores en off, frecuencia 25Hz y Dutty de 20% */
+/** Función de hacer una configuración por defecto, esta es con motores en off, frecuencia 25Hz y Dutty de 20% */
 void configMotors(void){
 
 	/* Configuración del motor derecho (amarillo) */
@@ -45,7 +49,7 @@ void configMotors(void){
 	// Señal inicial PWM
 	handlerPwmRight.ptrTIMx			    			= TIM2;
 	handlerPwmRight.PWMx_Config.PWMx_Channel	    = PWM_CHANNEL_1;
-	handlerPwmRight.PWMx_Config.PWMx_Prescaler 		= BTIMER_PLL_100MHz_SPEED_100us;
+	handlerPwmRight.PWMx_Config.PWMx_Prescaler 		= BTIMER_PLL_100MHz_SPEED_1us;
 	handlerPwmRight.PWMx_Config.PWMx_Period	   		= period;
 	handlerPwmRight.PWMx_Config.PWMx_DuttyCicle		= dutty;
 	handlerPwmRight.PWMx_Config.PWMx_Polarity		= PWM_POLARITY_ACTIVE_HIGH;
@@ -133,7 +137,7 @@ void configMotors(void){
 	handlerPinIntRight.GPIO_PinConfig.GPIO_PinPuPdControl 	= GPIO_PUPDR_NOTHING;
 	GPIO_Config(&handlerPinIntRight);
 
-	handlerIntRight.edgeType     	= EXTERNAL_INTERRUPT_RISING_EDGE;
+	handlerIntRight.edgeType     	= EXTERNAL_INTERRUPT_BOTH_EDGE;
 	handlerIntRight.pGPIOHandler 	= &handlerPinIntRight;
 	extInt_Config(&handlerIntRight);
 
@@ -144,18 +148,19 @@ void configMotors(void){
 	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinPuPdControl 	= GPIO_PUPDR_NOTHING;
 	GPIO_Config(&handlerPinIntLeft);
 
-	handlerIntLeft.edgeType     	= EXTERNAL_INTERRUPT_RISING_EDGE;
+	handlerIntLeft.edgeType     	= EXTERNAL_INTERRUPT_BOTH_EDGE;
 	handlerIntLeft.pGPIOHandler 	= &handlerPinIntLeft;
 	extInt_Config(&handlerIntLeft);
-
 }
 
 
 /** Función encargada de modificar la frecuencia y %duttyCycle de ambos motores */
 void setSignals(uint8_t freqHz, uint8_t duttyPer){
 	period = (uint16_t)(10000.0*(1.0/freqHz));
-	dutty = (uint16_t)(period*(duttyPer/100.0));
-	duttyChange = (float)period*0.02;
+	dutty = (uint16_t)(period*(((float)duttyPer)/100.0));
+	duttyChange = ((float)period)*0.02;
+//	duttyChangeRight = (float)period*0.025;
+//	duttyChangeLeft = (float)period*0.005;
 	updatePeriod(&handlerPwmRight, period);
 	updatePeriod(&handlerPwmLeft, period);
 	updateDuttyCycle(&handlerPwmRight, dutty);
@@ -173,6 +178,7 @@ void defaultMove(void){
 
 /** Función para iniciar el movimiento de los motores */
 void startMove(void){
+	flagMove = true;
 	counterIntRight = 0;
 	counterIntLeft = 0;
 	startPwmSignal(&handlerPwmRight);
@@ -183,12 +189,13 @@ void startMove(void){
 
 /** Función para detener el movimiento de los motores */
 void stopMove(void){
+	flagMove = false;
 	GPIO_WritePin(&handlerEnableRight, MOTOR_OFF);
 	GPIO_WritePin(&handlerEnableLeft, MOTOR_OFF);
 	stopPwmSignal(&handlerPwmRight);
 	stopPwmSignal(&handlerPwmLeft);
-	counterIntRight = 0;
-	counterIntLeft = 0;
+//	counterIntRight = 0;
+//	counterIntLeft = 0;
 }
 
 /** Función para realizar un recorrido en linea recta con control */
@@ -206,7 +213,7 @@ void straightLine(uint16_t distance_in_mm){
 	uint32_t previousTicksRight = counterIntRight;
 	uint32_t previousTicksLeft = counterIntLeft;
 	startMove();
-	while((counterIntRight < goalInterrupts)&&(counterIntLeft < goalInterrupts)){
+	while((counterIntRight < goalInterrupts)&&(counterIntLeft < goalInterrupts)&&(flagMove)){
 		// A la frecuencia que ocurre el ciclo while se muestrean las interrupciones
 		ticksRight = counterIntRight;
 		ticksLeft = counterIntLeft;
@@ -223,13 +230,25 @@ void straightLine(uint16_t distance_in_mm){
 		if(differenceLeft > differenceRight){
 			duttyRight += (uint16_t)duttyChange;
 			duttyLeft -= (uint16_t)duttyChange;
+//			duttyRight += (uint16_t)duttyChangeRight;
+//			duttyLeft -= (uint16_t)duttyChangeLeft;
 		}
 		else if(differenceRight > differenceLeft){
 			duttyRight -= (uint16_t)duttyChange;
 			duttyLeft += (uint16_t)duttyChange;
+//			duttyRight -= (uint16_t)duttyChangeRight;
+//			duttyLeft += (uint16_t)duttyChangeLeft;
 		}
 	}
-	stopMove();
+	if(flagMove == false){
+		writeMsg(&usartCmd, "Oppy forced to stop!\n");
+		stopMove();
+	}
+	else{
+		stopMove();
+	}
+	updateDuttyCycle(&handlerPwmRight, dutty);
+	updateDuttyCycle(&handlerPwmLeft, dutty);
 }
 
 /** Función para rotar */

@@ -97,6 +97,12 @@ void BasicTimer5_Callback(void){
 void usart1Rx_Callback(void){
 	usartData = getRxData();
 	writeChar(&usartCmd, usartData);
+	if(usartData == 's'){
+		flagMove = false;
+	}
+	else{
+		__NOP();
+	}
 }
 
 

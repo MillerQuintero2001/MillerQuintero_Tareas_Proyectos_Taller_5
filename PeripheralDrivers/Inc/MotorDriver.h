@@ -31,6 +31,7 @@
 /* Variables importantes */
 extern uint32_t counterIntRight;	// Variable que guarda el número de interrupciones del encoder en la rueda derecha (Motor Amarillo)
 extern uint32_t counterIntLeft;		// Variable que guarda el número de interrupciones del encoder en la rueda izquierda (Motor Azul)
+extern bool flagMove;				// Variable bandera para controlar el movimiento
 
 /* Prototipos de las funciones */
 void configMotors(void);
@@ -40,8 +41,6 @@ void startMove(void);
 void stopMove(void);
 void straightLine(uint16_t distance_in_mm);
 void rotation(uint8_t direction, uint16_t degrees);
-//void rotationCW(uint16_t degrees);
-//void rotationCCW(uint16_t degrees);
 void square(uint8_t direction, uint16_t side_in_mm);
 
 #endif /* MOTORDRIVER_H_ */

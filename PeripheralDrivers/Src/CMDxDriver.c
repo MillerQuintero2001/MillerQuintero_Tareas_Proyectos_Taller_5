@@ -305,8 +305,8 @@ void commandBuild(bool use){
 		else if(strcmp(cmd, "Line") == 0){
 			writeMsg(&usartCmd, "\nCMD: Line \n");
 			if((1 <= firstParameter)&&(firstParameter <= 65535)){
-				straightLine(firstParameter);
 				writeMsg(&usartCmd, "Oppy is doing a straight line \n");
+				straightLine(firstParameter);
 			}
 			else{
 				writeMsg(&usartCmd, "Wrong distance, remember, only positive integers between 1 and 65535 \n");
@@ -317,8 +317,8 @@ void commandBuild(bool use){
 		else if(strcmp(cmd, "Rotation") == 0){
 			writeMsg(&usartCmd, "\nCMD: Rotation \n");
 			if(((0 <= firstParameter)&&(firstParameter <= 1))&&((1 <= secondParameter)&&(secondParameter <= 360))){
-				rotation(firstParameter, secondParameter);
 				writeMsg(&usartCmd, "Oppy is doing a rotation \n");
+				rotation(firstParameter, secondParameter);
 			}
 			else{
 				writeMsg(&usartCmd, "Wrong values, remember, rotation between 0 and 1 and degrees between 1 and 360 \n");
@@ -329,8 +329,8 @@ void commandBuild(bool use){
 		else if(strcmp(cmd, "Square") == 0){
 			writeMsg(&usartCmd, "\nCMD: Square \n");
 			if(((0 <= firstParameter)&&(firstParameter <= 1))&&((1 <= secondParameter)&&(secondParameter <= 65535))){
-				square(firstParameter, secondParameter);
 				writeMsg(&usartCmd, "Oppy is doing a square \n");
+				square(firstParameter, secondParameter);
 			}
 			else{
 				writeMsg(&usartCmd, "Wrong values, remember, rotation between 0 and 1 and side between 1 and 65535 \n");

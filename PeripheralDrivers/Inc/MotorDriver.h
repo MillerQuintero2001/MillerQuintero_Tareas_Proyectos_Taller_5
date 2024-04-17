@@ -18,6 +18,7 @@
 #include "BasicTimer.h"
 #include "ExtiDriver.h"
 #include "PwmDriver.h"
+#include "SysTickDriver.h"
 #include "math.h"
 
 /* Macrodefiniciones para las configuraciones */
@@ -42,5 +43,6 @@ void stopMove(void);
 void straightLine(uint16_t distance_in_mm);
 void rotation(uint8_t direction, uint16_t degrees);
 void square(uint8_t direction, uint16_t side_in_mm);
+uint16_t constraint(uint16_t duttyInput);
 
 #endif /* MOTORDRIVER_H_ */

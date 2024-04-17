@@ -7,6 +7,7 @@
 
 #include "MotorDriver.h"
 #include "CMDxDriver.h"
+#include "SysTickDriver.h"
 
 /* Inicializo variables y elementos propios del driver */
 
@@ -26,14 +27,18 @@ GPIO_Handler_t handlerDirLeft 		= {0};
 EXTI_Config_t handlerIntLeft  		= {0};
 GPIO_Handler_t handlerPinIntLeft   	= {0};
 
+// Definimos los handler para el seguidor de línea y el de distancia infrarroja
+EXTI_Config_t handlerIntDistance 		= {0};
+GPIO_Handler_t handlerPinIntDistance 	= {0};
+
 // Variables generales
 bool flagMove = false;
 uint32_t counterIntRight = 0;
 uint32_t counterIntLeft = 0;
 uint16_t period = 40000;
-uint16_t dutty = 8000;
+uint16_t dutty = 12000;
 uint8_t interruptsRev = 120;			// Interrupciones por revolución del encoder (Depende de las aberturas del encoder y los flancos)
-float duttyChange = 800.00;
+float duttyChange = 200.00;
 //float duttyChangeRight = 10.00;	// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
 //float duttyChangeLeft = 2.00;		// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
 float wheelDiameter = 51.60;		// Diámetro promedio de las ruedas
@@ -134,7 +139,8 @@ void configMotors(void){
 	handlerPinIntRight.pGPIOx                            	= GPIOC;
 	handlerPinIntRight.GPIO_PinConfig.GPIO_PinNumber      	= PIN_1;
 	handlerPinIntRight.GPIO_PinConfig.GPIO_PinMode       	= GPIO_MODE_IN;
-	handlerPinIntRight.GPIO_PinConfig.GPIO_PinPuPdControl 	= GPIO_PUPDR_NOTHING;
+	handlerPinIntRight.GPIO_PinConfig.GPIO_PinPuPdControl 	= GPIO_PUPDR_PULLUP;
+	handlerPinIntRight.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
 	GPIO_Config(&handlerPinIntRight);
 
 	handlerIntRight.edgeType     	= EXTERNAL_INTERRUPT_BOTH_EDGE;
@@ -145,12 +151,24 @@ void configMotors(void){
 	handlerPinIntLeft.pGPIOx                      			= GPIOC;
 	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinNumber     	= PIN_3;
 	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinMode        	= GPIO_MODE_IN;
-	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinPuPdControl 	= GPIO_PUPDR_NOTHING;
+	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinPuPdControl 	= GPIO_PUPDR_PULLUP;
+	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
 	GPIO_Config(&handlerPinIntLeft);
 
 	handlerIntLeft.edgeType     	= EXTERNAL_INTERRUPT_BOTH_EDGE;
 	handlerIntLeft.pGPIOHandler 	= &handlerPinIntLeft;
 	extInt_Config(&handlerIntLeft);
+
+	// Sensor de distancia infrarrrojo
+	handlerPinIntDistance.pGPIOx								= GPIOC;
+	handlerPinIntDistance.GPIO_PinConfig.GPIO_PinNumber			= PIN_0;
+	handlerPinIntDistance.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_IN;
+	handlerPinIntDistance.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
+	GPIO_Config(&handlerPinIntDistance);
+
+	handlerIntDistance.edgeType		= EXTERNAL_INTERRUPT_RISING_EDGE;
+	handlerIntDistance.pGPIOHandler	= &handlerPinIntDistance;
+	extInt_Config(&handlerIntDistance);
 }
 
 
@@ -158,7 +176,7 @@ void configMotors(void){
 void setSignals(uint8_t freqHz, uint8_t duttyPer){
 	period = (uint16_t)(1000000.0*(1.0/freqHz));
 	dutty = (uint16_t)(period*(((float)duttyPer)/100.0));
-	duttyChange = ((float)period)*0.02;
+	duttyChange = ((float)period)*0.005;
 //	duttyChangeRight = (float)period*0.025;
 //	duttyChangeLeft = (float)period*0.005;
 	updatePeriod(&handlerPwmRight, period);
@@ -218,8 +236,8 @@ void straightLine(uint16_t distance_in_mm){
 		ticksRight = counterIntRight;
 		ticksLeft = counterIntLeft;
 
-		updateDuttyCycle(&handlerPwmRight, duttyRight);
-		updateDuttyCycle(&handlerPwmLeft, duttyLeft);
+		updateDuttyCycle(&handlerPwmRight, constraint(duttyRight));
+		updateDuttyCycle(&handlerPwmLeft, constraint(duttyLeft));
 
 		differenceRight = ticksRight - previousTicksRight;
 		differenceLeft = ticksLeft - previousTicksLeft;
@@ -228,17 +246,19 @@ void straightLine(uint16_t distance_in_mm){
 		previousTicksLeft = ticksLeft;
 
 		if(differenceLeft > differenceRight){
-			duttyRight += (uint16_t)(duttyChange-((float)period)*0.001);
-			duttyLeft -= (uint16_t)duttyChange;
+			duttyRight += (uint16_t)(duttyChange-(float)period*0.00025);
+			duttyLeft  -= (uint16_t)(duttyChange+(float)period*0.0003);
 //			duttyRight += (uint16_t)duttyChangeRight;
 //			duttyLeft -= (uint16_t)duttyChangeLeft;
 		}
-		else if(differenceRight > differenceLeft){
-			duttyRight -= (uint16_t)(duttyChange-((float)period)*0.001);
-			duttyLeft += (uint16_t)duttyChange;
+		if(differenceRight > differenceLeft){
+			duttyRight -= (uint16_t)(duttyChange+(float)period*0.00025);
+			duttyLeft  += (uint16_t)(duttyChange-(float)period*0.0003);;
 //			duttyRight -= (uint16_t)duttyChangeRight;
 //			duttyLeft += (uint16_t)duttyChangeLeft;
+
 		}
+		delay_ms(20);
 	}
 	if(flagMove == false){
 		writeMsg(&usartCmd, "Oppy forced to stop!\n");
@@ -292,6 +312,24 @@ void square(uint8_t direction, uint16_t side_in_mm){
 	rotation(direction, 90);
 }
 
+/** Función para limitar el cambio de dutty*/
+uint16_t constraint(uint16_t duttyInput){
+	if(duttyInput > (uint16_t)((float)dutty+(((float)period)*0.02))){
+		duttyInput = (uint16_t)((float)dutty+(((float)period)*0.02));
+	}
+	else if(duttyInput < (uint16_t)((float)dutty-(((float)period)*0.02))){
+		duttyInput = (uint16_t)((float)dutty-(((float)period)*0.02));
+	}
+	else{
+		__NOP();
+	}
+	return duttyInput;
+}
+
+void callback_extInt0 (void){
+	flagMove = false;
+	stopMove();
+}
 
 void callback_extInt1 (void){
 	counterIntRight++;

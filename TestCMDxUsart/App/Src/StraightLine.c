@@ -108,6 +108,7 @@ void initSystem(void){
 	commandConfig(CMD_USART1, USART_BAUDRATE_19200);
 
 	configMotors();
+	setSignals(25, 30);
 	//setSignals(25, (uint8_t)duttyPer);
 
 //	handlerSampleTimer.ptrTIMx								= TIM4;

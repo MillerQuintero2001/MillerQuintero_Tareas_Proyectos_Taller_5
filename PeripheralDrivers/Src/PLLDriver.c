@@ -171,5 +171,5 @@ void changeMCO2(uint8_t sourceClock, uint8_t preEscaler){
 		RCC->CFGR &= ~RCC_CFGR_MCO2; 						// Limpio
 		RCC->CFGR |= (sourceClock << RCC_CFGR_MCO2_Pos); 	// Selecciona el reloj
 		RCC->CFGR &= ~RCC_CFGR_MCO2PRE; 					// Limpio
-		RCC->CFGR |= (preEscaler << RCC_CFGR_MCO2PRE_Pos); 	// Selecciono el pre-escaler para el MCO1
+		RCC->CFGR |= (preEscaler << RCC_CFGR_MCO2PRE_Pos); 	// Selecciono el pre-escaler para el MCO2
 }

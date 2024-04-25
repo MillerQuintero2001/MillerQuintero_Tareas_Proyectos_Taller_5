@@ -38,7 +38,7 @@ uint32_t counterIntLeft = 0;
 uint16_t period = 40000;
 uint16_t dutty = 12000;
 uint8_t interruptsRev = 120;			// Interrupciones por revolución del encoder (Depende de las aberturas del encoder y los flancos)
-float duttyChange = 200.00;
+float duttyChange = 100.00;
 //float duttyChangeRight = 10.00;	// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
 //float duttyChangeLeft = 2.00;		// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
 float wheelDiameter = 51.60;		// Diámetro promedio de las ruedas
@@ -176,7 +176,7 @@ void configMotors(void){
 void setSignals(uint8_t freqHz, uint8_t duttyPer){
 	period = (uint16_t)(1000000.0*(1.0/freqHz));
 	dutty = (uint16_t)(period*(((float)duttyPer)/100.0));
-	duttyChange = ((float)period)*0.005;
+	duttyChange = ((float)period)*0.0025;
 //	duttyChangeRight = (float)period*0.025;
 //	duttyChangeLeft = (float)period*0.005;
 	updatePeriod(&handlerPwmRight, period);
@@ -246,14 +246,14 @@ void straightLine(uint16_t distance_in_mm){
 		previousTicksLeft = ticksLeft;
 
 		if(differenceLeft > differenceRight){
-			duttyRight += (uint16_t)(duttyChange-(float)period*0.00025);
-			duttyLeft  -= (uint16_t)(duttyChange+(float)period*0.0003);
+			duttyRight += (uint16_t)(duttyChange+(float)period*0.00013);
+			duttyLeft  -= (uint16_t)(duttyChange+(float)period*0.0006);
 //			duttyRight += (uint16_t)duttyChangeRight;
 //			duttyLeft -= (uint16_t)duttyChangeLeft;
 		}
 		if(differenceRight > differenceLeft){
 			duttyRight -= (uint16_t)(duttyChange+(float)period*0.00025);
-			duttyLeft  += (uint16_t)(duttyChange-(float)period*0.0003);;
+			duttyLeft  += (uint16_t)(duttyChange-(float)period*0.0005);;
 //			duttyRight -= (uint16_t)duttyChangeRight;
 //			duttyLeft += (uint16_t)duttyChangeLeft;
 

@@ -185,6 +185,14 @@ void setSignals(uint8_t freqHz, uint8_t duttyPer){
 	updateDuttyCycle(&handlerPwmLeft, dutty);
 }
 
+/** Función encargada de establecer la velocidad de cada rueda en mm/s */
+void setVelocity(uint8_t velocity){
+	float duttyCycleRight = ((float)velocity-38.50)/255;  // Ya en porcentajes (2.55*100)
+	float duttyCycleLeft = ((float)velocity-39.60)/259;
+	updateDuttyCycle(&handlerPwmRight, (uint16_t)((float)period*duttyCycleRight));
+	updateDuttyCycle(&handlerPwmLeft, (uint16_t)((float)period*duttyCycleLeft));
+}
+
 
 /** Función que restaura la configuración a un estado conocido, dirección para linea recta y polaridad activa-alta */
 void defaultMove(void){

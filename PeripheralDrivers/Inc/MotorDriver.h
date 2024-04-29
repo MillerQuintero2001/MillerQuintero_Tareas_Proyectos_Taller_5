@@ -37,6 +37,7 @@ extern bool flagMove;				// Variable bandera para controlar el movimiento
 /* Prototipos de las funciones */
 void configMotors(void);
 void setSignals(uint8_t freqHz, uint8_t dutty);
+void setVelocity(uint8_t velocity);
 void defaultMove(void);
 void startMove(void);
 void stopMove(void);

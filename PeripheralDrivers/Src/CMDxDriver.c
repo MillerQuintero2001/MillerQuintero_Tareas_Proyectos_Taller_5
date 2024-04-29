@@ -255,15 +255,17 @@ void commandBuild(bool use){
 			writeMsg(&usartCmd, "2) SetSignals #Frequency[Hz] #%DuttyCycle \n"
 					"-- Frequency[Hz] should be a positive integer between 1 and 100 \n"
 					"-- %DuttyCycle should be a positive integer between 1 and 100 \n");
-			writeMsg(&usartCmd, "3) Default			-- Set polarity of signals in active high and direction in forward \n");
-			writeMsg(&usartCmd, "4) Start			-- Start the movement of the Oppy \n");
-			writeMsg(&usartCmd, "5) Stop			-- Stop the movement of the Oppy \n");
-			writeMsg(&usartCmd, "6) Line #Distance[mm] \n"
+			writeMsg(&usartCmd, "3) SetVelocity #Velocity[mm/s] \n"
+					"-- Velocity should be a positive integer between 87 and 130 \n");
+			writeMsg(&usartCmd, "4) Default			-- Set polarity of signals in active high and direction in forward \n");
+			writeMsg(&usartCmd, "5) Start			-- Start the movement of the Oppy \n");
+			writeMsg(&usartCmd, "6) Stop			-- Stop the movement of the Oppy \n");
+			writeMsg(&usartCmd, "7) Line #Distance[mm] \n"
 					"-- Distance should be a positive integer between 1 and 65535 \n");
-			writeMsg(&usartCmd, "7) Rotation #Direction #°Degrees \n"
+			writeMsg(&usartCmd, "8) Rotation #Direction #°Degrees \n"
 					"-- Direction: ClockWise(CW) = 0; CounterClockWise(CCW) = 1 \n"
 					"-- °Degrees should be a positive integer between 1 and 360 \n");
-			writeMsg(&usartCmd, "8) Square #Direction #Side(mm) \n"
+			writeMsg(&usartCmd, "9) Square #Direction #Side(mm) \n"
 					"-- Direction: CW = 0; CCW = 1 \n"
 					"-- Side should be in mm, a positive integer between 1 and 65535 \n");
 		}
@@ -277,6 +279,18 @@ void commandBuild(bool use){
 			}
 			else{
 				writeMsg(&usartCmd, "Wrong frequency or dutty, remember, only positive integers between 1 and 100 \n");
+			}
+		}
+
+		// "SetVelocity" configura la velocidad de los motores
+		else if(strcmp(cmd, "SetVelocity") == 0){
+			writeMsg(&usartCmd, "\nCMD: SetVelocity \n");
+			if((87 <= firstParameter)&&(firstParameter <= 130)){
+				setVelocity(firstParameter);
+				writeMsg(&usartCmd, "Configuration succesfull \n");
+			}
+			else{
+				writeMsg(&usartCmd, "Wrong velocity, remember, only positive integers between 87 and 130 \n");
 			}
 		}
 

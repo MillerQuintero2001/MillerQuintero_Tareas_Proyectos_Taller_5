@@ -38,12 +38,12 @@ uint32_t counterIntLeft = 0;
 uint16_t period = 40000;
 uint16_t dutty = 12000;
 uint8_t interruptsRev = 120;			// Interrupciones por revolución del encoder (Depende de las aberturas del encoder y los flancos)
-float duttyChange = 100.00;
-//float duttyChangeRight = 10.00;	// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
-//float duttyChangeLeft = 2.00;		// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
-float wheelDiameter = 51.60;		// Diámetro promedio de las ruedas
-float wheelPerimeter = M_PI*51.60;	// Perímetro con promedio diámetro de las ruedas en milímetros
-float distanceAxis = 109.00;		// Distance entre ruedas (eje)
+float duttyChange = 100.00f;
+//float duttyChangeRight = 10.00;		// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
+//float duttyChangeLeft = 2.00;			// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
+float wheelDiameter = 51.60f;			// Diámetro promedio de las ruedas
+float wheelPerimeter = M_PI*51.725f;	// Perímetro con promedio diámetro de las ruedas en milímetros
+float distanceAxis = 109.00f;			// Distance entre ruedas (eje)
 
 
 /** Función de hacer una configuración por defecto, esta es con motores en off, frecuencia 25Hz y Dutty de 20% */
@@ -174,9 +174,9 @@ void configMotors(void){
 
 /** Función encargada de modificar la frecuencia y %duttyCycle de ambos motores */
 void setSignals(uint8_t freqHz, uint8_t duttyPer){
-	period = (uint16_t)(1000000.0*(1.0/freqHz));
-	dutty = (uint16_t)(period*(((float)duttyPer)/100.0));
-	duttyChange = ((float)period)*0.0025;
+	period = (uint16_t)(1000000.0f*(1.0f/freqHz));
+	dutty = (uint16_t)(period*(((float)duttyPer)/100.0f));
+	duttyChange = ((float)period)*0.0025f;
 //	duttyChangeRight = (float)period*0.025;
 //	duttyChangeLeft = (float)period*0.005;
 	updatePeriod(&handlerPwmRight, period);
@@ -187,8 +187,8 @@ void setSignals(uint8_t freqHz, uint8_t duttyPer){
 
 /** Función encargada de establecer la velocidad de cada rueda en mm/s */
 void setVelocity(uint8_t velocity){
-	float duttyCycleRight = ((float)velocity-38.50)/255;  // Ya en porcentajes (2.55*100)
-	float duttyCycleLeft = ((float)velocity-39.60)/259;
+	float duttyCycleRight = ((float)velocity-38.50f)/270.0f;  // Ya en porcentajes (2.70*100)
+	float duttyCycleLeft = ((float)velocity-39.60f)/275.0f;
 	updateDuttyCycle(&handlerPwmRight, (uint16_t)((float)period*duttyCycleRight));
 	updateDuttyCycle(&handlerPwmLeft, (uint16_t)((float)period*duttyCycleLeft));
 }
@@ -254,14 +254,14 @@ void straightLine(uint16_t distance_in_mm){
 		previousTicksLeft = ticksLeft;
 
 		if(differenceLeft > differenceRight){
-			duttyRight += (uint16_t)(duttyChange+(float)period*0.00013);
-			duttyLeft  -= (uint16_t)(duttyChange+(float)period*0.0006);
+			duttyRight += (uint16_t)(duttyChange+(float)period*0.00013f);
+			duttyLeft  -= (uint16_t)(duttyChange+(float)period*0.0006f);
 //			duttyRight += (uint16_t)duttyChangeRight;
 //			duttyLeft -= (uint16_t)duttyChangeLeft;
 		}
 		if(differenceRight > differenceLeft){
-			duttyRight -= (uint16_t)(duttyChange+(float)period*0.00025);
-			duttyLeft  += (uint16_t)(duttyChange-(float)period*0.0005);;
+			duttyRight -= (uint16_t)(duttyChange+(float)period*0.00025f);
+			duttyLeft  += (uint16_t)(duttyChange-(float)period*0.0005f);;
 //			duttyRight -= (uint16_t)duttyChangeRight;
 //			duttyLeft += (uint16_t)duttyChangeLeft;
 
@@ -297,7 +297,7 @@ void rotation(uint8_t direction, uint16_t degrees){
 		__NOP();
 	}
 	// Calculamos la cantidad de interrupciones para conseguir la rotación
-	uint16_t goalInterrupts = interruptsRev*(((float)(degrees))/360.0)*(distanceAxis/wheelDiameter);
+	uint16_t goalInterrupts = interruptsRev*(((float)(degrees))/360.0f)*(distanceAxis/wheelDiameter);
 	counterIntRight = 0;
 	counterIntLeft = 0;
 	startMove();
@@ -322,11 +322,11 @@ void square(uint8_t direction, uint16_t side_in_mm){
 
 /** Función para limitar el cambio de dutty*/
 uint16_t constraint(uint16_t duttyInput){
-	if(duttyInput > (uint16_t)((float)dutty+(((float)period)*0.02))){
-		duttyInput = (uint16_t)((float)dutty+(((float)period)*0.02));
+	if(duttyInput > (uint16_t)((float)dutty+(((float)period)*0.02f))){
+		duttyInput = (uint16_t)((float)dutty+(((float)period)*0.02f));
 	}
-	else if(duttyInput < (uint16_t)((float)dutty-(((float)period)*0.02))){
-		duttyInput = (uint16_t)((float)dutty-(((float)period)*0.02));
+	else if(duttyInput < (uint16_t)((float)dutty-(((float)period)*0.02f))){
+		duttyInput = (uint16_t)((float)dutty-(((float)period)*0.02f));
 	}
 	else{
 		__NOP();

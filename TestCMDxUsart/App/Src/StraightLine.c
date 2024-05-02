@@ -60,18 +60,18 @@ int main(void){
     /* Loop forever */
 	while(1){
 		commandBuild(USE_OPPY);
-		if(flagMove&&flagInit){
-			startBasicTimer(&handlerSampleTimer);
-			flagInit = false;
-		}
-		if((counterIntRight > 120*((float)(3000)/(M_PI*51.50)))||(counterIntLeft > 120*((float)(3000)/(M_PI*51.60)))||(!flagMove)){
-			stopMove();
-			stopBasicTimer(&handlerSampleTimer);
-			flagInit = true;
-		}
-		else{
-			__NOP();
-		}
+//		if(flagMove&&flagInit){
+//			startBasicTimer(&handlerSampleTimer);
+//			flagInit = false;
+//		}
+//		if((counterIntRight > 120*((float)(3000)/(M_PI*51.50)))||(counterIntLeft > 120*((float)(3000)/(M_PI*51.60)))||(!flagMove)){
+//			stopMove();
+//			stopBasicTimer(&handlerSampleTimer);
+//			flagInit = true;
+//		}
+//		else{
+//			__NOP();
+//		}
 	}
 	return 0;
 }

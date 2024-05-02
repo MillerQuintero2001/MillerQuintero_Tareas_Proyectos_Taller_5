@@ -36,13 +36,16 @@ GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 
 bool flag = false;
-bool flagInit = false;
+bool flagInit = true;
 BasicTimer_Handler_t handlerSampleTimer = {0};
-float distanceRight = 0.0;
-float distanceLeft = 0.0;
-uint8_t counter = 1;
+float velocityRight = 0.0;
+float velocityLeft = 0.0;
+uint16_t counter = 1;
 //float duttyPer = 15.00;
 char bufferMandar[64] = {0};
+
+uint16_t counterPreviousRight = 0;
+uint16_t counterPreviousLeft = 0;
 
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 			// Función que inicializa los periféricos básicos
@@ -57,26 +60,23 @@ int main(void){
     /* Loop forever */
 	while(1){
 		commandBuild(USE_DEFAULT);
-		if(flag&&flagInit){
-			if(counter < 12){
-				distanceRight = ((float)counterIntRight)*((M_PI*51.70f)/120.0f);
-				distanceLeft = ((float)counterIntLeft)*((M_PI*51.75f)/120.0f);
-				sprintf(bufferMandar, "%.2f\t %.2f\n", distanceRight, distanceLeft);
-				writeMsg(&usartCmd, bufferMandar);
-				flag = false;
-				counter++;
-				counterIntLeft = 0;
-				counterIntRight = 0;
-				startBasicTimer(&handlerSampleTimer);
-			}
-			else{
-				stopBasicTimer(&handlerSampleTimer);
-				stopMove();
-				counter = 1;
-				flag = false;
-			}
+		if(counter > 601){
+			stopMove();
+			stopBasicTimer(&handlerSampleTimer);
+			counter = 1;
+			flag = false;
 		}
-
+		else if(flag){
+			velocityRight = (((float)counterIntRight)*((M_PI*51.70f)/120.0f))/(0.01f*counter);
+			velocityLeft = (((float)counterIntLeft)*((M_PI*51.75f)/120.0f))/(0.01f*counter);
+			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
+			writeMsg(&usartCmd, bufferMandar);
+			counter++;
+			flag = false;
+		}
+		else{
+			__NOP();
+		}
 	}
 	return 0;
 }
@@ -116,15 +116,13 @@ void initSystem(void){
 	commandConfig(CMD_USART1, USART_BAUDRATE_19200);
 
 	configMotors();
-	setSignals(25, 15);
 
 	handlerSampleTimer.ptrTIMx								= TIM4;
 	handlerSampleTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
-	handlerSampleTimer.TIMx_Config.TIMx_period				= 10000;
+	handlerSampleTimer.TIMx_Config.TIMx_period				= 50;
 	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerSampleTimer);
-
 }
 
 /** Interrupción del timer blinky LED*/
@@ -133,7 +131,6 @@ void BasicTimer5_Callback(void){
 }
 
 void BasicTimer4_Callback(void){
-	stopBasicTimer(&handlerSampleTimer);
 	flag = true;
 }
 
@@ -149,23 +146,10 @@ void usart1Rx_Callback(void){
 }
 
 void commandx1(void){
-	startMove();
-	delay_ms(1000);
-	counterIntRight = 0;
-	counterIntLeft = 0;
 	startBasicTimer(&handlerSampleTimer);
-	flagInit = true;
+	startMove();
 }
 
-
-void commandx2(void){
-	setSignals(25, secondParameter);
-	startMove();
-	delay_ms(1000);
-	counterIntRight = 0;
-	counterIntLeft = 0;
-	startBasicTimer(&handlerSampleTimer);
-}
 
 
 

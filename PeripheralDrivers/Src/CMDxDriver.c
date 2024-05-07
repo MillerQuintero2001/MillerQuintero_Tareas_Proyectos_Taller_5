@@ -287,6 +287,7 @@ void commandBuild(bool use){
 			writeMsg(&usartCmd, "\nCMD: SetVelocity \n");
 			if((87 <= firstParameter)&&(firstParameter <= 130)){
 				setVelocity(firstParameter);
+				getDutty(firstParameter);
 				writeMsg(&usartCmd, "Configuration succesfull \n");
 			}
 			else{

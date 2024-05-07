@@ -38,17 +38,41 @@ BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 bool flag = false;
 bool flagInit = true;
 BasicTimer_Handler_t handlerSampleTimer = {0};
-float velocityRight = 0.0f;
-float velocityLeft = 0.0f;
+
 uint16_t counter = 1;
-//float duttyPer = 15.00;
 char bufferMandar[64] = {0};
 
-uint16_t counterPreviousRight = 0;
-uint16_t counterPreviousLeft = 0;
+/* Variables para el control PID */
+bool flagPID = false;				// Bandera que indica cuando hacer acción de control
+float u_max = 0.0f;
+float u_min = 0.0f;
+uint32_t counterPreviousRight = 0;
+uint32_t counterPreviousLeft = 0;
+// Calculo de la acción de control
+float u_control = 0.0f; 			// Acción de control actual
+float u_1_control = 0.0f;			// Accioń de control previa
+float error = 0.0f;					// Error actual
+float error_1 = 0.0f;				// Error una muestra antes
+float error_2 = 0.0f;				// Error dos muestras antes
+float kp = 0.0f;					// Constante proporcional
+float ti = 0.0f;					// Tiempo integrativo
+float td = 0.0f;					// Tiempo derivativo
+float timeSample = 0.0f;			// Tiempo de muestreo
+uint8_t setPointVelocity = 0;		// SetPoint de velocidad
+float velocityRight = 0.0f;			// Velocidad rueda derecha
+float velocityLeft = 0.0f;			// Velocidad rueda izquierda
+float q0 = 0.0f;					// Constante de PID discreto
+float q1 = 0.0f;					// Constante de PID discreto
+float q2 = 0.0f;					// Constante de PID discreto
+// Parámetros Ziegler-Nichols
+float k = 0.0f;						// Ganacia de la función de transferencia
+float tau = 0.0f;					// Constante de tiempo de la función de transferencia
+float theta = 0.0f;					// Retardo del sistema en PID discreto (L+ts/2)
 
 /* Definición de las cabeceras de funciones del main */
-void initSystem(void); 			// Función que inicializa los periféricos básicos
+void initSystem(void); 					// Función que inicializa los periféricos básicos
+void controlActionPID(void);			// Función que retorna el valor de la acción de control
+float mapControlDutty(float u_input, bool wheelIndicator);	// Función que mapea la acción de control a un % Dutty Cycle
 
 /** Función principal del programa
  * ¡Esta función es el corazón del programa! */
@@ -59,23 +83,14 @@ int main(void){
 
     /* Loop forever */
 	while(1){
-		commandBuild(USE_DEFAULT);
-		if(counter > 601){
-			stopMove();
-			stopBasicTimer(&handlerSampleTimer);
-			counter = 1;
-			flag = false;
-		}
-		else if(flag){
-			velocityRight = (((float)counterIntRight)*((M_PI*51.70f)/120.0f))/(0.005f*counter);
-			velocityLeft = (((float)counterIntLeft)*((M_PI*51.75f)/120.0f))/(0.005f*counter);
-			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
-			writeMsg(&usartCmd, bufferMandar);
-			counter++;
-			flag = false;
-		}
-		else{
-			__NOP();
+		commandBuild(USE_OPPY);
+		if(flagPID){
+			velocityRight = (counterIntRight-counterPreviousRight)/(timeSample);
+			velocityLeft = (counterIntLeft-counterPreviousLeft)/(timeSample);
+			counterPreviousRight = counterIntRight;
+			counterPreviousLeft = counterIntLeft;
+			controlActionPID();
+			flagPID = false;
 		}
 	}
 	return 0;
@@ -123,6 +138,49 @@ void initSystem(void){
 	handlerSampleTimer.TIMx_Config.TIMx_period				= 50;
 	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerSampleTimer);
+
+	// Calculamos las constantes del PID
+	kp = (1.2f*tau)/(k*theta);
+	ti = 2.0f*theta;
+	td = 0.5f*theta;
+	q0 = kp*(1.0f+(timeSample/(2.0f*ti))+(td/timeSample));
+	q1 = -kp*(1.0f-(timeSample/(2.0f*ti))+((2.0f*td)/timeSample));
+	q2 = (kp*td)/timeSample;
+
+}
+
+
+/** Función para calcular la acción de control */
+void controlActionPID(void){
+	if(velocityRight > velocityLeft){
+		error = (float)setPointVelocity - velocityLeft;
+		u_control = (u_1_control)+(q0*error)+(q1*error_1)+(q2*error_2);
+		updateDuttyCycle(&handlerPwmLeft, (uint16_t)mapControlDutty(u_control, false));
+		// ¿Restar a la otra rueda lo mismo que se le sumó de dutty a esta?
+	}
+	else if(velocityLeft > velocityRight){
+		error = (float)setPointVelocity - velocityRight;
+		u_control = (u_1_control)+(q0*error)+(q1*error_1)+(q2*error_2);
+		updateDuttyCycle(&handlerPwmRight, (uint16_t)mapControlDutty(u_control, true));
+	}
+	else{
+		__NOP();
+	}
+	u_1_control = u_control;
+	error_2 = error_1;
+	error_1 = error_2;
+}
+
+/** Función para realizar el mapeo entre acción de control y PWM */
+float mapControlDutty(float u_input, bool wheelIndicator){
+	float duttyPer = 0.0f;
+	if(wheelIndicator){
+		duttyPer = ((35.0f-20.0f)/u_max-u_min)*u_input + duttyWheels[0];
+	}
+	else{
+		duttyPer = ((35.0f-20.0f)/(u_max-u_min))*u_input + duttyWheels[1];
+	}
+	return duttyPer*40000;
 }
 
 /** Interrupción del timer blinky LED*/
@@ -131,7 +189,7 @@ void BasicTimer5_Callback(void){
 }
 
 void BasicTimer4_Callback(void){
-	flag = true;
+	flagPID = true;
 }
 
 void usart1Rx_Callback(void){
@@ -145,10 +203,6 @@ void usart1Rx_Callback(void){
 	}
 }
 
-void commandx1(void){
-	startBasicTimer(&handlerSampleTimer);
-	startMove();
-}
 
 
 

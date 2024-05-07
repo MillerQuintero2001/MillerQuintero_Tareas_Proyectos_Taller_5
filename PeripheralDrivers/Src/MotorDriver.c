@@ -41,9 +41,10 @@ uint8_t interruptsRev = 120;			// Interrupciones por revolución del encoder (De
 float duttyChange = 100.00f;
 //float duttyChangeRight = 10.00;		// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
 //float duttyChangeLeft = 2.00;			// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
-float wheelDiameter = 51.60f;			// Diámetro promedio de las ruedas
+float wheelDiameter = 51.725f;			// Diámetro promedio de las ruedas
 float wheelPerimeter = M_PI*51.725f;	// Perímetro con promedio diámetro de las ruedas en milímetros
 float distanceAxis = 109.00f;			// Distance entre ruedas (eje)
+float duttyWheels[2] = {0};
 
 
 /** Función de hacer una configuración por defecto, esta es con motores en off, frecuencia 25Hz y Dutty de 20% */
@@ -193,6 +194,11 @@ void setVelocity(uint8_t velocity){
 	updateDuttyCycle(&handlerPwmLeft, (uint16_t)((float)period*duttyCycleLeft));
 }
 
+/** Función encargada de retornar el %DuttyCycle según la velocidad */
+void getDutty(uint8_t velocity){
+	duttyWheels[0] = ((float)velocity-38.50f)/270.0f;  // Ya en porcentajes (2.70*100)
+	duttyWheels[1] = ((float)velocity-39.60f)/275.0f;
+}
 
 /** Función que restaura la configuración a un estado conocido, dirección para linea recta y polaridad activa-alta */
 void defaultMove(void){

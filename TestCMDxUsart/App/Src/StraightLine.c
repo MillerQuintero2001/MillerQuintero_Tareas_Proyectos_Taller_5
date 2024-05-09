@@ -60,6 +60,16 @@ int main(void){
     /* Loop forever */
 	while(1){
 		commandBuild(USE_OPPY);
+		if(flag){
+			float velocityRight = ((float)(counterIntRight - counterPreviousRight))*((M_PI*51.70f)/120.00f);
+			float velocityLeft = ((float)(counterIntLeft - counterPreviousLeft))*((M_PI*51.75f)/120.00f);
+
+			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
+			writeMsg(&usartCmd, bufferMandar);
+			counterPreviousRight = counterIntRight;
+			counterPreviousLeft = counterIntLeft;
+			flag = false;
+		}
 //		if(flagMove&&flagInit){
 //			startBasicTimer(&handlerSampleTimer);
 //			flagInit = false;
@@ -118,6 +128,7 @@ void initSystem(void){
 	handlerSampleTimer.TIMx_Config.TIMx_period				= 10000;
 	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerSampleTimer);
+	startBasicTimer(&handlerSampleTimer);
 }
 
 /** Interrupción del timer blinky LED*/
@@ -126,12 +137,7 @@ void BasicTimer5_Callback(void){
 }
 
 void BasicTimer4_Callback(void){
-	uint16_t counterRight = counterIntRight - counterPreviousRight;
-	uint16_t counterLeft = counterIntLeft - counterPreviousLeft;
-	sprintf(bufferMandar, "%u\t %u\n", (unsigned int)counterRight, (unsigned int)counterLeft);
-	writeMsg(&usartCmd, bufferMandar);
-	counterPreviousRight = counterIntRight;
-	counterPreviousLeft = counterIntLeft;
+	flag = true;
 }
 
 void usart1Rx_Callback(void){

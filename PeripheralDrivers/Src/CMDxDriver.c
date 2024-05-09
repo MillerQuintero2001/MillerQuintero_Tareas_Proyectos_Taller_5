@@ -256,7 +256,7 @@ void commandBuild(bool use){
 					"-- Frequency[Hz] should be a positive integer between 1 and 100 \n"
 					"-- %DuttyCycle should be a positive integer between 1 and 100 \n");
 			writeMsg(&usartCmd, "3) SetVelocity #Velocity[mm/s] \n"
-					"-- Velocity should be a positive integer between 87 and 130 \n");
+					"-- Velocity should be a positive integer between 88 and 140 \n");
 			writeMsg(&usartCmd, "4) Default			-- Set polarity of signals in active high and direction in forward \n");
 			writeMsg(&usartCmd, "5) Start			-- Start the movement of the Oppy \n");
 			writeMsg(&usartCmd, "6) Stop			-- Stop the movement of the Oppy \n");
@@ -285,13 +285,13 @@ void commandBuild(bool use){
 		// "SetVelocity" configura la velocidad de los motores
 		else if(strcmp(cmd, "SetVelocity") == 0){
 			writeMsg(&usartCmd, "\nCMD: SetVelocity \n");
-			if((87 <= firstParameter)&&(firstParameter <= 130)){
+			if((88 <= firstParameter)&&(firstParameter <= 140)){
 				setVelocity(firstParameter);
 				getDutty(firstParameter);
 				writeMsg(&usartCmd, "Configuration succesfull \n");
 			}
 			else{
-				writeMsg(&usartCmd, "Wrong velocity, remember, only positive integers between 87 and 130 \n");
+				writeMsg(&usartCmd, "Wrong velocity, remember, only positive integers between 88 and 140 \n");
 			}
 		}
 

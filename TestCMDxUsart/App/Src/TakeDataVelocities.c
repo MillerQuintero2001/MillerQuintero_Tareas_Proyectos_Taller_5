@@ -58,7 +58,7 @@ int main(void){
 	while(1){
 		commandBuild(USE_DEFAULT);
 		if(flag&&flagInit){
-			if(counter < 15){
+			if(counter < 16){
 				distanceRight = ((float)counterIntRight)*((M_PI*51.70f)/120.0f);
 				distanceLeft = ((float)counterIntLeft)*((M_PI*51.75f)/120.0f);
 				sprintf(bufferMandar, "%.2f\t %.2f\n", distanceRight, distanceLeft);

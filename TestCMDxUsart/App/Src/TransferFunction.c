@@ -44,8 +44,8 @@ uint16_t counter = 1;
 //float duttyPer = 15.00;
 char bufferMandar[64] = {0};
 
-uint16_t counterPreviousRight = 0;
-uint16_t counterPreviousLeft = 0;
+uint32_t counterPreviousRight = 0;
+uint32_t counterPreviousLeft = 0;
 
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 			// Función que inicializa los periféricos básicos
@@ -67,10 +67,12 @@ int main(void){
 			flag = false;
 		}
 		else if(flag){
-			velocityRight = (((float)counterIntRight)*((M_PI*51.70f)/120.0f))/(0.005f*counter);
-			velocityLeft = (((float)counterIntLeft)*((M_PI*51.75f)/120.0f))/(0.005f*counter);
+			velocityRight = (((float)(counterIntRight - counterPreviousRight))*((M_PI*51.70f)/120.00f))/(0.025f);
+			velocityLeft = (((float)(counterIntLeft - counterPreviousLeft))*((M_PI*51.75f)/120.00f))/(0.025f);
 			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
 			writeMsg(&usartCmd, bufferMandar);
+			counterPreviousRight = counterIntRight;
+			counterPreviousLeft = counterIntLeft;
 			counter++;
 			flag = false;
 		}
@@ -120,7 +122,7 @@ void initSystem(void){
 	handlerSampleTimer.ptrTIMx								= TIM4;
 	handlerSampleTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
-	handlerSampleTimer.TIMx_Config.TIMx_period				= 50;
+	handlerSampleTimer.TIMx_Config.TIMx_period				= 250;
 	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerSampleTimer);
 }

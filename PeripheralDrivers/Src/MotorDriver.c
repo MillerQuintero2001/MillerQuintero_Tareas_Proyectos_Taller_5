@@ -178,8 +178,6 @@ void setSignals(uint8_t freqHz, uint8_t duttyPer){
 	period = (uint16_t)(1000000.0f*(1.0f/freqHz));
 	dutty = (uint16_t)(period*(((float)duttyPer)/100.0f));
 	duttyChange = ((float)period)*0.0025f;
-//	duttyChangeRight = (float)period*0.025;
-//	duttyChangeLeft = (float)period*0.005;
 	updatePeriod(&handlerPwmRight, period);
 	updatePeriod(&handlerPwmLeft, period);
 	updateDuttyCycle(&handlerPwmRight, dutty);

@@ -60,16 +60,16 @@ int main(void){
     /* Loop forever */
 	while(1){
 		commandBuild(USE_OPPY);
-		if(flag){
-			float velocityRight = ((float)(counterIntRight - counterPreviousRight))*((M_PI*51.70f)/120.00f);
-			float velocityLeft = ((float)(counterIntLeft - counterPreviousLeft))*((M_PI*51.75f)/120.00f);
-
-			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
-			writeMsg(&usartCmd, bufferMandar);
-			counterPreviousRight = counterIntRight;
-			counterPreviousLeft = counterIntLeft;
-			flag = false;
-		}
+//		if(flag){
+//			float velocityRight = ((float)(counterIntRight - counterPreviousRight))*((M_PI*51.70f)/120.00f);
+//			float velocityLeft = ((float)(counterIntLeft - counterPreviousLeft))*((M_PI*51.75f)/120.00f);
+//
+//			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
+//			writeMsg(&usartCmd, bufferMandar);
+//			counterPreviousRight = counterIntRight;
+//			counterPreviousLeft = counterIntLeft;
+//			flag = false;
+//		}
 //		if(flagMove&&flagInit){
 //			startBasicTimer(&handlerSampleTimer);
 //			flagInit = false;
@@ -122,13 +122,13 @@ void initSystem(void){
 
 	configMotors();
 
-	handlerSampleTimer.ptrTIMx								= TIM4;
-	handlerSampleTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
-	handlerSampleTimer.TIMx_Config.TIMx_period				= 10000;
-	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
-	BasicTimer_Config(&handlerSampleTimer);
-	startBasicTimer(&handlerSampleTimer);
+//	handlerSampleTimer.ptrTIMx								= TIM4;
+//	handlerSampleTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
+//	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
+//	handlerSampleTimer.TIMx_Config.TIMx_period				= 10000;
+//	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
+//	BasicTimer_Config(&handlerSampleTimer);
+//	startBasicTimer(&handlerSampleTimer);
 }
 
 /** Interrupción del timer blinky LED*/

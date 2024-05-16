@@ -20,9 +20,7 @@
 
 #include "GPIOxDriver.h"
 #include "BasicTimer.h"
-#include "ExtiDriver.h"
 #include "USARTxDriver.h"
-#include "SysTickDriver.h"
 #include "PwmDriver.h"
 #include "AdcDriver.h"
 
@@ -31,7 +29,6 @@
 // Elementos para el Blinky LED
 GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
-
 
 // Elementos para hacer la comunicación serial
 GPIO_Handler_t handlerPinTX = {0};	// Pin de transmisión de datos
@@ -42,24 +39,21 @@ uint8_t usart2RxData = 0; // Variable en la que se guarda el dato transmitido
 char bufferMsg[64] = {0}; // Buffer de datos como un arreglo de caracteres
 char bufferData[64] = "Mensaje para enviar";
 
-// Elementoss para el ADC
+// Elementos para el ADC
 ADC_Multichannel_Config_t handlerDualADC = {0};
 uint8_t adcIsComplete = 0;
 uint8_t adcIndicator = 0;
 uint16_t adcCounter = 0;
-uint16_t dataQuantity = 1024;
-uint16_t dataADC1[1024] = {0};
-uint16_t dataADC4[1024] = {0};
+uint16_t dataQuantity = 10000;
+uint16_t dataADC1[10000] = {0};
+uint16_t dataADC4[10000] = {0};
 uint16_t dataADC[2] = {0};
+float dataChannel1 = 0.00f;
+float dataChannel4 = 0.00f;
 uint8_t channelOrder[2] = {ADC_CHANNEL_1, ADC_CHANNEL_4};
 uint16_t samplingOrder[2] = {ADC_SAMPLING_PERIOD_84_CYCLES, ADC_SAMPLING_PERIOD_84_CYCLES};
-uint8_t numberOfChannels = 2;
 PWM_Handler_t handlerPwmEventADC = {0};
 
-// Elementos del SysTick
-uint32_t systemTicks = 0;
-uint32_t systemTicksStart = 0;
-uint32_t systemTicksEnd = 0;
 
 
 /* Definición de las cabeceras de funciones del main */
@@ -78,9 +72,7 @@ int main(void){
 		if(usart2RxData != '\0'){
 			if(usart2RxData == 'a'){
 				// Iniciamos una conversion ADC
-				adcCounter = 0;
 				startPwmSignal(&handlerPwmEventADC);
-				enableOutput(&handlerPwmEventADC);
 			}
 			usart2RxData = '\0';
 		}
@@ -88,7 +80,9 @@ int main(void){
 		if(adcIsComplete == 1){
 			adcIsComplete = 0;
 			for (uint16_t i = 0; i < dataQuantity; i++){
-				sprintf(bufferData, "#%u\t%u\t%u\n",i+1,dataADC1[i],dataADC4[i]);
+				dataChannel1 = ((((float)dataADC1[i])*3.30f)/4095.00f);
+				dataChannel4 = ((((float)dataADC4[i])*3.30f)/4095.00f);
+				sprintf(bufferData, "#%u\t%.3f\t%.3f\n",i+1,dataChannel1,dataChannel4);
 				writeMsg(&usart2Comm, bufferData);
 			}
 		}
@@ -119,6 +113,7 @@ void initSystem(void){
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 250;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerBlinkyTimer);
+	startBasicTimer(&handlerBlinkyTimer);
 	/* Fin del GPIO y Timer del LED de estado
 	 * ----------------------------------------*/
 
@@ -128,7 +123,7 @@ void initSystem(void){
 	handlerPinTX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
 	handlerPinTX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
 	handlerPinTX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerPinTX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+	handlerPinTX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_HIGH;
 	handlerPinTX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
 	GPIO_Config(&handlerPinTX);
 
@@ -137,13 +132,13 @@ void initSystem(void){
 	handlerPinRX.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_ALTFN;
 	handlerPinRX.GPIO_PinConfig.GPIO_PinOPType		= GPIO_OTYPE_PUSHPULL;
 	handlerPinRX.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-	handlerPinRX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_FAST;
+	handlerPinRX.GPIO_PinConfig.GPIO_PinSpeed		= GPIO_OSPEED_HIGH;
 	handlerPinRX.GPIO_PinConfig.GPIO_PinAltFunMode	= AF7;
 	GPIO_Config(&handlerPinRX);
 
 	/* Configuración de la comunicación serial */
 	usart2Comm.ptrUSARTx						= USART2;
-	usart2Comm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+	usart2Comm.USART_Config.USART_baudrate 		= USART_BAUDRATE_230400;
 	usart2Comm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
 	usart2Comm.USART_Config.USART_parity		= USART_PARITY_NONE;
 	usart2Comm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
@@ -157,16 +152,16 @@ void initSystem(void){
 	handlerDualADC.resolution			= ADC_RESOLUTION_12_BIT;
 	handlerDualADC.dataAlignment		= ADC_ALIGNMENT_RIGHT;
 	handlerDualADC.extTriggerEnable		= ADC_EXTEN_RISING_EDGE;
-	handlerDualADC.extTriggerSelect		= ADC_EXTSEL_TIM2_CC2;
-	adc_ConfigMultichannel(&handlerDualADC, numberOfChannels);
+	handlerDualADC.extTriggerSelect		= ADC_EXTSEL_TIM5_CC3;
+	adc_ConfigMultichannel(&handlerDualADC, 2);
 
 	/* Configuración del PWM usado como disparador de la conversión ADC */
 	// Utilizo el canal 3 para PWM del Timer 5 ya que el 1 y 2 están ocupados por ADC
-	handlerPwmEventADC.ptrTIMx						= TIM2;
-	handlerPwmEventADC.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_2;
-	handlerPwmEventADC.PWMx_Config.PWMx_Prescaler	= BTIMER_SPEED_10us;
-	handlerPwmEventADC.PWMx_Config.PWMx_Period		= 10;
-	handlerPwmEventADC.PWMx_Config.PWMx_DuttyCicle	= 5;
+	handlerPwmEventADC.ptrTIMx						= TIM5;
+	handlerPwmEventADC.PWMx_Config.PWMx_Channel		= PWM_CHANNEL_3;
+	handlerPwmEventADC.PWMx_Config.PWMx_Prescaler	= BTIMER_SPEED_1us;
+	handlerPwmEventADC.PWMx_Config.PWMx_Period		= 50;
+	handlerPwmEventADC.PWMx_Config.PWMx_DuttyCicle	= 25;
 	pwm_Config(&handlerPwmEventADC);
 
 }
@@ -191,15 +186,15 @@ void adcComplete_Callback(void){
 		dataADC4[adcCounter] = getADC();
 		adcIndicator = 0;
 		adcCounter++;
-
 	}
 	// Control del contador de datos
 	if(adcCounter > (dataQuantity-1)){
-		adcCounter = 0;
-		disableOutput(&handlerPwmEventADC);
 		stopPwmSignal(&handlerPwmEventADC);
+		adcCounter = 0;
+		adcIndicator = 0;
 		adcIsComplete = 1;
 	}
+
 }
 
 

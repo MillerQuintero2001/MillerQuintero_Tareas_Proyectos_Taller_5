@@ -212,9 +212,9 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 				ptrUsartHandler->ptrUSARTx->BRR = 0x02B6;
 			}
 			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_115200){
-				usartDiv = freqClock/(16.0*115200.0);
+				usartDiv = freqClock/(16.00f*115200.00f);
 				mantiza = (uint16_t)usartDiv;
-				fraction = (uint8_t)roundf((usartDiv - (uint16_t)usartDiv)*16);
+				fraction = (uint8_t)roundf((usartDiv - (uint16_t)usartDiv)*16.00f);
 				baudrate = ((mantiza << 4)|fraction);
 				ptrUsartHandler->ptrUSARTx->BRR = baudrate;
 				// El valor a cargar es  27.1267 -> Mantiza = 27,fraction = 0.1267
@@ -223,12 +223,12 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 				// Configurando el Baudrate generator para una velocidad de 57600bps
 				//ptrUsartHandler->ptrUSARTx->BRR = 0x01B2;
 			}
-			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_230400){
-				// El valor a cargar es 10.8507 -> Mantiza = 10,fraction = 0.8507
-				// Mantiza = 10 = 0xA, fraction = 16 * 0.8507 = 13.61 = 14
-				// Valor a cargar 0x00AE
+			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_230400){ // Para 100MHz
+				// El valor a cargar es 13.5634 -> Mantiza = 13,fraction = 0.5634
+				// Mantiza = 13 = 0xD, fraction = 16 * 0.5634 = 9.0144 = 9
+				// Valor a cargar 0x00A9
 				// Configurando el Baudrate generator para una velocidad de 57600bps
-				ptrUsartHandler->ptrUSARTx->BRR = 0x00AE;
+				ptrUsartHandler->ptrUSARTx->BRR = 0x00A9;
 			}
 			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_921600){
 				// El valor a cargar es 2.7126 -> Mantiza = 2,fraction = 0.7126

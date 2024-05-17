@@ -223,8 +223,15 @@ void adc_Config(ADC_Config_t *adcConfig){
 	// Asignamos el canal de la conversión a la primera posición en la secuencia
 	ADC1->SQR3 |= (adcConfig->channel << 0);
 
-	/* 9. Configuramos el preescaler del ADC en 2:1 (el mas rápido que se puede tener */
-	ADC->CCR &= ~ADC_CCR_ADCPRE;
+	/* 9. ¡IMPORTANTE! El módulo ADC está conectado al APB2, y solo puede trabajar
+	 * a una frecuencia máxima de 36MHz, así que debemos configurar según el reloj */
+	if(RCC->CFGR & RCC_CFGR_SW){		// Si estamos con el PLL
+		ADC->CCR &= ~ADC_CCR_ADCPRE;
+		ADC->CCR |= ADC_CCR_ADCPRE_0;	// Con esto si está a 100MHz se divide por 4 y queda a 25MHz, o 80MHz queda en 20MHz
+	}
+	else{
+		ADC->CCR &= ~ADC_CCR_ADCPRE;
+	}
 
 	/* 10. Desactivamos las interrupciones globales */
 	__disable_irq();

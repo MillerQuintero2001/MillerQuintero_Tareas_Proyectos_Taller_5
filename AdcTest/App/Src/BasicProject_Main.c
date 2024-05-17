@@ -98,6 +98,9 @@ int main(void){
 /** Función encargada de iniciar hardware para un pin*/
 void initSystem(void){
 
+	/* Configuramos el sistema a 100MHz*/
+	configPLL(100);
+
 	/* GPIO y Timer del Blinky Led de Estado */
 	handlerBlinkyPin.pGPIOx								= GPIOA;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_5;
@@ -111,10 +114,11 @@ void initSystem(void){
 	// Atributos para el Timer 2 del LED de estado
 	handlerBlinkyTimer.ptrTIMx								= TIM2;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_SPEED_1ms;
-	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 250;
+	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
+	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerBlinkyTimer);
+	startBasicTimer(&handlerBlinkyTimer);
 	/* Fin del GPIO y Timer del LED de estado
 	 * ----------------------------------------*/
 
@@ -157,7 +161,7 @@ void initSystem(void){
 	usart2Comm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
 	USART_Config(&usart2Comm);
 
-	channel0.channel 		= ADC_CHANNEL_0;
+	channel0.channel 		= ADC_CHANNEL_4;
 	channel0.dataAlignment	= ADC_ALIGNMENT_RIGHT;
 	channel0.samplingPeriod	= ADC_SAMPLING_PERIOD_84_CYCLES;
 	channel0.resolution		= ADC_RESOLUTION_12_BIT;
@@ -165,12 +169,11 @@ void initSystem(void){
 
 	handlerADCTimer.ptrTIMx								= TIM5;
 	handlerADCTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-	handlerADCTimer.TIMx_Config.TIMx_speed				= BTIMER_SPEED_10us;
-	handlerADCTimer.TIMx_Config.TIMx_period				= 500;
+	handlerADCTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
+	handlerADCTimer.TIMx_Config.TIMx_period				= 1000;
 	handlerADCTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerADCTimer);
-
-
+	startBasicTimer(&handlerADCTimer);
 
 }
 

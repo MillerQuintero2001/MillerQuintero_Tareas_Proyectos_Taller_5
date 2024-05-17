@@ -63,7 +63,7 @@
 #define ADC_EXTSEL_TIM5_CC1		10
 #define ADC_EXTSEL_TIM5_CC2		11
 #define ADC_EXTSEL_TIM5_CC3		12
-#define ADC_EXTSEL_EXTI_11		16
+#define ADC_EXTSEL_EXTI_11		15
 
 typedef struct
 {

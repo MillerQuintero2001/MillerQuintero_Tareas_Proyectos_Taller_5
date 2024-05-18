@@ -32,27 +32,29 @@ GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 
 // Elementos para hacer la comunicación serial
-GPIO_Handler_t handlerPinTX = {0};		// Pin de transmisión de datos
-GPIO_Handler_t handlerPinRX = {0};		// Pin de recepción de datos
-USART_Handler_t usartComm =  {0};		// Comunicación serial
-uint8_t sendMsg = 0; 					// Variable para controlar la comunicación
-uint8_t usartRxData = 0; 				// Variable en la que se guarda el dato transmitido
-char bufferReception[32] = {0};			// Buffer para guardar caracteres ingresados
-char bufferMsg[64] = "Mensaje para enviar";
-char cmd[16] = {0};
-uint16_t counterReception = 0;
-bool stringComplete = false;
-unsigned int firstParameter = 0;
-unsigned int secondParameter = 0;
+GPIO_Handler_t handlerPinTX = {0};						// Pin de transmisión de datos
+GPIO_Handler_t handlerPinRX = {0};						// Pin de recepción de datos
+USART_Handler_t usartComm =  {0};						// Comunicación serial
+uint8_t usartRxData = 0; 								// Variable en la que se guarda el dato transmitido
+char bufferReception[32] = {0};							// Buffer para guardar caracteres ingresados
+char bufferMsg[64] = "Mensaje para enviar";				// Buffer de mensajes
+char cmd[16] = {0};										// BUffer de comandos
+uint16_t counterReception = 0;							// Contador de caracteres recibidos
+bool stringComplete = false;							// Bandera de comando completado
+unsigned int firstParameter = 0;						// Primer parámetro del comando
+unsigned int secondParameter = 0;						// Segundo parámetro del comando
 
 // Elementos para el ADC
-ADC_Config_t channel4 = {0};
-BasicTimer_Handler_t handlerTimerADC = {0};
-bool adcIsComplete = false;
-uint16_t adcCounter = 0;
-uint16_t dataQuantity = 30000;
-uint16_t* dataADC;
-float dataChannel4 = 0.00f;
+ADC_Config_t channelADC = {0};							// Canal ADC
+BasicTimer_Handler_t handlerTimerADC = {0};				// Timer de muestreo del ADC
+bool adcIsComplete = false;								// Bandera de ADC Completado
+uint32_t adcCounter = 0;								// Contador de conversiones
+uint32_t dataQuantity = 30000;							// Variable que guarda la cantidad de datos solicitados
+uint16_t* dataADC;										// Arreglo para la cantidad de datos
+float dataChannelADC = 0.00f;							// Variable que guarda el valor calculado de voltaje
+bool flagCapture = false;								// Bandera para indicar modo de captura
+bool flagConstant = false;								// Bandera para indicar modo de muestreo constante
+bool flagSingleData = false;							// Bandera para indicar una conversión en modo constante
 
 
 /* Definición de las cabeceras de funciones del main */
@@ -78,9 +80,16 @@ int main(void){
 		}
 
 		// Verificamos si se ha dado por completado del comando
-		if(stringComplete){
+		else if(stringComplete){
 			commandUSART(bufferReception);
 			stringComplete = false;
+		}
+
+		else if(flagSingleData){
+			sprintf(bufferMsg, "=%.3f/\n",dataChannelADC);
+			writeMsg(&usartComm, bufferMsg);
+			adcCounter++;
+			flagSingleData = false;
 		}
 
 		else{
@@ -154,11 +163,11 @@ void initSystem(void){
 	USART_Config(&usartComm);
 
 	/* Configuración del ADC single channel */
-	channel4.channel			= ADC_CHANNEL_4;
-	channel4.dataAlignment		= ADC_ALIGNMENT_RIGHT;
-	channel4.samplingPeriod		= ADC_SAMPLING_PERIOD_3_CYCLES;
-	channel4.resolution			= ADC_RESOLUTION_12_BIT;
-	adc_Config(&channel4);
+	channelADC.channel				= ADC_CHANNEL_4;
+	channelADC.dataAlignment		= ADC_ALIGNMENT_RIGHT;
+	channelADC.samplingPeriod		= ADC_SAMPLING_PERIOD_3_CYCLES;
+	channelADC.resolution			= ADC_RESOLUTION_12_BIT;
+	adc_Config(&channelADC);
 
 }
 
@@ -199,64 +208,68 @@ void commandUSART(char* ptrBufferReception){
 	// "Menu" este primer comando imprime una lista con los otros comandos que tiene el equipo
 	if(strcmp(cmd, "Menu") == 0){
 		writeMsg(&usartComm, "\nMenu CMDs:\n");
-		writeMsg(&usartComm, "1) Menu						-- Imprime este menu.\n");
-		writeMsg(&usartComm, "2) ADC #Freq[Hz] #Muestras	-- Establece la frecuencia de muestreo y el número de muestras. "
+		writeMsg(&usartComm, "1) Menu							-- Imprime este menu.\n");
+		writeMsg(&usartComm, "2) Capturar #Freq[Hz] #Muestras	-- Inicia la toma de datos según la frecuencia de muestreo y el número de muestras. "
 				"La frecuencia debe ser un número entre 1 y 1000000, las muestras entre 1 a 30000.\n");
-		writeMsg(&usartComm, "3) Capturar					-- Inicia la toma de datos.\n");
-		writeMsg(&usartComm, "4) Datos						-- Imprime los datos recolectados.\n");
-		writeMsg(&usartComm, "5) Enviar						-- Envia los datos en el formato para LabVIEW.\n");
-	}
-
-	// Configuración del muestreo
-	else if(strcmp(cmd, "ADC") == 0){
-		if((firstParameter > 1000000)||(firstParameter < 1)||(secondParameter < 1)||(secondParameter > 30000)){
-			if((firstParameter > 1000000)||(firstParameter < 1)){
-				writeMsg(&usartComm, "Recuerde que la frecuencia debe ser entre 1 Hz a 1000000 Hz.\n");
-			}
-			else{
-				__NOP();
-			}
-			if((secondParameter < 1)||(secondParameter > 30000)){
-				writeMsg(&usartComm, "Recuerde que el número de muestras debe ser entre 1 a 30000.\n");
-			}
-			else{
-				__NOP();
-			}
-		}
-		else{
-			float arrValue = 0.00f;
-			arrValue = (10000000.00f/((float)firstParameter));
-			/* Configuración del Timer para el ADC */
-			handlerTimerADC.ptrTIMx								= TIM5;
-			handlerTimerADC.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-			handlerTimerADC.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100ns;
-			handlerTimerADC.TIMx_Config.TIMx_period 			= (uint32_t)arrValue;
-			handlerTimerADC.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
-			BasicTimer_Config(&handlerTimerADC);
-			dataQuantity = secondParameter;
-			dataADC = (uint16_t*)malloc(dataQuantity*sizeof(uint16_t));
-			for(uint32_t j = 0; j<dataQuantity;j++){
-				dataADC[j] = 0;
-			}
-			writeMsg(&usartComm, "Listo para la captura de datos.\n");
-		}
+		writeMsg(&usartComm, "3) Imprimir						-- Imprime los datos recolectados.\n");
+		writeMsg(&usartComm, "4) Constante #Freq[Hz] #Muestras	-- Envia datos constantemente a la frecuencia indicada hasta alcanzar la cantidad solicitada. "
+				"La frecuencia debe ser un número entre 1 y 1000000, las muestras desde 1 dato hasta 5 millones de datos.\n");
 	}
 
 	// Lanzar captura de datos
 	else if(strcmp(cmd, "Capturar") == 0){
-		writeMsg(&usartComm, "La captura de datos ha comenzado.\n");
-		startBasicTimer(&handlerTimerADC);
+		if((!flagConstant)){
+			if((firstParameter > 1000000)||(firstParameter < 1)||(secondParameter < 1)||(secondParameter > 30000)){
+				if((firstParameter > 1000000)||(firstParameter < 1)){
+					writeMsg(&usartComm, "Recuerde que la frecuencia debe ser entre 1 Hz a 1000000 Hz.\n");
+				}
+				else{
+					__NOP();
+				}
+				if((secondParameter < 1)||(secondParameter > 30000)){
+					writeMsg(&usartComm, "Recuerde que el número de muestras debe ser entre 1 a 30000.\n");
+				}
+				else{
+					__NOP();
+				}
+			}
+			else{
+				float arrValue = 0.00f;
+				arrValue = (10000000.00f/((float)firstParameter));
+
+				/* Configuración del Timer para el ADC */
+				handlerTimerADC.ptrTIMx								= TIM5;
+				handlerTimerADC.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
+				handlerTimerADC.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100ns;
+				handlerTimerADC.TIMx_Config.TIMx_period 			= (uint32_t)arrValue;
+				handlerTimerADC.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
+				BasicTimer_Config(&handlerTimerADC);
+
+				dataQuantity = secondParameter;
+				dataADC = (uint16_t*)malloc(dataQuantity*sizeof(uint16_t));
+				for(uint32_t j = 0; j<dataQuantity;j++){
+					dataADC[j] = 0;
+				}
+				writeMsg(&usartComm, "La captura de datos ha comenzado.\n");
+				flagCapture = true;
+				startBasicTimer(&handlerTimerADC);
+			}
+		}
+		else{
+			writeMsg(&usartComm, "Ya se está haciendo un muestreo constante.\n");
+		}
 	}
 
 	// Imprimir datos
-	else if(strcmp(cmd, "Datos") == 0){
-		if(adcIsComplete){
+	else if(strcmp(cmd, "Imprimir") == 0){
+		if((adcIsComplete)&&(flagCapture)){
+			flagCapture = false;
+			adcIsComplete = false;
 			writeMsg(&usartComm, "Los datos se imprimirán en 5 segundos.\n");
 			delay_ms(5000);
-			adcIsComplete = false;
 			for (uint32_t i = 0; i < dataQuantity; i++){
-				dataChannel4 = ((((float)dataADC[i])*3.30f)/4095.00f);
-				sprintf(bufferMsg, "#%lu\t%.3f\n",i+1,dataChannel4);
+				dataChannelADC = ((((float)dataADC[i])*3.30f)/4095.00f);
+				sprintf(bufferMsg, "#%lu\t%.3f\n",i+1,dataChannelADC);
 				writeMsg(&usartComm, bufferMsg);
 			}
 			// Una vez imprimidos se libera la memoria dinámica
@@ -264,6 +277,45 @@ void commandUSART(char* ptrBufferReception){
 		}
 		else{
 			writeMsg(&usartComm, "No se han capturado datos.\n");
+		}
+	}
+
+	// Muestreo y envio constante de datos
+	else if(strcmp(cmd, "Constante") == 0){
+		if(!flagCapture){
+			if((firstParameter > 1000000)||(firstParameter < 1)||(secondParameter < 1)||(secondParameter > 5000000)){
+				if((firstParameter > 1000000)||(firstParameter < 1)){
+					writeMsg(&usartComm, "Recuerde que la frecuencia debe ser entre 1 Hz a 1000000 Hz.\n");
+				}
+				else{
+					__NOP();
+				}
+				if((secondParameter < 1)||(secondParameter > 5000000)){
+					writeMsg(&usartComm, "Recuerde que el número de muestras debe ser entre 1 a 5000000.\n");
+				}
+				else{
+					__NOP();
+				}
+			}
+			else{
+				float arrValue = 0.00f;
+				arrValue = (10000000.00f/((float)firstParameter));
+
+				/* Configuración del Timer para el ADC */
+				handlerTimerADC.ptrTIMx								= TIM5;
+				handlerTimerADC.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
+				handlerTimerADC.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100ns;
+				handlerTimerADC.TIMx_Config.TIMx_period 			= (uint32_t)arrValue;
+				handlerTimerADC.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
+				BasicTimer_Config(&handlerTimerADC);
+
+				dataQuantity = secondParameter;
+				flagConstant = true;
+				startBasicTimer(&handlerTimerADC);
+			}
+		}
+		else{
+			writeMsg(&usartComm, "Está en modo de captura, espere los datos o imprimalos.\n");
 		}
 	}
 
@@ -293,15 +345,29 @@ void usart2Rx_Callback(void){
 }
 
 void adcComplete_Callback(void){
-	if(adcCounter >= dataQuantity){
-		adcIsComplete = true;
-		adcCounter = 0;
-		stopBasicTimer(&handlerTimerADC);
-		writeMsg(&usartComm, "¡Muestra completada!\n");
+	if(flagCapture){
+		if(adcCounter >= dataQuantity){
+			stopBasicTimer(&handlerTimerADC);
+			adcIsComplete = true;
+			adcCounter = 0;
+			writeMsg(&usartComm, "¡Muestra completada!\n");
+		}
+		else{
+			dataADC[adcCounter] = getADC();
+			adcCounter++;
+		}
 	}
 	else{
-		dataADC[adcCounter] = getADC();
-		adcCounter++;
+		if(adcCounter >= dataQuantity){
+			stopBasicTimer(&handlerTimerADC);
+			adcCounter = 0;
+			flagSingleData = false;
+			flagConstant = false;
+		}
+		else{
+			flagSingleData = true;
+			dataChannelADC =((((float)getADC())*3.30f)/4095.00f);
+		}
 	}
 }
 

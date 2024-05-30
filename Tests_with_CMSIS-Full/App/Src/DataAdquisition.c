@@ -37,7 +37,8 @@ GPIO_Handler_t handlerPinRX = {0};						// Pin de recepción de datos
 USART_Handler_t usartComm =  {0};						// Comunicación serial
 uint8_t usartRxData = 0; 								// Variable en la que se guarda el dato transmitido
 char bufferReception[32] = {0};							// Buffer para guardar caracteres ingresados
-char bufferMsg[64] = "Mensaje para enviar";				// Buffer de mensajes
+char bufferMsg[32] = {0};								// Buffer de mensajes
+char bufferData[10] = {0};
 char cmd[16] = {0};										// BUffer de comandos
 uint16_t counterReception = 0;							// Contador de caracteres recibidos
 bool stringComplete = false;							// Bandera de comando completado
@@ -67,7 +68,7 @@ int main(void){
 
 	// Inicializamos todos los elementos del sistema
 	initSystem();
-	sprintf(bufferMsg, "La frecuencia del microcontrolador es %u.\n", (unsigned int)getConfigPLL());
+	sprintf(bufferMsg, "ClockFreq %u.\n", (unsigned int)getConfigPLL());
 	writeMsg(&usartComm, bufferMsg);
 
     /* Loop forever */
@@ -86,8 +87,8 @@ int main(void){
 		}
 
 		else if(flagSingleData){
-			sprintf(bufferMsg, "=%.3f/\n",dataChannelADC);
-			writeMsg(&usartComm, bufferMsg);
+			sprintf(bufferData, "%.4f\n",dataChannelADC);
+			writeMsg(&usartComm, bufferData);
 			adcCounter++;
 			flagSingleData = false;
 		}
@@ -153,7 +154,7 @@ void initSystem(void){
 
 	/* Configuración de la comunicación serial */
 	usartComm.ptrUSARTx							= USART2;
-	usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+	usartComm.USART_Config.USART_baudrate 		= USART_BAUDRATE_230400;
 	usartComm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
 	usartComm.USART_Config.USART_parity			= USART_PARITY_NONE;
 	usartComm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
@@ -184,9 +185,12 @@ void commandBuild(void){
 		bufferReception[counterReception] = '\0';
 		counterReception = 0;
 	}
-	if(usartRxData == '\b'){
+	else if(usartRxData == '\b'){
 		counterReception--;
 		counterReception--;
+	}
+	else{
+		__NOP();
 	}
 
 	// Volvemos a null para terminar
@@ -209,11 +213,11 @@ void commandUSART(char* ptrBufferReception){
 	if(strcmp(cmd, "Menu") == 0){
 		writeMsg(&usartComm, "\nMenu CMDs:\n");
 		writeMsg(&usartComm, "1) Menu							-- Imprime este menu.\n");
-		writeMsg(&usartComm, "2) Capturar #Freq[Hz] #Muestras	-- Inicia la toma de datos según la frecuencia de muestreo y el número de muestras. "
+		writeMsg(&usartComm, "2) Capturar #Freq[Hz] #Muestras	-- Inicia la toma de datos segun la frecuencia de muestreo y el numero de muestras. "
 				"La frecuencia debe ser un número entre 1 y 1000000, las muestras entre 1 a 30000.\n");
 		writeMsg(&usartComm, "3) Imprimir						-- Imprime los datos recolectados.\n");
 		writeMsg(&usartComm, "4) Constante #Freq[Hz] #Muestras	-- Envia datos constantemente a la frecuencia indicada hasta alcanzar la cantidad solicitada. "
-				"La frecuencia debe ser un número entre 1 y 1000000, las muestras desde 1 dato hasta 5 millones de datos.\n");
+				"La frecuencia debe ser un numero entre 1 y 1000000, las muestras desde 1 dato hasta 5 millones de datos.\n");
 	}
 
 	// Lanzar captura de datos
@@ -227,7 +231,7 @@ void commandUSART(char* ptrBufferReception){
 					__NOP();
 				}
 				if((secondParameter < 1)||(secondParameter > 30000)){
-					writeMsg(&usartComm, "Recuerde que el número de muestras debe ser entre 1 a 30000.\n");
+					writeMsg(&usartComm, "Recuerde que el numero de muestras debe ser entre 1 a 30000.\n");
 				}
 				else{
 					__NOP();
@@ -256,7 +260,7 @@ void commandUSART(char* ptrBufferReception){
 			}
 		}
 		else{
-			writeMsg(&usartComm, "Ya se está haciendo un muestreo constante.\n");
+			writeMsg(&usartComm, "Ya se esta haciendo un muestreo constante.\n");
 		}
 	}
 
@@ -265,7 +269,7 @@ void commandUSART(char* ptrBufferReception){
 		if((adcIsComplete)&&(flagCapture)){
 			flagCapture = false;
 			adcIsComplete = false;
-			writeMsg(&usartComm, "Los datos se imprimirán en 5 segundos.\n");
+			writeMsg(&usartComm, "Los datos se imprimiran en 5 segundos.\n");
 			delay_ms(5000);
 			for (uint32_t i = 0; i < dataQuantity; i++){
 				dataChannelADC = ((((float)dataADC[i])*3.30f)/4095.00f);
@@ -291,7 +295,7 @@ void commandUSART(char* ptrBufferReception){
 					__NOP();
 				}
 				if((secondParameter < 1)||(secondParameter > 5000000)){
-					writeMsg(&usartComm, "Recuerde que el número de muestras debe ser entre 1 a 5000000.\n");
+					writeMsg(&usartComm, "Recuerde que el numero de muestras debe ser entre 1 a 5000000.\n");
 				}
 				else{
 					__NOP();
@@ -315,7 +319,7 @@ void commandUSART(char* ptrBufferReception){
 			}
 		}
 		else{
-			writeMsg(&usartComm, "Está en modo de captura, espere los datos o imprimalos.\n");
+			writeMsg(&usartComm, "Esta en modo de captura, espere los datos o imprimalos.\n");
 		}
 	}
 
@@ -350,7 +354,7 @@ void adcComplete_Callback(void){
 			stopBasicTimer(&handlerTimerADC);
 			adcIsComplete = true;
 			adcCounter = 0;
-			writeMsg(&usartComm, "¡Muestra completada!\n");
+			writeMsg(&usartComm, "Muestra completada.\n");
 		}
 		else{
 			dataADC[adcCounter] = getADC();

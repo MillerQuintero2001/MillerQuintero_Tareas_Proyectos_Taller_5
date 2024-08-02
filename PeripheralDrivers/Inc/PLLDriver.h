@@ -32,7 +32,7 @@
  * es lo máximo permitido por el MCU, si se ingresa un valor superior a 100, el sistema queda con el HSI */
 
 void configPLL(uint8_t PLLFreqMHz);
-uint64_t getConfigPLL(void);
+uint32_t getConfigPLL(void);
 void changeMCO1(uint8_t sourceClock, uint8_t preEscaler);
 void changeMCO2(uint8_t sourceClock, uint8_t preEscaler);
 

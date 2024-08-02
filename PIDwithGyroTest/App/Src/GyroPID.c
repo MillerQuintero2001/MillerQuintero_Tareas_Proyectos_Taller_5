@@ -24,10 +24,11 @@
 #include "PwmDriver.h"
 #include "PLLDriver.h"
 #include "ExtiDriver.h"
-#include "SysTickDriver.h"
+#include "I2CDriver.h"
+
 #include "CMDxDriver.h"
 #include "MotorDriver.h"
-
+#include "MPU6050.h"
 
 /* Definición de los handlers necesarios */
 
@@ -41,6 +42,11 @@ BasicTimer_Handler_t handlerSampleTimer = {0};
 
 uint16_t counter = 1;
 char bufferMandar[64] = {0};
+
+// Variables del giroscopio
+float offsetGyro = 0.0f;
+uint32_t numberOfSamples = 0;
+float time = 0.020f;
 
 /* Variables para el control PID */
 bool flagPID = false;				// Bandera que indica cuando hacer acción de control
@@ -91,15 +97,15 @@ int main(void){
 	while(1){
 		commandBuild(USE_DEFAULT);
 		if(flagPID){
-			vR = (((float)(counterIntRight-counterPreviousRight))*((M_PI*51.70f)/120.00f))/(timeSample);
-			vL = (((float)(counterIntLeft-counterPreviousLeft))*((M_PI*51.75f)/120.00f))/(timeSample);
-			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
-			writeMsg(&usartCmd, bufferMandar);
-			controlActionPID();
-			//sprintf(bufferMandar, "%.2f\n", u_control);
-			//writeMsg(&usartCmd, bufferMandar);
-			counterPreviousRight = counterIntRight;
-			counterPreviousLeft = counterIntLeft;
+//			vR = (((float)(counterIntRight-counterPreviousRight))*((M_PI*51.70f)/120.00f))/(timeSample);
+//			vL = (((float)(counterIntLeft-counterPreviousLeft))*((M_PI*51.75f)/120.00f))/(timeSample);
+//			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
+//			writeMsg(&usartCmd, bufferMandar);
+//			controlActionPID();
+//			sprintf(bufferMandar, "%.2f\n", u_control);
+//			writeMsg(&usartCmd, bufferMandar);
+//			counterPreviousRight = counterIntRight;
+//			counterPreviousLeft = counterIntLeft;
 			flagPID = false;
 		}
 		else{
@@ -117,8 +123,6 @@ void initSystem(void){
 	/* Activamos el Coprocesador Matemático - FPU */
 	SCB->CPACR |= (0XF << 20);
 
-	/* Configuramos el SysTick */
-	config_SysTick_ms(PLL_CLOCK_100_CONFIGURED);
 
 	/* GPIO y Timer del Blinky Led de Estado */
 	handlerBlinkyPin.pGPIOx								= GPIOC;
@@ -145,6 +149,8 @@ void initSystem(void){
 
 	configMotors();
 
+	configMPU6050();
+
 	// Calculamos las constantes del PID
 	kp = (((1.2f*tau)/(k*theta))/2.00f);
 	ti = 2.0f*theta;
@@ -156,7 +162,7 @@ void initSystem(void){
 	handlerSampleTimer.ptrTIMx								= TIM4;
 	handlerSampleTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
-	handlerSampleTimer.TIMx_Config.TIMx_period				= 500;
+	handlerSampleTimer.TIMx_Config.TIMx_period				= 200;
 	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerSampleTimer);
 
@@ -265,18 +271,17 @@ void BasicTimer5_Callback(void){
 }
 
 void BasicTimer4_Callback(void){
-	if(flagInit){
-		stopBasicTimer(&handlerSampleTimer);
-		handlerSampleTimer.TIMx_Config.TIMx_period	= 300;
-		BasicTimer_Config(&handlerSampleTimer);
-		flagInit = false;
-		counterIntRight = 0;
-		counterIntLeft = 0;
-		startBasicTimer(&handlerSampleTimer);
+	uint32_t counter = 0;
+	while(counter < numberOfSamples){
+		float angularVelocity = getGyroscopeData();
+		sprintf(bufferMandar,"El dato #%lu del giroscopio es %.6f°/s\n",counter+1,angularVelocity);
+		writeMsg(&usartCmd, bufferMandar);
+		float angle = (angularVelocity - offsetGyro)*(time);
+		sprintf(bufferMandar,"El dato #%lu del ángulo es %.6f°\n",counter+1,angle);
+		writeMsg(&usartCmd, bufferMandar);
+		counter++;
 	}
-	else{
-		flagPID = true;
-	}
+	stopBasicTimer(&handlerSampleTimer);
 }
 
 void usart1Rx_Callback(void){
@@ -296,11 +301,10 @@ void commandx1(void){
 }
 
 void commandx2(void){
-	startBasicTimer(&handlerSampleTimer);
 	startMove();
 }
 
-void commandx4(void){
+void commandx3(void){
 	stopMove();
 	stopBasicTimer(&handlerSampleTimer);
 	flagPID = 0;
@@ -313,12 +317,19 @@ void commandx4(void){
 	counterPreviousLeft = 0;
 }
 
+void commandx4(void){
+	offsetGyro = getGyroscopeOffset(20000);
+	sprintf(bufferMandar,"El offset del giroscopio es %.6f °/s\n",offsetGyro);
+	writeMsg(&usartCmd, bufferMandar);
+}
 
+void commandx5(void){
+	numberOfSamples = firstParameter;
+	startBasicTimer(&handlerSampleTimer);
+}
 
-
-
-
-
-
-
-
+void commandx6(void){
+	float dataGyro = getGyroscopeData();
+	sprintf(bufferMandar,"El dato del giroscopio es %.6f °/s\n",dataGyro);
+	writeMsg(&usartCmd, bufferMandar);
+}

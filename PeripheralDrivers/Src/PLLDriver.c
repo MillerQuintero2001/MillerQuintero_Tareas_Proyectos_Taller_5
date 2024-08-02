@@ -140,8 +140,8 @@ void configPLL(uint8_t PLLFreqMHz){
 }
 
 /** Función que retorna la frecuencia configurada calculada con la frecuencia del HSI y los pre-escaler */
-uint64_t getConfigPLL(void){
-	uint64_t freq = 0;
+uint32_t getConfigPLL(void){
+	uint32_t freq = 0;
 	/* Vamos a leer los registros para obtener el valor de los pre-escaler
 	 * entendiendo que para que esta función sea correcta el PLLP debe ser siempre 2
 	 * lo que hacemos es conseguir el valor del PLLM y el PLLN que son sencillos

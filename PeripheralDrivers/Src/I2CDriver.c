@@ -53,7 +53,7 @@ void i2c_config(I2C_Handler_t *ptrHandlerI2C){
 		}
 	}
 	else{
-		ptrHandlerI2C->ptrI2Cx->CR2 |= I2C_CR2_FREQ_4; //Se escribe 16 MHz, o sino la macro DE 16 Mhz también
+		ptrHandlerI2C->ptrI2Cx->CR2 |= I2C_CR2_FREQ_4; //Se escribe 16 MHz, o sino la macro de 16 Mhz también
 	}
 
 

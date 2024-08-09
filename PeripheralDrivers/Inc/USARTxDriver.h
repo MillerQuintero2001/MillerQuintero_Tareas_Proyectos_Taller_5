@@ -100,5 +100,8 @@ void usart2Tx_String(void);
 void usart6Tx_Char(void);
 void usart6Tx_String(void);
 
+void USART1_IRQHandler(void);
+void USART2_IRQHandler(void);
+void USART6_IRQHandler(void);
 
 #endif /* USARTXDRIVER_H_ */

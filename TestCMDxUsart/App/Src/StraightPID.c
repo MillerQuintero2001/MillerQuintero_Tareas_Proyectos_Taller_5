@@ -73,6 +73,9 @@ float k = 7.55f;							// Ganacia de la función de transferencia
 float tau = 0.3175f;						// Constante de tiempo de la función de transferencia
 float theta = 0.06f;						// Retardo del sistema en PID discreto (L+ts/2)
 
+float velocityRight = 0.0f;
+float velocityLeft = 0.0f;
+
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 										// Función que inicializa los periféricos básicos
 void controlActionPID(void);								// Función que retorna el valor de la acción de control
@@ -121,7 +124,7 @@ void initSystem(void){
 	config_SysTick_ms(PLL_CLOCK_100_CONFIGURED);
 
 	/* GPIO y Timer del Blinky Led de Estado */
-	handlerBlinkyPin.pGPIOx								= GPIOC;
+	handlerBlinkyPin.pGPIOx								= GPIOA;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_5;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_OUT;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed 		= GPIO_OSPEED_FAST;

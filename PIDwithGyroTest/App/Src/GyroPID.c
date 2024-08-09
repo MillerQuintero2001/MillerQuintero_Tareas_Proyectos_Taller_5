@@ -125,7 +125,7 @@ void initSystem(void){
 
 
 	/* GPIO y Timer del Blinky Led de Estado */
-	handlerBlinkyPin.pGPIOx								= GPIOC;
+	handlerBlinkyPin.pGPIOx								= GPIOA;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_5;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_OUT;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed 		= GPIO_OSPEED_FAST;
@@ -145,11 +145,11 @@ void initSystem(void){
 	/* Fin del GPIO y Timer del LED de estado
 	 * ----------------------------------------*/
 
-	commandConfig(CMD_USART1, USART_BAUDRATE_19200);
+	commandConfig(CMD_USART2, USART_BAUDRATE_115200);
 
 	configMotors();
 
-	configMPU6050();
+	//configMPU6050();
 
 	// Calculamos las constantes del PID
 	kp = (((1.2f*tau)/(k*theta))/2.00f);

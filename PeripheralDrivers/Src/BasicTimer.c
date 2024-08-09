@@ -106,23 +106,23 @@ void BasicTimer_Config(BasicTimer_Handler_t *ptrBTimerHandler){
 	/* 6. Activamos el canal del sistema NVIC para que lea la interrupción*/
 	if(ptrTimerUsed == TIM2){
 		// Activando en NVIC para la interrupción del TIM2
-		NVIC_EnableIRQ(TIM2_IRQn);
 		__NVIC_SetPriority(TIM2_IRQn, ptrBTimerHandler->TIMx_Config.TIMx_priorityInterrupt);
+		NVIC_EnableIRQ(TIM2_IRQn);
 	}
 	else if(ptrTimerUsed == TIM3){
 		// Activando en NVIC para la interrupción del TIM3
-		NVIC_EnableIRQ(TIM3_IRQn);
 		__NVIC_SetPriority(TIM3_IRQn, ptrBTimerHandler->TIMx_Config.TIMx_priorityInterrupt);
+		NVIC_EnableIRQ(TIM3_IRQn);
 	}
 	else if(ptrTimerUsed == TIM4){
-		// Activando en NVIC para la interrupción del TIM3
-		NVIC_EnableIRQ(TIM4_IRQn);
+		// Activando en NVIC para la interrupción del TIM4
 		__NVIC_SetPriority(TIM4_IRQn, ptrBTimerHandler->TIMx_Config.TIMx_priorityInterrupt);
+		NVIC_EnableIRQ(TIM4_IRQn);
 	}
 	else if(ptrTimerUsed == TIM5){
-		// Activando en NVIC para la interrupción del TIM3
-		NVIC_EnableIRQ(TIM5_IRQn);
+		// Activando en NVIC para la interrupción del TIM5
 		__NVIC_SetPriority(TIM5_IRQn, ptrBTimerHandler->TIMx_Config.TIMx_priorityInterrupt);
+		NVIC_EnableIRQ(TIM5_IRQn);
 	}
 	else{
 		__NOP();

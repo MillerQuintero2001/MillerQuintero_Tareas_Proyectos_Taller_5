@@ -971,38 +971,38 @@ void extInt_Config(EXTI_Config_t *extiConfig){
 	 * */
 	switch (extiConfig->pGPIOHandler->GPIO_PinConfig.GPIO_PinNumber) {
 	case 0: {
-		__NVIC_EnableIRQ(EXTI0_IRQn);
 		__NVIC_SetPriority(EXTI0_IRQn, extiConfig->priorityInterrupt);
+		__NVIC_EnableIRQ(EXTI0_IRQn);
 		break;
 	}
 	case 1: {
-		__NVIC_EnableIRQ(EXTI1_IRQn);
 		__NVIC_SetPriority(EXTI1_IRQn, extiConfig->priorityInterrupt);
+		__NVIC_EnableIRQ(EXTI1_IRQn);
 		break;
 	}
 	case 2: {
-		__NVIC_EnableIRQ(EXTI2_IRQn);
 		__NVIC_SetPriority(EXTI2_IRQn, extiConfig->priorityInterrupt);
+		__NVIC_EnableIRQ(EXTI2_IRQn);
 		break;
 	}
 	case 3: {
-		__NVIC_EnableIRQ(EXTI3_IRQn);
 		__NVIC_SetPriority(EXTI3_IRQn, extiConfig->priorityInterrupt);
+		__NVIC_EnableIRQ(EXTI3_IRQn);
 		break;
 	}
 	case 4: {
-		__NVIC_EnableIRQ(EXTI4_IRQn);
 		__NVIC_SetPriority(EXTI4_IRQn, extiConfig->priorityInterrupt);
+		__NVIC_EnableIRQ(EXTI4_IRQn);
 		break;
 	}
 	case 5 ... 9: {
-		__NVIC_EnableIRQ(EXTI9_5_IRQn);
 		__NVIC_SetPriority(EXTI9_5_IRQn, extiConfig->priorityInterrupt);
+		__NVIC_EnableIRQ(EXTI9_5_IRQn);
 		break;
 	}
 	case 10 ... 15: {
-		__NVIC_EnableIRQ(EXTI15_10_IRQn);
 		__NVIC_SetPriority(EXTI15_10_IRQn, extiConfig->priorityInterrupt);
+		__NVIC_EnableIRQ(EXTI15_10_IRQn);
 		break;
 	}
 	default: {
@@ -1108,8 +1108,8 @@ void EXTI4_IRQHandler(void){
 }
 
 /* ISR de la interrupción canales 9_5
- * Estan todos los casos identificados por un bloque if()
- * y el analisis de la bandera (pending register -> EXTI_PR)
+ * Están todos los casos identificados por un bloque if()
+ * y el análisis de la bandera (pending register -> EXTI_PR)
  */
 void EXTI9_5_IRQHandler(void){
     if(EXTI->PR & EXTI_PR_PR5){
@@ -1135,8 +1135,8 @@ void EXTI9_5_IRQHandler(void){
 }
 
 /* ISR de la interrupción canales 15_10
- * Estan todos los casos identificados por un bloque if()
- * y el analisis de la bandera (pending register -> EXTI_PR)
+ * Están todos los casos identificados por un bloque if()
+ * y el análisis de la bandera (pending register -> EXTI_PR)
  */
 void EXTI15_10_IRQHandler(void){
 	// Evaluamos si la interrupción que se lanzo corresponde al PIN_Y del GPIO_X

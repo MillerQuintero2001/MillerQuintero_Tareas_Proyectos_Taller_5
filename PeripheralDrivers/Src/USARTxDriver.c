@@ -27,7 +27,7 @@ float usartDiv = 0.0;				// Variable que guarda el valor calculo como decimal
 uint16_t mantiza = 0;				// Variable que guarda el valor de la mantiza para los baudrate
 uint8_t fraction = 0;				// Variable que guarda el valor de la fraction para los baudrate
 uint16_t baudrate = 0;
-uint64_t freqClock = 0;
+uint32_t freqClock = 0;
 
 void USART_Config(USART_Handler_t *ptrUsartHandler){
 	/* 1. Activamos la señal de reloj que viene desde el BUS al que pertenece el periferico */
@@ -221,7 +221,7 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 				// Mantiza = 27 = 0x1B, fraction = 16 * 0.1267 = 2.03 = 2
 				// Valor a cargar 0x01B2
 				// Configurando el Baudrate generator para una velocidad de 115200bps
-				//ptrUsartHandler->ptrUSARTx->BRR = 0x01B2;
+				// ptrUsartHandler->ptrUSARTx->BRR = 0x01B2;
 			}
 			else if(ptrUsartHandler->USART_Config.USART_baudrate == USART_BAUDRATE_230400){ // Para 100MHz
 				// El valor a cargar es 13.5634 -> Mantiza = 13,fraction = 0.5634
@@ -366,14 +366,14 @@ void USART_Config(USART_Handler_t *ptrUsartHandler){
 
 	// Matriculamos en el NVIC para el USART correspondiente
 	if(ptrUsartHandler->ptrUSARTx == USART1){
-		__NVIC_EnableIRQ(USART1_IRQn);
 		__NVIC_SetPriority(USART1_IRQn, ptrUsartHandler->USART_Config.USART_priorityInterrupt);
+		__NVIC_EnableIRQ(USART1_IRQn);
 	}else if(ptrUsartHandler->ptrUSARTx == USART2){
-		__NVIC_EnableIRQ(USART2_IRQn);
 		__NVIC_SetPriority(USART2_IRQn, ptrUsartHandler->USART_Config.USART_priorityInterrupt);
+		__NVIC_EnableIRQ(USART2_IRQn);
 	}else if(ptrUsartHandler->ptrUSARTx == USART6){
-		__NVIC_EnableIRQ(USART6_IRQn);
 		__NVIC_SetPriority(USART6_IRQn, ptrUsartHandler->USART_Config.USART_priorityInterrupt);
+		__NVIC_EnableIRQ(USART6_IRQn);
 	}
 
 	__enable_irq();	// Activo nuevamente las interrupciones globales

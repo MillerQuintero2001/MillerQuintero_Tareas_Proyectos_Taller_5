@@ -1,6 +1,6 @@
 /**
  ******************************************************************************
- * @file           : GyroPID.c
+ * @file           : TransferFunctionAngle.c
  * @author         : Miller Quintero - miquinterog@unal.edu.co
  * @brief          : Oppy haciendo línea recta
  ******************************************************************************
@@ -45,9 +45,11 @@ char bufferMandar[64] = {0};
 
 // Variables del giroscopio
 bool flagTakeOffset = true;
-float sumAngle = 0.0f;
-float offsetAngleGyro = 0.0f;
-uint16_t numberOfSamples = 150;
+bool flagData = false;
+float dataGyroscope = 0.0f;
+float sumAngularVelocity = 0.0f;
+float totalCurrentAngle = 0.0f;
+float offsetAngularVelocity = 0.0f;
 uint16_t counterSamples = 0;
 
 /* Variables para el control PID */
@@ -102,20 +104,20 @@ int main(void){
     /* Loop forever */
 	while(1){
 		commandBuild(USE_DEFAULT);
-		if(flagPID){
-//			vR = (((float)(counterIntRight-counterPreviousRight))*((M_PI*51.70f)/120.00f))/(timeSample);
-//			vL = (((float)(counterIntLeft-counterPreviousLeft))*((M_PI*51.75f)/120.00f))/(timeSample);
-//			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
-//			writeMsg(&usartCmd, bufferMandar);
-//			controlActionPID();
-//			sprintf(bufferMandar, "%.2f\n", u_control);
-//			writeMsg(&usartCmd, bufferMandar);
-//			counterPreviousRight = counterIntRight;
-//			counterPreviousLeft = counterIntLeft;
-			flagPID = false;
+		if(counterSamples > 1000){
+			stopMove();
+			stopBasicTimer(&handlerSampleTimer);
+			counterSamples = 0;
+			flagData = false;
 		}
-		else{
-			__NOP();
+
+		else if(flagData){
+			counterSamples++;
+			dataGyroscope = (getGyroscopeData() - offsetAngularVelocity)*0.020f;
+			totalCurrentAngle += dataGyroscope;
+			sprintf(bufferMandar, "%.6f\n", totalCurrentAngle);
+			writeMsg(&usartCmd, bufferMandar);
+			flagData = false;
 		}
 	}
 	return 0;
@@ -280,17 +282,17 @@ void BasicTimer5_Callback(void){
 void BasicTimer4_Callback(void){
 	if(flagTakeOffset){
 		counterSamples++;
-		// El dato del giroscopio está en °/s, multiplicamos por el tiempo de muestreo para tener los grados °
-		sumAngle += getGyroscopeData()*0.020f;
-		if(counterSamples >= numberOfSamples){
-			offsetAngleGyro = sumAngle/((float)counterSamples);
+		// El dato del giroscopio está en °/s
+		sumAngularVelocity += getGyroscopeData();
+		if(counterSamples >= 200){
+			offsetAngularVelocity = sumAngularVelocity/((float)counterSamples);
 		}
 		else{
 			__NOP();
 		}
 	}
 	else{
-		__NOP();
+		flagData = true;
 	}
 }
 
@@ -311,19 +313,19 @@ void calculateOffsetGyro(uint16_t samples){
 		__NOP();
 	}
 	// We verify if the offset is not appropiate
-	if(fabs(offsetAngleGyro) >= 0.018){
+	if(fabs(offsetAngularVelocity) >= 0.85f){
 		// Then, We repeat the process again
 		counterSamples = 0;
-		sumAngle = 0.0f;
+		sumAngularVelocity = 0.0f;
 		calculateOffsetGyro(samples);
 	}
 	else{
 		// The offset angle is correct
 		stopBasicTimer(&handlerSampleTimer);
 		counterSamples = 0;
-		sumAngle = 0.0f;
+		sumAngularVelocity = 0.0f;
 		flagTakeOffset = false;
-		sprintf(bufferMandar,"El offset del giroscopio es %.6f °/s\n",offsetAngleGyro);
+		sprintf(bufferMandar,"El offset del giroscopio es %.6f °/s\n",offsetAngularVelocity);
 		writeMsg(&usartCmd, bufferMandar);
 	}
 }
@@ -343,4 +345,16 @@ void commandx2(void){
 	error_2 = 0.0f;
 	counterPreviousRight = 0;
 	counterPreviousLeft = 0;
+}
+
+void commandx3(void){
+	startBasicTimer(&handlerSampleTimer);
+	startMove();
+}
+
+void commandx4(void){
+	sprintf(bufferMandar,"Dato simple del giroscopio es %.6f °/s\n", getGyroscopeData());
+	writeMsg(&usartCmd, bufferMandar);
+	sprintf(bufferMandar,"Dato offset del giroscopio es %.6f °/s\n", offsetAngularVelocity);
+		writeMsg(&usartCmd, bufferMandar);
 }

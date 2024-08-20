@@ -175,8 +175,8 @@ void configMotors(void){
 
 /** Función encargada de modificar la frecuencia y %duttyCycle de ambos motores */
 void setSignals(uint8_t freqHz, uint8_t duttyPer){
-	period = (uint16_t)(1000000.0f*(1.0f/freqHz));
-	dutty = (uint16_t)(period*(((float)duttyPer)/100.0f));
+	period = (uint16_t)(1000000.00f*(1.00f/((float)freqHz)));
+	dutty = (uint16_t)(period*(((float)duttyPer)/100.00f));
 	duttyChange = ((float)period)*0.0025f;
 	updatePeriod(&handlerPwmRight, period);
 	updatePeriod(&handlerPwmLeft, period);

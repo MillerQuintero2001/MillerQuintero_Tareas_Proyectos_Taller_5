@@ -124,7 +124,7 @@ void initSystem(void){
 	config_SysTick_ms(PLL_CLOCK_100_CONFIGURED);
 
 	/* GPIO y Timer del Blinky Led de Estado */
-	handlerBlinkyPin.pGPIOx								= GPIOA;
+	handlerBlinkyPin.pGPIOx								= GPIOC;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_5;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_OUT;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed 		= GPIO_OSPEED_FAST;

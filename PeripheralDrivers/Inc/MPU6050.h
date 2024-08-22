@@ -35,6 +35,7 @@
 
 /* Prototipos de las funciones */
 void configMPU6050(void);
+void resetMPU6050(void);
 float getGyroscopeData(void);
 float getGyroscopeOffset(uint32_t samples);
 

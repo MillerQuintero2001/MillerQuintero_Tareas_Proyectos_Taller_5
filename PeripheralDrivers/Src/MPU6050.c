@@ -18,6 +18,9 @@ uint8_t arraySaveData[2] = {0};
 /** Función que inicializa el hardware del MPU6050 */
 void configMPU6050(void){
 
+	/* Activamos el Coprocesador Matemático - FPU */
+	SCB->CPACR |= (0XF << 20);
+
 	/* Configuración del pin SCL del I2C1 */
 	handlerI2C_SCL.pGPIOx								= GPIOB;
 	handlerI2C_SCL.GPIO_PinConfig.GPIO_PinNumber		= PIN_6;
@@ -47,6 +50,13 @@ void configMPU6050(void){
 	// Hacemos un primer reset del sensor para asegurar que funcione a la primera
 	i2c_writeSingleRegister(&handlerAccelerometer, PWR_MGMT_1, 0x00);
 }
+
+
+/* Función para resetear el sensor */
+void resetMPU6050(void){
+	i2c_writeSingleRegister(&handlerAccelerometer, PWR_MGMT_1, 0x00);
+}
+
 
 /** Función para obtener los datos del eje Z del giroscopio */
 float getGyroscopeData(void){

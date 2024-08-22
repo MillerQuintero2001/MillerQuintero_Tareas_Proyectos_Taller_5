@@ -50,6 +50,9 @@ float duttyWheels[2] = {0};
 /** Función de hacer una configuración por defecto, esta es con motores en off, frecuencia 25Hz y Dutty de 20% */
 void configMotors(void){
 
+	/* Activamos el Coprocesador Matemático - FPU */
+	SCB->CPACR |= (0XF << 20);
+
 	/* Configuración del motor derecho (amarillo) */
 
 	// Señal inicial PWM
@@ -339,7 +342,6 @@ uint16_t constraint(uint16_t duttyInput){
 }
 
 void callback_extInt0 (void){
-	flagMove = false;
 	stopMove();
 }
 

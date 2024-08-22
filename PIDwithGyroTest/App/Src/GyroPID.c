@@ -40,60 +40,55 @@ bool flag = false;
 bool flagInit = true;
 BasicTimer_Handler_t handlerSampleTimer = {0};
 
-uint16_t counter = 1;
+uint16_t counter = 0;
 char bufferMandar[64] = {0};
 
 // Variables del giroscopio
 bool flagTakeOffset = true;
-float sumAngle = 0.0f;
-float offsetAngleGyro = 0.0f;
-uint16_t numberOfSamples = 150;
+bool flagData = false;
+float dataAngle = 0.0f;
+float sumAngularVelocity = 0.0f;
+float totalCurrentAngle = 0.0f;
+float offsetAngularVelocity = 0.0f;
 uint16_t counterSamples = 0;
 
 /* Variables para el control PID */
-bool flagPID = false;				// Bandera que indica cuando hacer acción de control
 float u_max = 400.00f;
 float u_min = 0.0f;
 uint32_t counterPreviousRight = 0;
 uint32_t counterPreviousLeft = 0;
-float DuttyBaseRight = 12000.00f;
-float DuttyBaseLeft = 12000.00f;
+float duttyBaseRight = 12000.00f;
+float duttyBaseLeft = 12840.00f;
 uint32_t counter1 = 0;
 uint32_t counter2 = 0;
+
 // Calculo de la acción de control
 float u_control = 0.0f; 			// Acción de control actual
 float u_1_control = 0.0f;			// Accioń de control previa
 float error = 0.0f;					// Error actual
 float error_1 = 0.0f;				// Error una muestra antes
 float error_2 = 0.0f;				// Error dos muestras antes
-float kp = 0.000f;					// Constante proporcional
-float ti = 0.000f;					// Tiempo integrativo
-float td = 0.000f;					// Tiempo derivativo
-float timeSample = 0.030f;			// Tiempo de muestreo
-uint8_t setPointVelocity = 117;		// SetPoint de velocidad
-float vR = 0.0f;					// Velocidad rueda derecha
-float vL = 0.0f;					// Velocidad rueda izquierda
+float kp = 0.900f;					// Constante proporcional
+float ti = 0.120f;					// Tiempo integrativo [s]
+float td = 0.030f;					// Tiempo derivativo [s]
+float timeSample = 0.020f;			// Tiempo de muestreo [s]
+
 float q0 = 0.0f;					// Constante de PID discreto
 float q1 = 0.0f;					// Constante de PID discreto
 float q2 = 0.0f;					// Constante de PID discreto
-// Parámetros Ziegler-Nichols
-float k = 7.55f;							// Ganacia de la función de transferencia
-float tau = 0.3175f;						// Constante de tiempo de la función de transferencia
-float theta = 0.06f;						// Retardo del sistema en PID discreto (L+ts/2)
 
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 										// Función que inicializa los periféricos básicos
 void controlActionPID(void);								// Función que retorna el valor de la acción de control
-float mapControlDutty(float u_input);	// Función que mapea la acción de control a un % Dutty Cycle
-void constraintError(void);									// Funcíon que limita el error para que no sea superior al 100%
-void constraintControl(void);								// Función que limita el valor de la acción de control
-void calculateOffsetGyro(uint16_t samples);
+void controlDrift(float* currentAngle);						// Function that exam if the drift angle has been reach and take action
+void constraintControl(float* uControl, float maxChange);	// Función que limita el valor de la acción de control
+void calculateOffsetGyro(uint16_t samples);					// Function that calculates the offset by averages in the MPU6050
 
 /** Función principal del programa
  * ¡Esta función es el corazón del programa! */
 int main(void){
 
-	// Inicializamos todos los elementos del sistema
+	// Initialize al peripherals from the system
 	initSystem();
 
 	// Calculate the offset of the Gyroscope with 200 samples
@@ -102,18 +97,17 @@ int main(void){
     /* Loop forever */
 	while(1){
 		commandBuild(USE_DEFAULT);
-		if(flagPID){
-//			vR = (((float)(counterIntRight-counterPreviousRight))*((M_PI*51.70f)/120.00f))/(timeSample);
-//			vL = (((float)(counterIntLeft-counterPreviousLeft))*((M_PI*51.75f)/120.00f))/(timeSample);
-//			sprintf(bufferMandar, "%.2f\t %.2f\n", velocityRight, velocityLeft);
-//			writeMsg(&usartCmd, bufferMandar);
-//			controlActionPID();
-//			sprintf(bufferMandar, "%.2f\n", u_control);
-//			writeMsg(&usartCmd, bufferMandar);
-//			counterPreviousRight = counterIntRight;
-//			counterPreviousLeft = counterIntLeft;
-			flagPID = false;
+
+		if(flagData){
+			dataAngle = (getGyroscopeData() - offsetAngularVelocity)*timeSample;
+			totalCurrentAngle += dataAngle;
+			// Calculate the error for input PID, is like this because the setPointAngle is equal to zero
+			error = -totalCurrentAngle;
+			//controlDrift(&totalCurrentAngle);
+			controlActionPID();
+			flagData = false;
 		}
+
 		else{
 			__NOP();
 		}
@@ -128,7 +122,6 @@ void initSystem(void){
 
 	/* Activamos el Coprocesador Matemático - FPU */
 	SCB->CPACR |= (0XF << 20);
-
 
 	/* GPIO y Timer del Blinky Led de Estado */
 	handlerBlinkyPin.pGPIOx								= GPIOC;
@@ -154,14 +147,15 @@ void initSystem(void){
 	commandConfig(CMD_USART1, USART_BAUDRATE_19200);
 
 	configMotors();
-	setSignals(25, 30);
+	updateDuttyCycle(&handlerPwmRight, 12000);
+	updateDuttyCycle(&handlerPwmLeft, 12840);
 
 	configMPU6050();
 
 	// Calculamos las constantes del PID
-	kp = (((1.2f*tau)/(k*theta))/2.00f);
-	ti = 2.0f*theta;
-	td = 0.5f*theta;
+//	kp = (((1.2f*tau)/(k*theta))/2.00f);
+//	ti = 2.0f*theta;
+//	td = 0.5f*theta;
 	q0 = kp*(1.0f+(timeSample/(2.0f*ti))+(td/timeSample));
 	q1 = -kp*(1.0f-(timeSample/(2.0f*ti))+((2.0f*td)/timeSample));
 	q2 = (kp*td)/timeSample;
@@ -178,99 +172,101 @@ void initSystem(void){
 
 /** Función para calcular la acción de control */
 void controlActionPID(void){
-	float newDutty = 0;
-	float duttyChange = 0.00f;
-	if(vR > vL){
-		error = ((float)setPointVelocity) - vL;
-		constraintError();
-		u_control = (u_1_control)+(q0*error)+(q1*error_1)+(q2*error_2);
-		constraintControl();
-		newDutty = mapControlDutty(u_control);
-		duttyChange = newDutty - DuttyBaseLeft;
-		sprintf(bufferMandar,"%.2f\n",(duttyChange/400.00f));
+
+	u_control = (u_1_control)+(q0*error)+(q1*error_1)+(q2*error_2);
+	// Control action is limited to a change of 10% Dutty Cycle
+	constraintControl(&u_control, 4000.00f);
+
+	// Control of print data
+	if(counter >= 10){
+		sprintf(bufferMandar, "%.3f\t%.3f\n", u_control, totalCurrentAngle);
 		writeMsg(&usartCmd, bufferMandar);
-		updateDuttyCycle(&handlerPwmRight, (uint16_t)(DuttyBaseRight + duttyChange));
-		updateDuttyCycle(&handlerPwmLeft, (uint16_t)(DuttyBaseLeft + duttyChange));
-		// Actualizamos el dutty base
-		DuttyBaseRight += duttyChange;
-		DuttyBaseLeft += duttyChange;
+		counter = 0;
 	}
-
-
-//	if(velocityRight > velocityLeft){
-//		error = ((float)setPointVelocity) - velocityLeft;
-//		constraintError();
-//		u_control = (u_1_control)+(q0*error)+(q1*error_1)+(q2*error_2);
-//		constraintControl();
-//		newDutty = (uint16_t)mapControlDutty(u_control, false);
-//		duttyChange = ((float)newDutty)-(30.00f*400.00f);			// Númerico
-//		updateDuttyCycle(&handlerPwmLeft, newDutty);
-//		updateDuttyCycle(&handlerPwmRight, ((uint16_t)(30.00f*400.00f) - duttyChange));
-//		counter1++;
-//	}
-//	else if(velocityLeft > velocityRight){
-//		error = (float)setPointVelocity - velocityRight;
-//		constraintError();
-//		u_control = (u_1_control)+(q0*error)+(q1*error_1)+(q2*error_2);
-//		constraintControl();
-//		newDutty = (uint16_t)mapControlDutty(u_control, true);
-//		duttyChange = ((float)newDutty)-(30.00f*400.00f);	// Númerico
-//		updateDuttyCycle(&handlerPwmRight, newDutty);
-//		updateDuttyCycle(&handlerPwmLeft, ((uint16_t)(30.00f*400.00f) - duttyChange));
-//		counter2++;
-//	}
 	else{
 		__NOP();
 	}
+
+	updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft - u_control));
+	updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight + u_control));
+
+//	// If the error is less than zero, then the Oppy is going to the left side
+//	if(error < 0){
+//		updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft + u_control));
+//		updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight - u_control));
+//	}
+//
+//	// Else if the error is greater than zero, then the Oppy is going to the right side
+//	else if(error > 0){
+//		updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft - u_control));
+//		updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight + u_control));
+//	}
+//
+//	// Else, is straight!
+//	else{
+//		__NOP();
+//	}
+
+	// Update the values
 	u_1_control = u_control;
 	error_2 = error_1;
 	error_1 = error;
 }
 
-/** Función para realizar el mapeo entre acción de control y PWM */
-float mapControlDutty(float u_input){
-	float duttyPer = 0.0f;
-	if(error < 0){
-		duttyPer = 30.00f - ((35.00f-25.00f)/u_max-u_min)*u_input;
-	}
-	else if (error > 0){
-		duttyPer = ((35.00f-25.00f)/u_max-u_min)*u_input + 30.00f;
-	}
-	//Constraint
-	if(duttyPer > 35){
-		duttyPer = 35.00f;
-	}
-	else if(duttyPer < 25){
-		duttyPer = 25.00f;
-	}
-	return duttyPer*400.00f;
-}
-
-/** Función que limita el error para que no supere el 100%*/
-void constraintError(void){
-	if(error < -setPointVelocity){
-		error = -setPointVelocity;
-	}
-	else if(error > setPointVelocity){
-		error = setPointVelocity;
+void controlDrift(float* currentAngle){
+	if(fabs(*currentAngle) > 5.0f){
+		stopBasicTimer(&handlerSampleTimer);
+		stopMove();
+		resetMPU6050();
+		calculateOffsetGyro(200);
+		*currentAngle = totalCurrentAngle/2.0f;
+		startBasicTimer(&handlerSampleTimer);
+		startMove();
 	}
 	else{
 		__NOP();
 	}
 }
 
-/** Función que limita el valor de la acción de control */
-void constraintControl(void){
-	if(u_control < 0){
-		u_control = 0.00f;
+
+void constraintControl(float* uControl, float maxChange){
+	if(*uControl >= maxChange){
+		*uControl = maxChange;
 	}
-	else if(u_control > 400){
-		u_control = 400.00f;
+	else if(*uControl <= -maxChange){
+		*uControl = -maxChange;
 	}
 	else{
 		__NOP();
 	}
 }
+
+
+void calculateOffsetGyro(uint16_t samples){
+	flagTakeOffset = true;
+	startBasicTimer(&handlerSampleTimer);
+	while(!(counterSamples >= samples)){
+		__NOP();
+	}
+	offsetAngularVelocity = sumAngularVelocity/((float)counterSamples);
+	// We verify if the offset is not appropiate
+	if(fabs(offsetAngularVelocity) >= 0.85f){
+		// Then, We repeat the process again
+		counterSamples = 0;
+		sumAngularVelocity = 0.0f;
+		calculateOffsetGyro(samples);
+	}
+	else{
+		// The offset angle is correct
+		stopBasicTimer(&handlerSampleTimer);
+		counterSamples = 0;
+		sumAngularVelocity = 0.0f;
+		flagTakeOffset = false;
+		sprintf(bufferMandar,"El offset del giroscopio es %.6f °/s\n",offsetAngularVelocity);
+		writeMsg(&usartCmd, bufferMandar);
+	}
+}
+
 
 /** Interrupción del timer blinky LED*/
 void BasicTimer5_Callback(void){
@@ -280,17 +276,12 @@ void BasicTimer5_Callback(void){
 void BasicTimer4_Callback(void){
 	if(flagTakeOffset){
 		counterSamples++;
-		// El dato del giroscopio está en °/s, multiplicamos por el tiempo de muestreo para tener los grados °
-		sumAngle += getGyroscopeData()*0.020f;
-		if(counterSamples >= numberOfSamples){
-			offsetAngleGyro = sumAngle/((float)counterSamples);
-		}
-		else{
-			__NOP();
-		}
+		// Gyroscope data is in °/s
+		sumAngularVelocity += getGyroscopeData();
 	}
 	else{
-		__NOP();
+		flagData = true;
+		counter++;
 	}
 }
 
@@ -299,32 +290,11 @@ void usart1Rx_Callback(void){
 	writeChar(&usartCmd, usartData);
 	if((flagMove)&&(usartData == 's')){
 		flagMove = false;
-	}
-	else{
-		__NOP();
-	}
-}
-
-void calculateOffsetGyro(uint16_t samples){
-	startBasicTimer(&handlerSampleTimer);
-	while(!(counterSamples >= samples)){
-		__NOP();
-	}
-	// We verify if the offset is not appropiate
-	if(fabs(offsetAngleGyro) >= 0.018){
-		// Then, We repeat the process again
-		counterSamples = 0;
-		sumAngle = 0.0f;
-		calculateOffsetGyro(samples);
-	}
-	else{
-		// The offset angle is correct
+		stopMove();
 		stopBasicTimer(&handlerSampleTimer);
-		counterSamples = 0;
-		sumAngle = 0.0f;
-		flagTakeOffset = false;
-		sprintf(bufferMandar,"El offset del giroscopio es %.6f °/s\n",offsetAngleGyro);
-		writeMsg(&usartCmd, bufferMandar);
+	}
+	else{
+		__NOP();
 	}
 }
 
@@ -335,7 +305,7 @@ void commandx1(void){
 void commandx2(void){
 	stopMove();
 	stopBasicTimer(&handlerSampleTimer);
-	flagPID = 0;
+	totalCurrentAngle = 0.0f;
 	u_control = 0.0f;
 	u_1_control = 0.0f;
 	error = 0.0f;
@@ -343,4 +313,25 @@ void commandx2(void){
 	error_2 = 0.0f;
 	counterPreviousRight = 0;
 	counterPreviousLeft = 0;
+}
+
+void commandx3(void){
+	startBasicTimer(&handlerSampleTimer);
+	startMove();
+}
+
+void commandx4(void){
+	sprintf(bufferMandar,"Dato simple del giroscopio es %.6f °/s\n", getGyroscopeData());
+	writeMsg(&usartCmd, bufferMandar);
+	sprintf(bufferMandar,"Dato offset del giroscopio es %.6f °/s\n", offsetAngularVelocity);
+	writeMsg(&usartCmd, bufferMandar);
+}
+
+void commandx5(void){
+	updateDuttyCycle(&handlerPwmRight, (uint16_t)firstParameter);
+	updateDuttyCycle(&handlerPwmLeft, (uint16_t)secondParameter);
+}
+
+void commandx6(void){
+	calculateOffsetGyro((uint16_t)firstParameter);
 }

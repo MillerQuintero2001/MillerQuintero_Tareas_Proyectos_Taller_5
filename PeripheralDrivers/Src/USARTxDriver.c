@@ -30,6 +30,10 @@ uint16_t baudrate = 0;
 uint32_t freqClock = 0;
 
 void USART_Config(USART_Handler_t *ptrUsartHandler){
+
+	/* 0. Activamos el Coprocesador Matemático - FPU */
+		SCB->CPACR |= (0XF << 20);
+
 	/* 1. Activamos la señal de reloj que viene desde el BUS al que pertenece el periferico */
 	/* Lo debemos hacer para cada uno de las pisbles opciones que tengamos (USART1, USART2, USART6) */
     /* 1.1 Configuramos el USART1 */

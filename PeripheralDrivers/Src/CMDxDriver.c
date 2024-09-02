@@ -17,11 +17,15 @@ char bufferReception[64] = {0};		// Buffer para guardar caracteres ingresados
 char cmd[32] = {0};					// Arreglo para guardar el comando ingresado y gestionarlo
 uint8_t counterReception = 0;		// Contador de carácteres para la recepción
 bool stringComplete = false;
-unsigned int firstParameter = 0;
-unsigned int secondParameter = 0;
+float firstParameter = 0;
+float secondParameter = 0;
+float thirdParameter = 0;
 
 /** Función necesaria para prepara el USART1 para comandos del robot */
 void commandConfig(uint8_t USARTport, uint8_t baudrate){
+
+	/* Activamos el Coprocesador Matemático - FPU */
+	SCB->CPACR |= (0XF << 20);
 
 	if(USARTport == CMD_USART1){
 
@@ -173,7 +177,7 @@ void commandBuild(bool use){
 		 * en 3 elemetos diferentes, el string del comando "cmd", y dos números enteros llamados
 		 * "firstParameter" y "secondParameter". De esta forma, podemos introducir información
 		 * al micro desde el puerto serial */
-		sscanf(bufferReception, "%s %u %u", cmd, &firstParameter, &secondParameter);
+		sscanf(bufferReception, "%s %f %f %f", cmd, &firstParameter, &secondParameter, &thirdParameter);
 
 		/* Usamos la funcion strcmp, string compare, que me retorna un 0 si los 2 strings son iguales */
 
@@ -225,6 +229,12 @@ void commandBuild(bool use){
 			commandx6();
 		}
 
+		// "Commandx7"
+		else if(strcmp(cmd, "Commandx7") == 0){
+			writeMsg(&usartCmd, "\nCMD: Commandx7 \n");
+			commandx7();
+		}
+
 		// En cualquier otro caso, indicamos que el comando es incorrecto
 		else{
 			writeMsg(&usartCmd, "\nWrong command \n");
@@ -244,7 +254,7 @@ void commandBuild(bool use){
 		 * en 3 elemetos diferentes, el string del comando "cmd", y dos números enteros llamados
 		 * "firstParameter" y "secondParameter". De esta forma, podemos introducir información
 		 * al micro desde el puerto serial */
-		sscanf(bufferReception, "%s %u %u", cmd, &firstParameter, &secondParameter);
+		sscanf(bufferReception, "%s %f %f %f", cmd, &firstParameter, &secondParameter, &thirdParameter);
 
 		/* Usamos la funcion strcmp, string compare, que me retorna un 0 si los 2 strings son iguales */
 
@@ -273,8 +283,8 @@ void commandBuild(bool use){
 		// "SetMotorSignals" configura la frecuencia y el dutty de la PWM de los motores
 		else if(strcmp(cmd, "SetSignals") == 0){
 			writeMsg(&usartCmd, "\nCMD: SetSignals \n");
-			if(((1 <= firstParameter)&&(firstParameter <= 100))&&((1 <= secondParameter)&&(secondParameter <= 100))){
-				setSignals(firstParameter, secondParameter);
+			if(((1 <= (uint8_t)firstParameter)&&((uint8_t)firstParameter <= 100))&&((1 <= (uint8_t)secondParameter)&&((uint8_t)secondParameter <= 100))){
+				setSignals((uint8_t)firstParameter, (uint8_t)secondParameter);
 				writeMsg(&usartCmd, "Configuration succesfull \n");
 			}
 			else{
@@ -285,9 +295,9 @@ void commandBuild(bool use){
 		// "SetVelocity" configura la velocidad de los motores
 		else if(strcmp(cmd, "SetVelocity") == 0){
 			writeMsg(&usartCmd, "\nCMD: SetVelocity \n");
-			if((88 <= firstParameter)&&(firstParameter <= 140)){
-				setVelocity(firstParameter);
-				getDutty(firstParameter);
+			if((88 <= (uint8_t)firstParameter)&&((uint8_t)firstParameter <= 140)){
+				setVelocity((uint8_t)firstParameter);
+				getDutty((uint8_t)firstParameter);
 				writeMsg(&usartCmd, "Configuration succesfull \n");
 			}
 			else{
@@ -319,9 +329,9 @@ void commandBuild(bool use){
 		// "StraightLine" inicia un recorrido en línea recta con control, según la distancia indicada
 		else if(strcmp(cmd, "Line") == 0){
 			writeMsg(&usartCmd, "\nCMD: Line \n");
-			if((1 <= firstParameter)&&(firstParameter <= 65535)){
+			if((1 <= (uint16_t)firstParameter)&&((uint16_t)firstParameter <= 65535)){
 				writeMsg(&usartCmd, "Oppy is doing a straight line \n");
-				straightLine(firstParameter);
+				straightLine((uint16_t)firstParameter);
 			}
 			else{
 				writeMsg(&usartCmd, "Wrong distance, remember, only positive integers between 1 and 65535 \n");
@@ -331,9 +341,9 @@ void commandBuild(bool use){
 		// "Rotation" realiza una rotación en el sentido y grados indicados
 		else if(strcmp(cmd, "Rotation") == 0){
 			writeMsg(&usartCmd, "\nCMD: Rotation \n");
-			if(((0 <= firstParameter)&&(firstParameter <= 1))&&((1 <= secondParameter)&&(secondParameter <= 360))){
+			if(((0 <= (uint8_t)firstParameter)&&((uint8_t)firstParameter <= 1))&&((1 <= (uint16_t)secondParameter)&&((uint16_t)secondParameter <= 360))){
 				writeMsg(&usartCmd, "Oppy is doing a rotation \n");
-				rotation(firstParameter, secondParameter);
+				rotation((uint8_t)firstParameter, (uint16_t)secondParameter);
 			}
 			else{
 				writeMsg(&usartCmd, "Wrong values, remember, rotation between 0 and 1 and degrees between 1 and 360 \n");
@@ -343,9 +353,9 @@ void commandBuild(bool use){
 		// "Square" realiza un cuadrado con el Oppy
 		else if(strcmp(cmd, "Square") == 0){
 			writeMsg(&usartCmd, "\nCMD: Square \n");
-			if(((0 <= firstParameter)&&(firstParameter <= 1))&&((1 <= secondParameter)&&(secondParameter <= 65535))){
+			if(((0 <= (uint8_t)firstParameter)&&((uint8_t)firstParameter <= 1))&&((1 <= (uint16_t)secondParameter)&&((uint16_t)secondParameter <= 65535))){
 				writeMsg(&usartCmd, "Oppy is doing a square \n");
-				square(firstParameter, secondParameter);
+				square((uint8_t)firstParameter, (uint16_t)secondParameter);
 			}
 			else{
 				writeMsg(&usartCmd, "Wrong values, remember, rotation between 0 and 1 and side between 1 and 65535 \n");
@@ -358,9 +368,9 @@ void commandBuild(bool use){
 		}
 
 		// Limpiamos los párametros
-		stringComplete = 0;
-		firstParameter = 0;
-		secondParameter = 0;
+		stringComplete = false;
+		firstParameter = 0.0f;
+		secondParameter = 0.0f;
 	}
 
 	else{
@@ -386,6 +396,9 @@ __attribute__ ((weak)) void commandx5(void){
 	__NOP();
 }
 __attribute__ ((weak)) void commandx6(void){
+	__NOP();
+}
+__attribute__ ((weak)) void commandx7(void){
 	__NOP();
 }
 

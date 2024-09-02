@@ -25,6 +25,7 @@
 #include "PLLDriver.h"
 #include "ExtiDriver.h"
 #include "I2CDriver.h"
+#include "SysTickDriver.h"
 
 #include "CMDxDriver.h"
 #include "MotorDriver.h"
@@ -36,8 +37,6 @@
 GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
 BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 
-bool flag = false;
-bool flagInit = true;
 BasicTimer_Handler_t handlerSampleTimer = {0};
 
 uint16_t counter = 0;
@@ -53,14 +52,14 @@ float offsetAngularVelocity = 0.0f;
 uint16_t counterSamples = 0;
 
 /* Variables para el control PID */
-float u_max = 400.00f;
-float u_min = 0.0f;
 uint32_t counterPreviousRight = 0;
 uint32_t counterPreviousLeft = 0;
+float currentDistance = 0.0f;
 float duttyBaseRight = 12000.00f;
-float duttyBaseLeft = 12840.00f;
-uint32_t counter1 = 0;
-uint32_t counter2 = 0;
+float duttyBaseLeft = 12720.00f;
+uint8_t sideIndicator = 0;
+uint8_t sideGoal = 0;
+uint8_t direction = 0; // Variable to specify if the the square direction will be clock wise = 0, or counter clock wise = 1;
 
 // Calculo de la acción de control
 float u_control = 0.0f; 			// Acción de control actual
@@ -68,9 +67,9 @@ float u_1_control = 0.0f;			// Accioń de control previa
 float error = 0.0f;					// Error actual
 float error_1 = 0.0f;				// Error una muestra antes
 float error_2 = 0.0f;				// Error dos muestras antes
-float kp = 0.900f;					// Constante proporcional
-float ti = 0.120f;					// Tiempo integrativo [s]
-float td = 0.030f;					// Tiempo derivativo [s]
+float kp = 2.000f;					// Constante proporcional
+float ti = 0.080f;					// Tiempo integrativo [s]
+float td = 0.050f;					// Tiempo derivativo [s]
 float timeSample = 0.020f;			// Tiempo de muestreo [s]
 
 float q0 = 0.0f;					// Constante de PID discreto
@@ -80,7 +79,6 @@ float q2 = 0.0f;					// Constante de PID discreto
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 										// Función que inicializa los periféricos básicos
 void controlActionPID(void);								// Función que retorna el valor de la acción de control
-void controlDrift(float* currentAngle);						// Function that exam if the drift angle has been reach and take action
 void constraintControl(float* uControl, float maxChange);	// Función que limita el valor de la acción de control
 void calculateOffsetGyro(uint16_t samples);					// Function that calculates the offset by averages in the MPU6050
 
@@ -103,9 +101,53 @@ int main(void){
 			totalCurrentAngle += dataAngle;
 			// Calculate the error for input PID, is like this because the setPointAngle is equal to zero
 			error = -totalCurrentAngle;
-			//controlDrift(&totalCurrentAngle);
 			controlActionPID();
 			flagData = false;
+		}
+		else if(currentDistance > 3000.0f){
+
+			sideIndicator++;
+			// Stop
+			stopMove();
+			stopBasicTimer(&handlerSampleTimer);
+			sprintf(bufferMandar, "%.3f\n",totalCurrentAngle);
+			writeMsg(&usartCmd, bufferMandar);
+
+			if(sideIndicator < sideGoal){
+				calculateOffsetGyro(200);
+
+				// Normalize movement conditions and do the correct rotation
+				updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+				updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
+				if(direction == MOVEMENT_CW){
+					rotation(MOVEMENT_CW, 90+totalCurrentAngle);
+				}
+				else{
+					rotation(MOVEMENT_CCW, 90-totalCurrentAngle);
+				}
+
+				defaultMove();
+
+				// Reset variables
+				totalCurrentAngle = 0.0f;
+				dataAngle = 0.0f;
+				u_control = 0.0f;
+				u_1_control = 0.0f;
+				error = 0.0f;
+				error_1 = 0.0f;
+				error_2 = 0.0f;
+				currentDistance = 0.0f;
+
+				resetMPU6050();
+				calculateOffsetGyro(200);
+				startBasicTimer(&handlerSampleTimer);
+				startMove();
+			}
+
+			else{
+				commandx2();
+				writeMsg(&usartCmd, "Square 3x3 complete!\n");
+			}
 		}
 
 		else{
@@ -147,8 +189,8 @@ void initSystem(void){
 	commandConfig(CMD_USART1, USART_BAUDRATE_19200);
 
 	configMotors();
-	updateDuttyCycle(&handlerPwmRight, 12000);
-	updateDuttyCycle(&handlerPwmLeft, 12840);
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 
 	configMPU6050();
 
@@ -179,14 +221,13 @@ void controlActionPID(void){
 
 	// Control of print data
 	if(counter >= 10){
-		sprintf(bufferMandar, "%.3f\t%.3f\n", u_control, totalCurrentAngle);
+		sprintf(bufferMandar, "%.3f\n",totalCurrentAngle);
 		writeMsg(&usartCmd, bufferMandar);
 		counter = 0;
 	}
 	else{
 		__NOP();
 	}
-
 	updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft - u_control));
 	updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight + u_control));
 
@@ -211,21 +252,6 @@ void controlActionPID(void){
 	u_1_control = u_control;
 	error_2 = error_1;
 	error_1 = error;
-}
-
-void controlDrift(float* currentAngle){
-	if(fabs(*currentAngle) > 5.0f){
-		stopBasicTimer(&handlerSampleTimer);
-		stopMove();
-		resetMPU6050();
-		calculateOffsetGyro(200);
-		*currentAngle = totalCurrentAngle/2.0f;
-		startBasicTimer(&handlerSampleTimer);
-		startMove();
-	}
-	else{
-		__NOP();
-	}
 }
 
 
@@ -282,6 +308,7 @@ void BasicTimer4_Callback(void){
 	else{
 		flagData = true;
 		counter++;
+		currentDistance = ((counterIntRight + counterIntLeft)/2.00f)*(M_PI*51.725f/120.0f);
 	}
 }
 
@@ -299,39 +326,61 @@ void usart1Rx_Callback(void){
 }
 
 void commandx1(void){
+	defaultMove();
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 	startMove();
 }
 
 void commandx2(void){
 	stopMove();
 	stopBasicTimer(&handlerSampleTimer);
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
+	flagTakeOffset = false;
+	flagData = false;
+	sideIndicator = 0;
+	sideGoal = 0;
+	currentDistance = 0.0f;
 	totalCurrentAngle = 0.0f;
+	dataAngle = 0.0f;
 	u_control = 0.0f;
 	u_1_control = 0.0f;
 	error = 0.0f;
 	error_1 = 0.0f;
 	error_2 = 0.0f;
-	counterPreviousRight = 0;
-	counterPreviousLeft = 0;
+	resetMPU6050();
 }
 
 void commandx3(void){
+	sideGoal = firstParameter;
+	direction = secondParameter;
+	defaultMove();
 	startBasicTimer(&handlerSampleTimer);
 	startMove();
 }
 
 void commandx4(void){
-	sprintf(bufferMandar,"Dato simple del giroscopio es %.6f °/s\n", getGyroscopeData());
-	writeMsg(&usartCmd, bufferMandar);
-	sprintf(bufferMandar,"Dato offset del giroscopio es %.6f °/s\n", offsetAngularVelocity);
-	writeMsg(&usartCmd, bufferMandar);
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
+	rotation(firstParameter, secondParameter);
 }
 
 void commandx5(void){
-	updateDuttyCycle(&handlerPwmRight, (uint16_t)firstParameter);
-	updateDuttyCycle(&handlerPwmLeft, (uint16_t)secondParameter);
+	duttyBaseRight = firstParameter;
+	duttyBaseLeft = secondParameter;
+	updateDuttyCycle(&handlerPwmRight, (uint16_t)duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, (uint16_t)duttyBaseLeft);
 }
 
 void commandx6(void){
 	calculateOffsetGyro((uint16_t)firstParameter);
+}
+
+void commandx7(void){
+	kp = firstParameter;
+	ti = secondParameter;
+	td = thirdParameter;
+	sprintf(bufferMandar,"Kp = %.6f,ti = %.6f,td = %.6f\n",kp, ti, td);
+	writeMsg(&usartCmd, bufferMandar);
 }

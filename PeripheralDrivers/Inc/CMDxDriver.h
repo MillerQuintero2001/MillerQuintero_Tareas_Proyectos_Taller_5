@@ -29,8 +29,9 @@
 
 extern USART_Handler_t usartCmd;		// Variable tipo USART para trabajar en general
 extern uint8_t usartData; 				// Variable en la que se guarda el dato transmitido
-extern unsigned int firstParameter;		// Primer Parámetro global para trabajar comandos
-extern unsigned int secondParameter;	// Segundo Parámetro global para trabajar comandos
+extern float firstParameter;			// Primer Parámetro global para trabajar comandos
+extern float secondParameter;			// Segundo Parámetro global para trabajar comandos
+extern float thirdParameter;			// Tercer Parámetro global para trabajar comandos
 
 void commandConfig(uint8_t USARTport, uint8_t baudrate);
 void commandBuild(bool use);
@@ -40,6 +41,7 @@ void commandx3(void);
 void commandx4(void);
 void commandx5(void);
 void commandx6(void);
+void commandx7(void);
 
 
 #endif /* CMDXDRIVER_H_ */

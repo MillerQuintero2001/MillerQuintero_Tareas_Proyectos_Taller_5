@@ -43,7 +43,7 @@ float duttyChange = 100.00f;
 //float duttyChangeLeft = 2.00;			// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
 float wheelDiameter = 51.725f;			// Diámetro promedio de las ruedas
 float wheelPerimeter = M_PI*51.725f;	// Perímetro con promedio diámetro de las ruedas en milímetros
-float distanceAxis = 109.00f;			// Distance entre ruedas (eje)
+float distanceAxis = 108.00f;			// Distance entre ruedas (eje) (anteriormente era 109 mm)
 float duttyWheels[2] = {0};
 
 
@@ -304,7 +304,7 @@ void rotation(uint8_t direction, uint16_t degrees){
 		__NOP();
 	}
 	// Calculamos la cantidad de interrupciones para conseguir la rotación
-	uint16_t goalInterrupts = interruptsRev*(((float)(degrees))/360.0f)*(distanceAxis/wheelDiameter);
+	uint16_t goalInterrupts = (uint16_t)(((float)interruptsRev)*(((float)(degrees))/360.0f)*(distanceAxis/wheelDiameter));
 	counterIntRight = 0;
 	counterIntLeft = 0;
 	startMove();

@@ -46,7 +46,10 @@ char bufferMandar[64] = {0};
 bool flagTakeOffset = true;
 bool flagData = false;
 float dataAngle = 0.0f;
+float previousDataAngle = 0.0f;
 float sumAngularVelocity = 0.0f;
+
+float differentialCurrentAngle = 0.0f;
 float totalCurrentAngle = 0.0f;
 float offsetAngularVelocity = 0.0f;
 uint16_t counterSamples = 0;
@@ -54,9 +57,13 @@ uint16_t counterSamples = 0;
 /* Variables para el control PID */
 uint32_t counterPreviousRight = 0;
 uint32_t counterPreviousLeft = 0;
-float currentDistance = 0.0f;
+
+float differentialDistance = 0.0f;
+float currentDistanceX = 0.0f;
+float currentDistanceY = 0.0f;
+
 float duttyBaseRight = 12000.00f;
-float duttyBaseLeft = 12720.00f;
+float duttyBaseLeft = 12700.00f;
 uint8_t sideIndicator = 0;
 uint8_t sideGoal = 0;
 uint8_t direction = 0; // Variable to specify if the the square direction will be clock wise = 0, or counter clock wise = 1;
@@ -67,7 +74,7 @@ float u_1_control = 0.0f;			// Accioń de control previa
 float error = 0.0f;					// Error actual
 float error_1 = 0.0f;				// Error una muestra antes
 float error_2 = 0.0f;				// Error dos muestras antes
-float kp = 2.000f;					// Constante proporcional
+float kp = 2.200f;					// Constante proporcional
 float ti = 0.080f;					// Tiempo integrativo [s]
 float td = 0.050f;					// Tiempo derivativo [s]
 float timeSample = 0.020f;			// Tiempo de muestreo [s]
@@ -97,15 +104,31 @@ int main(void){
 		commandBuild(USE_DEFAULT);
 
 		if(flagData){
+			// Take angular velocity in the time sample and multiply it by time sample to get the angle in that time
 			dataAngle = (getGyroscopeData() - offsetAngularVelocity)*timeSample;
+			// Sum with totalCurrentAngle to update the real current angle of the Oppy
 			totalCurrentAngle += dataAngle;
+
+			// Take the difference between previous and current data angle to get the differential angle and can calculate X and Y
+			differentialCurrentAngle = previousDataAngle + dataAngle;
+
+			differentialDistance = (((counterIntLeft - counterPreviousLeft)+(counterIntRight - counterPreviousRight))/2.0f)*(M_PI*51.725f/120.0f);
+			currentDistanceX += differentialDistance*cosf(differentialCurrentAngle*M_PI/180.0f);
+			currentDistanceY += differentialDistance*sinf(differentialCurrentAngle*M_PI/180.0f);
+
+			previousDataAngle = dataAngle;
+
+			counterPreviousRight = counterIntRight;
+			counterPreviousLeft = counterIntLeft;
+
 			// Calculate the error for input PID, is like this because the setPointAngle is equal to zero
 			error = -totalCurrentAngle;
 			controlActionPID();
 			flagData = false;
 		}
-		else if(currentDistance > 3000.0f){
-
+		else if(currentDistanceX >= 3000.0f){
+			currentDistanceX = 0.0f;
+			currentDistanceY = 0.0f;
 			sideIndicator++;
 			// Stop
 			stopMove();
@@ -136,7 +159,9 @@ int main(void){
 				error = 0.0f;
 				error_1 = 0.0f;
 				error_2 = 0.0f;
-				currentDistance = 0.0f;
+				differentialDistance = 0.0f;
+				counterPreviousRight = 0;
+				counterPreviousLeft = 0;
 
 				resetMPU6050();
 				calculateOffsetGyro(200);
@@ -221,7 +246,7 @@ void controlActionPID(void){
 
 	// Control of print data
 	if(counter >= 10){
-		sprintf(bufferMandar, "%.3f\n",totalCurrentAngle);
+		sprintf(bufferMandar, "%.3f\t%.3f\n",totalCurrentAngle, currentDistanceY);
 		writeMsg(&usartCmd, bufferMandar);
 		counter = 0;
 	}
@@ -306,9 +331,8 @@ void BasicTimer4_Callback(void){
 		sumAngularVelocity += getGyroscopeData();
 	}
 	else{
-		flagData = true;
 		counter++;
-		currentDistance = ((counterIntRight + counterIntLeft)/2.00f)*(M_PI*51.725f/120.0f);
+		flagData = true;
 	}
 }
 
@@ -341,7 +365,9 @@ void commandx2(void){
 	flagData = false;
 	sideIndicator = 0;
 	sideGoal = 0;
-	currentDistance = 0.0f;
+	differentialDistance = 0.0f;
+	currentDistanceX = 0.0f;
+	currentDistanceY = 0.0f;
 	totalCurrentAngle = 0.0f;
 	dataAngle = 0.0f;
 	u_control = 0.0f;
@@ -349,6 +375,8 @@ void commandx2(void){
 	error = 0.0f;
 	error_1 = 0.0f;
 	error_2 = 0.0f;
+	counterPreviousRight = 0;
+	counterPreviousLeft = 0;
 	resetMPU6050();
 }
 
@@ -361,9 +389,8 @@ void commandx3(void){
 }
 
 void commandx4(void){
-	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
-	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
-	rotation(firstParameter, secondParameter);
+	sprintf(bufferMandar, "%.3f\t%.3f\n",sinf(firstParameter*M_PI/180.0f),cosf(secondParameter*M_PI/180.0f));
+	writeMsg(&usartCmd, bufferMandar);
 }
 
 void commandx5(void){

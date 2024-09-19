@@ -16,11 +16,13 @@
 
 #include "Single_Cell.h"
 
+#define FLOOR_TILE_SIZE 254		// Dimensions of the square fllor tile, in milimeters
+
 /* Prototipos privados */
 Cell_map_t init_empty_cell(Cell_map_t dummyCell);
 
 /**
- * Esta funcion se encarga de inicializar las celdas que hacen parte
+ * Esta función se encarga de inicializar las celdas que hacen parte
  * del grid del mapa que se desea estudiar.
  *
  * La idea es que cada celda debe ser capaz de reconocer a sus vecinos
@@ -33,12 +35,14 @@ Cell_map_t init_empty_cell(Cell_map_t dummyCell){
     // aca se escribe toda la info de la celda...}
 	dummyCell.identifier[0] = 0;
 	dummyCell.identifier[1] = 0;
-	dummyCell.coordinateX = 0;
-	dummyCell.coordinateY = 0;
+	dummyCell.coordinateX = 0.00f;
+	dummyCell.coordinateY = 0.00f;
+	// Write 'e' to represente an empty no walkable cell
 	dummyCell.typeOfCell = 'e';
-	dummyCell.Gcost = 0;
-	dummyCell.Hcost = 0;
-	dummyCell.Fcost = 0;
+	// This great number is only to simbolize an infinite value
+	dummyCell.Gcost = 25000.00f;
+	dummyCell.Hcost = 25000.00f;
+	dummyCell.Fcost = 25000.00f;
 	for(uint8_t i = 0; i < 8; i++){
 		dummyCell.neighbours[i] = NULL;
 	}
@@ -53,11 +57,12 @@ Cell_map_t init_empty_cell(Cell_map_t dummyCell){
  *	pero sin organizar sus caracteristicas mas específicas.
  *
  * */
-Cell_map_t create_cell(uint8_t pos_x, uint8_t pos_y){
-    // Se utiliza la funcion init_empty_cell(unknowCell2);
-	Cell_map_t unknowCell;
+Cell_map_t create_cell(uint8_t matrix_pos_x, uint8_t matrix_pos_y){
+	Cell_map_t unknowCell = {0};
 	unknowCell = init_empty_cell(unknowCell);
-	unknowCell.coordinateX = pos_x;
-	unknowCell.coordinateY = pos_y;
+	unknowCell.identifier[0] = matrix_pos_x + 'A';
+	unknowCell.identifier[1] = matrix_pos_y;
+	unknowCell.coordinateX = matrix_pos_x*FLOOR_TILE_SIZE;
+	unknowCell.coordinateY = matrix_pos_y*FLOOR_TILE_SIZE;
     return  unknowCell;
 }

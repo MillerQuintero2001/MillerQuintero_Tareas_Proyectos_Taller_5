@@ -34,10 +34,9 @@ BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 // Elementos para hacer la comunicación serial
 GPIO_Handler_t handlerPinTX = {0};				// Pin de transmisión de datos
 GPIO_Handler_t handlerPinRX = {0};				// Pin de recepción de datos
-USART_Handler_t usart2Comm =  {0};				// Comunicación serial
-uint8_t usart2RxData = 0; 						// Variable en la que se guarda el dato transmitido
+USART_Handler_t usartCmd =  {0};				// Comunicación serial
+uint8_t usartData = 0; 						// Variable en la que se guarda el dato transmitido
 char bufferMsg[64] = {0}; 						// Buffer de datos como un arreglo de caracteres
-
 
 #define MAP_GRID_ROWS		8
 #define MAP_GRID_COLS		10
@@ -95,10 +94,13 @@ void initSystem(void);
 /** Función que ejecuta paso a paso el algoritmo A* */
 int main(void) {
 
+	initSystem();
 	/* prints !!!Hello World!!! */
-	printf("!!!Hello World!!!\n");
+	//printf("!!!Hello World!!!\n");
+	writeMsg(&usartCmd, "!!!Hello World!!!\n");
 
-	printf("A* pathfinding\n");
+	//printf("A* pathfinding\n");
+	writeMsg(&usartCmd, "A* pathfinding\n");
 
 	/* 1. Crea todas las celdas vacias */
 	init_empty_grid_map(grid_cols, grid_rows, grid_map_cells);
@@ -123,24 +125,27 @@ int main(void) {
 	populate_grid(". . . . . . . . . . ", 6, grid_map_cells);
 	populate_grid(". . . . S . . . . . ", 7, grid_map_cells);
 
-	// Imprime la informacion mas simple de todas las celdas del grid
-	//print_cells_info(grid_cels);
+	// Imprime la informacion más simple de todas las celdas del grid
+	/* YA FUNCIONA ESTA FUNCIÓN */
+	//print_cells_info(grid_map_cells);
 
 	/* 3. Imprime en pantalla el mapa que se envió a por los comandos del USART,
 	 * para verificar que en efecto el sistema tiene el mapa correcto, o que el mapa
 	 * fue correctamente recibido
 	 * */
+	/* YA FUNCIONA ESTA FUNCIÓN */
 	print_map(grid_cols, grid_rows, grid_map_cells);
 
 	/* 4. Ejecución del algoritmo A*
 	 * Al llamar esta funcion, que basicamente ejecuta el pseudocodigo, se debe
 	 * obtener al final la solución para la ruta.
 	 * */
-	A_star_algorithm();
+//	A_star_algorithm();
 
 /* == Espacio para pruebas simples... == */
 //	/* Incluye la celda "Start" en la lista open_list, utilizando para esto al puntero "current_cell" */
-//	addTo_open_list(ptr_start_cell);
+	ptr_start_cell = get_cell_start(grid_map_cells, grid_cols, grid_rows);
+	addTo_open_list(ptr_start_cell);
 //
 //	print_single_cell_info(ptr_current_cell);
 //	identify_cell_neighbours(grid_map_cells, &grid_map_cells[66]);
@@ -152,7 +157,8 @@ int main(void) {
 //	removeFrom_open_list(ptr_current_cell);
 /* == Final de las pruebas simples... == */
 
-	printf("END\n");
+//	printf("END\n");
+	writeMsg(&usartCmd, "\nEND\n");
 
 	return 0;
 }
@@ -290,7 +296,8 @@ Cell_map_t* get_cell_start(Cell_map_t *grid_map, uint8_t gridCols,uint8_t gridRo
 		return ptr_search;
 	}
 	else{
-		printf("Start cell hasn't been found.\n");
+		//printf("Start cell hasn't been found.\n");
+		writeMsg(&usartCmd, "Start cell hasn't been found.\n");
 		return NULL;
 	}
 }
@@ -307,7 +314,7 @@ Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols,uint8_t gridRow
 		i++;
 		ptr_search = grid_map + i;
 	}
-	// The goal cell has been found
+	//If goal cell has been found
 	if(i < gridCols*gridRows){
 		ptr_search->Gcost = get_G_cost(ptr_search->ptr_parent, ptr_search);
 		ptr_search->Hcost = 0;
@@ -316,7 +323,8 @@ Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols,uint8_t gridRow
 		return ptr_search;
 	}
 	else{
-		printf("Goal cell hasn't been found.\n");
+		//printf("Goal cell hasn't been found.\n");
+		writeMsg(&usartCmd, "Goal cell hasn't been found.\n");
 		return NULL;
 	}
 }
@@ -349,18 +357,18 @@ void addTo_open_list(Cell_map_t *working_cell){
  * Entrega el puntero al elemento mas arriba de la lista open_list
  * */
 Cell_map_t* get_next_item(void){
-
     return *open_list; // Escribir código...
-
 }
 
 /**
  * Esta función identifica cuantos elementos activos hay en la lista open_list */
 uint8_t get_count_item_open_list(void) {
-	// Escribir código...
+	Cell_map_t *ptr_element = *open_list;
 	uint8_t counter = 0;
-	while(*(open_list+counter) != NULL){
+	while(ptr_element->typeOfCell != 'e'){
 		counter++;
+		// Sum 1 to the pointer to desplace at the next element
+		ptr_element++;
 	}
     // Esta función retorna un valor...
 	return counter;
@@ -400,7 +408,7 @@ void init_empty_openlist(Cell_map_t* empty_cell){
 }
 
 /**
- * Funcion encargada de ordenar el arreglo OpenList con respecto a los valores F y H
+ * Función encargada de ordenar el arreglo OpenList con respecto a los valores F y H
  * de cada elemento al que se apunta en la lista.
  *
  * Esta función es "llamada" desde la función "addTo_open_list(...)"
@@ -515,8 +523,15 @@ void identify_cell_neighbours(Cell_map_t *grid_map, Cell_map_t *cell_to_check){
 void populate_grid(char *row_data, uint8_t grid_row, Cell_map_t *grid_map){
     // Escribir código...
 	uint8_t k = 0;
-	while(*(row_data + k) != '\0'){
-		(grid_map + k + grid_row*8)->typeOfCell = (uint8_t)(*(row_data + k));
+	uint8_t index = 0;
+	while(k < (MAP_GRID_COLS*2)){
+		if(*(row_data + k) != ' '){
+			(grid_map + index + grid_row*MAP_GRID_COLS)->typeOfCell = *(row_data + k);
+			index++;
+		}
+		else{
+			__NOP();
+		}
 		k++;
 	}
 }
@@ -543,18 +558,41 @@ void init_empty_grid_map(uint8_t gridCols, uint8_t gridRows, Cell_map_t *cellArr
  *
  * */
 void print_single_cell_info(Cell_map_t *singleCell) {
-	printf("Cell's identification is:\n"
-			"Columna: %c\n"
-			"Fila: %hhu\n", singleCell->identifier[0], singleCell->identifier[1]);
-	printf("The X & Y coordinates are: X = %hu, Y = %hu\n", singleCell->coordinateX, singleCell->coordinateY);
-	// Espacio para escribir el tipo de celda
+//	printf("Cell's identification is:\n"
+//			"Columna: %c\n"
+//			"Fila: %hu\n", singleCell->identifier[0], singleCell->identifier[1]);
+//	printf("The X & Y coordinates are: X = %hu, Y = %hu\n", singleCell->coordinateX, singleCell->coordinateY);
+//	printf("The type of cell is: %c.\n",singleCell->typeOfCell);
+//
+//	printf("The G cost is: %hu\n", singleCell->Gcost);
+//	printf("The H cost is: %hu\n", singleCell->Hcost);
+//	printf("The F cost is: %hu\n", singleCell->Fcost);
+//
+//	printf("The parent's identifier is: %c%hu.\n\n", singleCell->ptr_parent->identifier[0], singleCell->ptr_parent->identifier[1]);
 
-	printf("The G cost is: %hu\n", singleCell->Gcost);
-	printf("The H cost is: %hu\n", singleCell->Hcost);
-	printf("The F cost is: %hu\n", singleCell->Fcost);
-    // Escribir código...
-	Cell_map_t *parent = singleCell->ptr_parent;
-	printf("The parent's identifier is: %c%hhu.\n\n", parent->identifier[0], parent->identifier[1]);
+	// With the MCU
+	sprintf(bufferMsg,"Cell's identification is:\n"
+			"Columna: %c\n"
+			"Fila: %hu\n", singleCell->identifier[0], singleCell->identifier[1]);
+	writeMsg(&usartCmd, bufferMsg);
+
+	sprintf(bufferMsg,"The X & Y coordinates are: X = %.3f, Y = %.3f\n", singleCell->coordinateX, singleCell->coordinateY);
+	writeMsg(&usartCmd, bufferMsg);
+
+	sprintf(bufferMsg,"The type of cell is: %c.\n",singleCell->typeOfCell);
+	writeMsg(&usartCmd, bufferMsg);
+
+	sprintf(bufferMsg,"The G cost is: %.3f\n", singleCell->Gcost);
+	writeMsg(&usartCmd, bufferMsg);
+
+	sprintf(bufferMsg,"The H cost is: %.3f\n", singleCell->Hcost);
+	writeMsg(&usartCmd, bufferMsg);
+
+	sprintf(bufferMsg,"The F cost is: %.3f\n", singleCell->Fcost);
+	writeMsg(&usartCmd, bufferMsg);
+
+	sprintf(bufferMsg,"The parent's identifier is: %c%hu.\n\n", singleCell->ptr_parent->identifier[0], singleCell->ptr_parent->identifier[1]);
+	writeMsg(&usartCmd, bufferMsg);
 }
 
 /**
@@ -579,16 +617,18 @@ void print_cells_info(Cell_map_t *cellArray){
  * e imprimir los elementos (columnas) de cada fila
  * */
 void print_map(int8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray) {
-    // Escribir código...
 	for(uint8_t j = 0; j < gridCols*gridRows; j++){
-		printf("%c ", (cellArray+j)->typeOfCell);
-
-		if((j%(gridCols-1)) == 0){
-			printf("\n");
+		if((j%(gridCols)) == 0){
+			//printf("\n");
+			writeChar(&usartCmd, '\n');
 		}
 		else{
 			__NOP();
 		}
+		//printf("%c ", (cellArray+j)->typeOfCell);
+		char c = (cellArray+j)->typeOfCell;
+		writeChar(&usartCmd, c);
+		writeChar(&usartCmd, ' ');
 	}
 }
 
@@ -604,7 +644,7 @@ void print_path(Cell_map_t *working_cell){
 	Cell_map_t *ptr_backward_path = working_cell;
 	printf("The path is:\n");
 	while(ptr_backward_path != NULL){
-		printf("%c%hhu", working_cell->identifier[0], working_cell->identifier[1]);
+		printf("%c%hu", working_cell->identifier[0], working_cell->identifier[1]);
 		ptr_backward_path = ptr_backward_path->ptr_parent;
 	}
 }
@@ -646,8 +686,8 @@ void initSystem(void){
 	// Atributos para el Timer 2 del LED de estado
 	handlerBlinkyTimer.ptrTIMx								= TIM2;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_SPEED_1ms;
-	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 250;
+	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
+	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
 	BasicTimer_Config(&handlerBlinkyTimer);
 	startBasicTimer(&handlerBlinkyTimer);
@@ -669,15 +709,15 @@ void initSystem(void){
 	GPIO_Config(&handlerPinRX);
 
 	/* Configuración de la comunicación serial */
-	usart2Comm.ptrUSARTx						= USART2;
-	usart2Comm.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
-	usart2Comm.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-	usart2Comm.USART_Config.USART_parity		= USART_PARITY_NONE;
-	usart2Comm.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-	usart2Comm.USART_Config.USART_mode			= USART_MODE_RXTX;
-	usart2Comm.USART_Config.USART_enableIntRX	= USART_RX_INTERRUP_ENABLE;
-	usart2Comm.USART_Config.USART_enableIntTX	= USART_TX_INTERRUP_DISABLE;
-	USART_Config(&usart2Comm);
+	usartCmd.ptrUSARTx							= USART2;
+	usartCmd.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
+	usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
+	usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
+	usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
+	usartCmd.USART_Config.USART_mode			= USART_MODE_RXTX;
+	usartCmd.USART_Config.USART_enableIntRX		= USART_RX_INTERRUP_ENABLE;
+	usartCmd.USART_Config.USART_enableIntTX		= USART_TX_INTERRUP_DISABLE;
+	USART_Config(&usartCmd);
 }
 
 
@@ -689,7 +729,7 @@ void BasicTimer2_Callback(void){
 
 /** Interrupción del USART2 */
 void usart2Rx_Callback(void){
-	usart2RxData = getRxData();	// Pongo en alto la variable bandera del USART2 para el main
+	usartData = getRxData();	// Pongo en alto la variable bandera del USART2 para el main
 }
 
 

@@ -65,27 +65,28 @@ char* map_string[MAP_GRID_ROWS];
 /* Prototipos de las funciones del main */
 
 // Related with A* pathfinding
-void init_empty_grid_map(uint8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray);
-void print_cells_info(Cell_map_t *cellArray);
-void print_single_cell_info(Cell_map_t *singleCell);
-void print_map(int8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray);
-void populate_grid(char *row_data, uint8_t grid_row, Cell_map_t *grid_map);
-Cell_map_t* get_cell_start(Cell_map_t *grid_map, uint8_t gridCols, uint8_t gridRows);
-Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols,uint8_t gridRows);
+void init_empty_grid_map(uint8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray);			// Ready
+void print_cells_info(Cell_map_t *cellArray);													// Ready
+void print_single_cell_info(Cell_map_t *singleCell);											// Ready
+void print_map(int8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray);						// Ready
+void populate_grid(char *row_data, uint8_t grid_row, Cell_map_t *grid_map);						// Ready
+Cell_map_t* get_cell_start(Cell_map_t *grid_map, uint8_t gridCols, uint8_t gridRows);			// Ready
+Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols, uint8_t gridRows);			// Ready
 void addTo_open_list(Cell_map_t *working_cell);
-void identify_cell_neighbours(Cell_map_t *grid_map, Cell_map_t *cell_to_check);
-uint16_t get_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell);
-void update_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell);
-uint16_t get_G_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell);
-void update_G_cost(Cell_map_t *parent_cell, Cell_map_t *working_cell);
-uint16_t get_F_cost(Cell_map_t *working_cell);
-void update_F_cost(Cell_map_t *working_cell);
+void identify_cell_neighbours(Cell_map_t *grid_map, Cell_map_t *cell_to_check);					// Ready
+float get_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell);								// Ready
+void update_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell);							// Ready
+float get_G_cost(Cell_map_t *neighbour_cell, Cell_map_t *working_cell);							// Ready
+void update_G_cost(Cell_map_t *parent_cell, Cell_map_t *working_cell);							// Ready
+float get_F_cost(Cell_map_t *working_cell);														// Ready
+void update_F_cost(Cell_map_t *working_cell);													// Ready
 void order_open_list(uint8_t index_last);
-void init_empty_openlist(Cell_map_t* empty_cell);
-uint8_t get_count_item_open_list(void);
-void removeFrom_open_list(Cell_map_t *working_cell);
-Cell_map_t* get_next_item(void);
-void print_path(Cell_map_t *working_cell);
+void init_empty_openlist(Cell_map_t* empty_cell);												// Wrote but not checked
+uint8_t get_count_item_open_list(void);															// Wrote but not checked
+void removeFrom_open_list(Cell_map_t *working_cell);											// Wrote but not checked
+Cell_map_t* get_next_item(void);																// Wrote but not checked
+void addTo_closed_list(Cell_map_t *working_cell);
+void print_path(Cell_map_t *working_cell);														// Wrote but not checked
 void A_star_algorithm(void);
 
 // Related with peripherals
@@ -122,7 +123,7 @@ int main(void) {
 	populate_grid(". # # . . . . # # . ", 3, grid_map_cells);
 	populate_grid(". # . . . . . . # . ", 4, grid_map_cells);
 	populate_grid(". . . . . . . . . . ", 5, grid_map_cells);
-	populate_grid(". . . . . . . . . . ", 6, grid_map_cells);
+	populate_grid(". . . . # . . . . . ", 6, grid_map_cells);
 	populate_grid(". . . . S . . . . . ", 7, grid_map_cells);
 
 	// Imprime la informacion más simple de todas las celdas del grid
@@ -144,17 +145,36 @@ int main(void) {
 
 /* == Espacio para pruebas simples... == */
 //	/* Incluye la celda "Start" en la lista open_list, utilizando para esto al puntero "current_cell" */
-	ptr_start_cell = get_cell_start(grid_map_cells, grid_cols, grid_rows);
+	ptr_goal_cell = get_cell_goal(grid_map_cells, grid_cols, grid_rows);
+	ptr_start_cell = ptr_current_cell = get_cell_start(grid_map_cells, grid_cols, grid_rows);
 	addTo_open_list(ptr_start_cell);
-//
-//	print_single_cell_info(ptr_current_cell);
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[66]);
+
+	print_single_cell_info(ptr_current_cell);
+//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[65]);
 //	update_H_cost(ptr_goal_cell, &grid_map_cells[57]);
 //	update_G_cost(ptr_current_cell, &grid_map_cells[57]);
 //	update_F_cost(&grid_map_cells[57]);
 //
-//	addTo_open_list(&grid_map_cells[57]);
-//	removeFrom_open_list(ptr_current_cell);
+//	/* Test to check if the border cell's neighbours were well identified */
+//	// Corners:
+//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[0]);
+//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[9]);
+//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[70]);
+//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[79]);
+//
+//	// TODO: Generic borders
+//	// Up border
+//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[5]);
+//	// Left Border
+//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[20]);
+//	// Right border
+//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[39]);
+//	// Down border
+//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[73]);
+
+
+	addTo_open_list(&grid_map_cells[57]);
+	removeFrom_open_list(ptr_current_cell);
 /* == Final de las pruebas simples... == */
 
 //	printf("END\n");
@@ -173,25 +193,21 @@ int main(void) {
  * además de ser mas conveniente hacer los cálculos con las funciones de CMSIS que con las
  * de C estándar ya que son mucho más eficientes.
  * */
-uint16_t get_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell){
-
-    // Escribir código...
+float get_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell){
 	float32_t ptrSource[2] = {0};
 	ptrSource[0] = (float32_t)(goal_cell->coordinateX - working_cell->coordinateX);
 	ptrSource[1] = (float32_t)(goal_cell->coordinateY - working_cell->coordinateY);
 	float32_t inputSqrt = 0.00f;
 	float32_t output = 0.00f;
 	arm_power_f32(ptrSource, 2, &inputSqrt);
-	//const float32_t input = pow((goal_cell->coordinateX - working_cell->coordinateX),2)+pow((goal_cell->coordinateY - working_cell->coordinateY),2);
-
 	if(arm_sqrt_f32(inputSqrt, &output) == ARM_MATH_SUCCESS){
-		uint16_t aux_result = (uint16_t)output;
+		float aux_result = (float)output;
 		return aux_result;
 	}
 
 	else{
 		printf("Error updating the H cost.\n");
-		return 0;
+		return 0.00f;
 	}
 }
 
@@ -214,18 +230,21 @@ void update_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell){
  * además de ser mas conveniente hacer los calculos con las funciones de CMSIS que con las
  * de C standar ya que son mucho mas eficientes.
  * */
-uint16_t get_G_cost(Cell_map_t *neighbour_cell, Cell_map_t *working_cell){
+float get_G_cost(Cell_map_t *neighbour_cell, Cell_map_t *working_cell){
 
-	// Escribir código...
+	float32_t ptrSource[2] = {0};
+	ptrSource[0] = (float32_t)(neighbour_cell->coordinateX - working_cell->coordinateX);
+	ptrSource[1] = (float32_t)(neighbour_cell->coordinateY - working_cell->coordinateY);
+	float32_t inputSqrt = 0.00f;
 	float32_t output = 0.00f;
-	const float32_t input = (float32_t)(pow((neighbour_cell->coordinateX - working_cell->coordinateX),2)+pow((neighbour_cell->coordinateY - working_cell->coordinateY),2));
-	if(arm_sqrt_f32(input, &output) == ARM_MATH_SUCCESS){
-		uint16_t aux_result = (uint16_t)output + (neighbour_cell->Gcost);
+	arm_power_f32(ptrSource, 2, &inputSqrt);
+	if(arm_sqrt_f32(inputSqrt, &output) == ARM_MATH_SUCCESS){
+		float aux_result = (float)output + (neighbour_cell->Gcost);
 		return aux_result;
 	}
 	else{
 		printf("Error updating the G cost.\n");
-		return 0;
+		return 0.00f;
 	}
 }
 
@@ -239,7 +258,7 @@ uint16_t get_G_cost(Cell_map_t *neighbour_cell, Cell_map_t *working_cell){
 void update_G_cost(Cell_map_t *parent_cell, Cell_map_t *working_cell){
 	// Check if the working cell is the start cell, in that case his G cost is zero and doesn't have any parent
     if(working_cell->typeOfCell == 'S'){
-    	working_cell->Gcost = 0;
+    	working_cell->Gcost = 0.00f;
     	working_cell->ptr_parent = NULL;
     }
     // Otherwise, we update his G cost and his parent
@@ -257,7 +276,7 @@ void update_G_cost(Cell_map_t *parent_cell, Cell_map_t *working_cell){
  * F = G_cost + H_cost
  *
  * */
-uint16_t get_F_cost(Cell_map_t *working_cell){
+float get_F_cost(Cell_map_t *working_cell){
 	return (working_cell->Gcost + working_cell->Hcost);
 }
 
@@ -282,9 +301,9 @@ Cell_map_t* get_cell_start(Cell_map_t *grid_map, uint8_t gridCols,uint8_t gridRo
     // Escribir código...
 	Cell_map_t *ptr_search = grid_map;
 	uint8_t i = 0;
-	while((ptr_search->typeOfCell != 'S')||(i < gridCols*gridRows)){
+	while((ptr_search->typeOfCell != 'S')&&(i < gridCols*gridRows)){
+		ptr_search++;
 		i++;
-		ptr_search = grid_map + i;
 	}
 	// The start cell has been found
 	if(i < gridCols*gridRows){
@@ -306,17 +325,17 @@ Cell_map_t* get_cell_start(Cell_map_t *grid_map, uint8_t gridCols,uint8_t gridRo
  * Esta función busca cual es la celda que esta designada como el "objetivo" (Goal),
  * además se le organizan los parametros G, H y F adecuadamente...
  * */
-Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols,uint8_t gridRows) {
+Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols, uint8_t gridRows) {
     // Escribir código...
 	Cell_map_t *ptr_search = grid_map;
 	uint8_t i = 0;
-	while((ptr_search->typeOfCell != 'G')||(i < gridCols*gridRows)){
+	while(((ptr_search->typeOfCell) != 'G')&&(i < MAP_CELLS_COUNT)){
+		ptr_search++;
 		i++;
-		ptr_search = grid_map + i;
 	}
 	//If goal cell has been found
 	if(i < gridCols*gridRows){
-		ptr_search->Gcost = get_G_cost(ptr_search->ptr_parent, ptr_search);
+		ptr_search->Gcost = 0;
 		ptr_search->Hcost = 0;
 		ptr_search->Fcost = get_F_cost(ptr_search);
 	    // Esta función retorna un valor...
@@ -348,42 +367,99 @@ Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols,uint8_t gridRow
  * en el orden adecuado... punteros, queridos punteros...
  * */
 void addTo_open_list(Cell_map_t *working_cell){
+	uint8_t j = 0;
+	// This is to search the element of the list with the same or greater G cost
+	while(working_cell->Fcost > (*(open_list + j))->Fcost){
+		j++;
+	}
+	/* There are 2 cases:
+	 * 1) The F cost is the same, in which case, will be necessary sort it according to the H cost
+	 * 2) The F cost is lower than compare element  */
 
+	// 1) Case: Same F cost, so, is necessary check others with the same F cost, and after, compare the H cost
+	if(working_cell->Fcost == (*(open_list + j))->Fcost){
+		// Check the H costs of the elements with the same F cost
+		while(working_cell->Hcost > (*(open_list + j))->Hcost){
+			j++;
+			// If we are checking a cell with another F cost, we substract 1 to 'j' and break while loop
+			if(working_cell->Fcost < (*(open_list + j))->Fcost){
+				j--;
+				break;
+			}
+			else{
+				__NOP();
+			}
+		}
+		/* Now, there are 2 cases:
+		 * 1.1) The H cost is the same, in which case the current open list element will be first
+		 * 1.2) The H cost is lower than compare element, and the working cell will be put before the compare element  */
+		// 1.1 Case: Same H cost, so, the first will be the original open list element
+		if(working_cell->Hcost == (*(open_list + j))->Hcost){
+			j++;
+			// Copy original
+			Cell_map_t *ptrCopy =  (*(open_list + j));
+			// Change of place the element
+			*(open_list+j) = working_cell;
+			// Save the next
+			Cell_map_t *ptrAux = *(open_list + j + 1);
+			j++;
+			while((*(open_list + j + 2))->typeOfCell != 'e'){
+				*(open_list + j) = ptrCopy;
+				ptrCopy = *(open_list + j + 1)
+				*(open_list + j + 1) = ptrAux;
+				ptrAux = *(open_list + j + 2);
+				j++;
+			}
+			// Actions to avoid lose information
+			*(open_list + j + 1) = ptrCopy;		// Save second to last real element
+			ptrCopy = *(open_list + j + 2);		// Save the empty cell
+			*(open_list + j + 2) = ptrAux;		// Last real element
+			*(open_list + j + 3) = ptrCopy;		// Now, this is the end od the array (empty cell)
+		}
+		// 1.2 Case: The H cost is lower than compare element
+		else{
+
+		}
+		while();
+	}
     // Escribir código...
-
+	open_list_index++;
 }
 
-/*
- * Entrega el puntero al elemento mas arriba de la lista open_list
- * */
+/** Entrega el puntero al elemento mas arriba de la lista open_list */
 Cell_map_t* get_next_item(void){
-    return *open_list; // Escribir código...
+    return *open_list;
 }
 
-/**
- * Esta función identifica cuantos elementos activos hay en la lista open_list */
+/** Esta función identifica cuantos elementos activos hay en la lista open_list */
 uint8_t get_count_item_open_list(void) {
 	Cell_map_t *ptr_element = *open_list;
 	uint8_t counter = 0;
 	while(ptr_element->typeOfCell != 'e'){
 		counter++;
-		// Sum 1 to the pointer to desplace at the next element
+		// Sum 1 to the pointer to displace at the next element
 		ptr_element++;
 	}
-    // Esta función retorna un valor...
 	return counter;
 }
-/*
- * Remueve el elemento indicado por el puntero working_cell, que además deberia ser el elemento
- * más arriba en la lista de open_list
- * */
+/** Remueve el elemento indicado por el puntero working_cell, que además debería ser el elemento más arriba en la lista de open_list */
 void removeFrom_open_list(Cell_map_t *working_cell){
 	Cell_map_t *ptr_element = *open_list;
 	uint8_t i = 0;
-	while(ptr_element->typeOfCell != 'e'){
-		*(open_list+i) = *(open_list+i+1);
+	while((ptr_element->typeOfCell != 'e')&&(ptr_element == working_cell)){
+		//*(open_list+i) = *(open_list+i+1);
 		i++;
 		ptr_element = *(open_list+i);
+	}
+	if(ptr_element == working_cell){
+		while(ptr_element->typeOfCell != 'e'){
+			*(open_list+i) = *(open_list+i+1);
+			i++;
+			ptr_element = *(open_list+i);
+		}
+	}
+	else{
+		writeMsg(&usartCmd, "Error: The parameter indicated in 'removeFrom_open_list' function doesn't exists.\n");
 	}
 }
 
@@ -492,7 +568,7 @@ void identify_cell_neighbours(Cell_map_t *grid_map, Cell_map_t *cell_to_check){
     	cell_to_check->neighbours[3] = NULL;
     	cell_to_check->neighbours[5] = NULL;
     }
-    else if(cell_to_check->coordinateX == MAP_GRID_COLS){
+    else if(cell_to_check->coordinateX == FLOOR_TILE_SIZE*(MAP_GRID_COLS-1)){
     	cell_to_check->neighbours[2] = NULL;
     	cell_to_check->neighbours[4] = NULL;
     	cell_to_check->neighbours[7] = NULL;
@@ -504,7 +580,7 @@ void identify_cell_neighbours(Cell_map_t *grid_map, Cell_map_t *cell_to_check){
     	cell_to_check->neighbours[1] = NULL;
     	cell_to_check->neighbours[2] = NULL;
     }
-    else if(cell_to_check->coordinateY == MAP_GRID_ROWS){
+    else if(cell_to_check->coordinateY == FLOOR_TILE_SIZE*(MAP_GRID_ROWS-1)){
     	cell_to_check->neighbours[5] = NULL;
     	cell_to_check->neighbours[6] = NULL;
     	cell_to_check->neighbours[7] = NULL;
@@ -558,7 +634,7 @@ void init_empty_grid_map(uint8_t gridCols, uint8_t gridRows, Cell_map_t *cellArr
  *
  * */
 void print_single_cell_info(Cell_map_t *singleCell) {
-//	printf("Cell's identification is:\n"
+//	printf("\nCell's identification is:\n"
 //			"Columna: %c\n"
 //			"Fila: %hu\n", singleCell->identifier[0], singleCell->identifier[1]);
 //	printf("The X & Y coordinates are: X = %hu, Y = %hu\n", singleCell->coordinateX, singleCell->coordinateY);
@@ -568,10 +644,15 @@ void print_single_cell_info(Cell_map_t *singleCell) {
 //	printf("The H cost is: %hu\n", singleCell->Hcost);
 //	printf("The F cost is: %hu\n", singleCell->Fcost);
 //
-//	printf("The parent's identifier is: %c%hu.\n\n", singleCell->ptr_parent->identifier[0], singleCell->ptr_parent->identifier[1]);
+//	if(singleCell->ptr_parent == NULL){
+//		printf("The parent's identifier is: NULL.\n");
+//	}
+//	else{
+//		printf("The parent's identifier is: %c%hu.\n\n", singleCell->ptr_parent->identifier[0], singleCell->ptr_parent->identifier[1]);
+//	}
 
 	// With the MCU
-	sprintf(bufferMsg,"Cell's identification is:\n"
+	sprintf(bufferMsg,"\nCell's identification is:\n"
 			"Columna: %c\n"
 			"Fila: %hu\n", singleCell->identifier[0], singleCell->identifier[1]);
 	writeMsg(&usartCmd, bufferMsg);
@@ -591,8 +672,13 @@ void print_single_cell_info(Cell_map_t *singleCell) {
 	sprintf(bufferMsg,"The F cost is: %.3f\n", singleCell->Fcost);
 	writeMsg(&usartCmd, bufferMsg);
 
-	sprintf(bufferMsg,"The parent's identifier is: %c%hu.\n\n", singleCell->ptr_parent->identifier[0], singleCell->ptr_parent->identifier[1]);
-	writeMsg(&usartCmd, bufferMsg);
+	if(singleCell->ptr_parent == NULL){
+		writeMsg(&usartCmd, "The parent's identifier is: NULL.\n");
+	}
+	else{
+		sprintf(bufferMsg,"The parent's identifier is: %c%hu.\n\n", singleCell->ptr_parent->identifier[0], singleCell->ptr_parent->identifier[1]);
+		writeMsg(&usartCmd, bufferMsg);
+	}
 }
 
 /**
@@ -630,21 +716,19 @@ void print_map(int8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray) {
 		writeChar(&usartCmd, c);
 		writeChar(&usartCmd, ' ');
 	}
+	//printf("\n");
+	writeChar(&usartCmd, '\n');
 }
 
 
-/**
- * Esta función debe recibir como parámetro el puntero a la ultima celda, que debe ser la "goal"
+/** Esta función debe recibir como parámetro el puntero a la última celda, que debe ser la "goal"
  * Con la información del ID_parent y entendiendo que todas las celdas visitadas
- * ya deben estar en el arreglo closed_list, se debe poder buscar la ruta y presentarla en pantalla
- *
- * */
+ * ya deben estar en el arreglo closed_list, se debe poder buscar la ruta y presentarla en pantalla */
 void print_path(Cell_map_t *working_cell){
-    // Escribir código...
 	Cell_map_t *ptr_backward_path = working_cell;
-	printf("The path is:\n");
+	printf("The path in backward is:\n");
 	while(ptr_backward_path != NULL){
-		printf("%c%hu", working_cell->identifier[0], working_cell->identifier[1]);
+		printf("%c%hu,", ptr_backward_path->identifier[0], ptr_backward_path->identifier[1]);
 		ptr_backward_path = ptr_backward_path->ptr_parent;
 	}
 }
@@ -652,7 +736,7 @@ void print_path(Cell_map_t *working_cell){
 /**
  * == A* algorithm ==
  * Aca es donde se hace toda la magia, todo lo de arriba es necesario, pero
- * el algoritmo se ejecuta es en esta funcion.
+ * el algoritmo se ejecuta es en esta función.
  *
  * Esta función es la descripción literal del pseudocodigo...
   * */

@@ -16,8 +16,6 @@
 
 #include "Single_Cell.h"
 
-#define FLOOR_TILE_SIZE 254		// Dimensions of the square fllor tile, in milimeters
-
 /* Prototipos privados */
 Cell_map_t init_empty_cell(Cell_map_t dummyCell);
 

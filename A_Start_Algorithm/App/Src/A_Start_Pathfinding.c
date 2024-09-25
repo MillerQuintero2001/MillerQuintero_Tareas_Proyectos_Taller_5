@@ -72,7 +72,7 @@ void print_map(int8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray);						/
 void populate_grid(char *row_data, uint8_t grid_row, Cell_map_t *grid_map);						// Ready
 Cell_map_t* get_cell_start(Cell_map_t *grid_map, uint8_t gridCols, uint8_t gridRows);			// Ready
 Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols, uint8_t gridRows);			// Ready
-void addTo_open_list(Cell_map_t *working_cell);
+void addTo_open_list(Cell_map_t *working_cell);													// Ready
 void identify_cell_neighbours(Cell_map_t *grid_map, Cell_map_t *cell_to_check);					// Ready
 float get_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell);								// Ready
 void update_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell);							// Ready
@@ -80,12 +80,12 @@ float get_G_cost(Cell_map_t *neighbour_cell, Cell_map_t *working_cell);							//
 void update_G_cost(Cell_map_t *parent_cell, Cell_map_t *working_cell);							// Ready
 float get_F_cost(Cell_map_t *working_cell);														// Ready
 void update_F_cost(Cell_map_t *working_cell);													// Ready
-void order_open_list(uint8_t index_last);
-void init_empty_openlist(Cell_map_t* empty_cell);												// Wrote but not checked
-uint8_t get_count_item_open_list(void);															// Wrote but not checked
-void removeFrom_open_list(Cell_map_t *working_cell);											// Wrote but not checked
-Cell_map_t* get_next_item(void);																// Wrote but not checked
-void addTo_closed_list(Cell_map_t *working_cell);
+void order_open_list(uint8_t index_last);														// Need more harder and extreme
+void init_empty_openlist(Cell_map_t* empty_cell);												// Ready
+uint8_t get_count_item_open_list(void);															// Ready
+void removeFrom_open_list(Cell_map_t *working_cell);											// Ready
+Cell_map_t* get_next_item(void);																// Ready
+void addTo_closed_list(Cell_map_t *working_cell);												// Wrote but not checked
 void print_path(Cell_map_t *working_cell);														// Wrote but not checked
 void A_star_algorithm(void);
 
@@ -119,7 +119,7 @@ int main(void) {
 	 * */
 	populate_grid(". . . . . G . . . . ", 0, grid_map_cells);
 	populate_grid(". . . . . . . . . . ", 1, grid_map_cells);
-	populate_grid(". . # # # # # # . . ", 2, grid_map_cells);
+	populate_grid(". . . # # # # # . . ", 2, grid_map_cells);
 	populate_grid(". # # . . . . # # . ", 3, grid_map_cells);
 	populate_grid(". # . . . . . . # . ", 4, grid_map_cells);
 	populate_grid(". . . . . . . . . . ", 5, grid_map_cells);
@@ -137,23 +137,40 @@ int main(void) {
 	/* YA FUNCIONA ESTA FUNCIÓN */
 	print_map(grid_cols, grid_rows, grid_map_cells);
 
-	/* 4. Ejecución del algoritmo A*
-	 * Al llamar esta funcion, que basicamente ejecuta el pseudocodigo, se debe
-	 * obtener al final la solución para la ruta.
-	 * */
-//	A_star_algorithm();
 
-/* == Espacio para pruebas simples... == */
-//	/* Incluye la celda "Start" en la lista open_list, utilizando para esto al puntero "current_cell" */
+	/* 4. Preparativos previos al A*, son:
+	 * 	- Definir los punteros de la meta y el punto de inicio.
+	 * 	- Agregar el puntero a la celda de inicio a la Open List
+	 * 	- Definir el H cost en cada una de las celdas del mapa ya que esta medida si es absoluta */
 	ptr_goal_cell = get_cell_goal(grid_map_cells, grid_cols, grid_rows);
 	ptr_start_cell = ptr_current_cell = get_cell_start(grid_map_cells, grid_cols, grid_rows);
 	addTo_open_list(ptr_start_cell);
+	for(uint8_t k = 0; k < MAP_CELLS_COUNT; k++){
+		update_H_cost(ptr_goal_cell, (grid_map_cells + k));
+	}
 
+	/* 5. Ejecución del algoritmo A*
+	 * Al llamar esta funcion, que basicamente ejecuta el pseudocodigo, se debe
+	 * obtener al final la solución para la ruta.
+	 * */
+	A_star_algorithm();
+
+/* == Espacio para pruebas simples... == */
+//	/* Incluye la celda "Start" en la lista open_list, utilizando para esto al puntero "current_cell" */
 	print_single_cell_info(ptr_current_cell);
 //	identify_cell_neighbours(grid_map_cells, &grid_map_cells[65]);
 //	update_H_cost(ptr_goal_cell, &grid_map_cells[57]);
 //	update_G_cost(ptr_current_cell, &grid_map_cells[57]);
 //	update_F_cost(&grid_map_cells[57]);
+//	update_H_cost(ptr_goal_cell, &grid_map_cells[58]);
+//	update_G_cost(ptr_current_cell, &grid_map_cells[58]);
+//	update_F_cost(&grid_map_cells[58]);
+//	update_H_cost(ptr_goal_cell, &grid_map_cells[56]);
+//	update_G_cost(ptr_current_cell, &grid_map_cells[56]);
+//	update_F_cost(&grid_map_cells[56]);
+//	update_H_cost(ptr_goal_cell, &grid_map_cells[22]);
+//	update_G_cost(ptr_current_cell, &grid_map_cells[22]);
+//	update_F_cost(&grid_map_cells[22]);
 //
 //	/* Test to check if the border cell's neighbours were well identified */
 //	// Corners:
@@ -173,8 +190,21 @@ int main(void) {
 //	identify_cell_neighbours(grid_map_cells, &grid_map_cells[73]);
 
 
-	addTo_open_list(&grid_map_cells[57]);
-	removeFrom_open_list(ptr_current_cell);
+//	addTo_open_list(&grid_map_cells[57]);
+//	//printf("The number of elements in the open list is %hu.\n", get_count_item_open_list());
+//	sprintf(bufferMsg, "The number of elements in the open list is %hu.\n", get_count_item_open_list());
+//	writeMsg(&usartCmd, bufferMsg);
+//
+//	//printf("The pointer's address is %u.\n",  (uintptr_t)get_next_item());
+//	sprintf(bufferMsg, "The pointer's address is %u.\n",  (uintptr_t)get_next_item());
+//	writeMsg(&usartCmd, bufferMsg);
+
+//	removeFrom_open_list(ptr_current_cell);
+//	addTo_open_list(&grid_map_cells[56]);
+//	addTo_open_list(&grid_map_cells[58]);
+//	addTo_open_list(&grid_map_cells[22]);
+//	removeFrom_open_list(&grid_map_cells[57]);
+//	removeFrom_open_list(*open_list);
 /* == Final de las pruebas simples... == */
 
 //	printf("END\n");
@@ -335,7 +365,7 @@ Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols, uint8_t gridRo
 	}
 	//If goal cell has been found
 	if(i < gridCols*gridRows){
-		ptr_search->Gcost = 0;
+		ptr_search->Gcost = 25000.00f;
 		ptr_search->Hcost = 0;
 		ptr_search->Fcost = get_F_cost(ptr_search);
 	    // Esta función retorna un valor...
@@ -367,63 +397,19 @@ Cell_map_t* get_cell_goal(Cell_map_t *grid_map, uint8_t gridCols, uint8_t gridRo
  * en el orden adecuado... punteros, queridos punteros...
  * */
 void addTo_open_list(Cell_map_t *working_cell){
-	uint8_t j = 0;
-	// This is to search the element of the list with the same or greater G cost
-	while(working_cell->Fcost > (*(open_list + j))->Fcost){
-		j++;
+	working_cell->typeOfCell = 'o';
+	// To introduce the new element to the list, we will first move the existing ones
+	for(uint8_t i = open_list_index; i > 0; i--){
+		*(open_list + i) = *(open_list + i - 1);
 	}
-	/* There are 2 cases:
-	 * 1) The F cost is the same, in which case, will be necessary sort it according to the H cost
-	 * 2) The F cost is lower than compare element  */
+	// Now, the first element is the element to introduce
+	*open_list = working_cell;
 
-	// 1) Case: Same F cost, so, is necessary check others with the same F cost, and after, compare the H cost
-	if(working_cell->Fcost == (*(open_list + j))->Fcost){
-		// Check the H costs of the elements with the same F cost
-		while(working_cell->Hcost > (*(open_list + j))->Hcost){
-			j++;
-			// If we are checking a cell with another F cost, we substract 1 to 'j' and break while loop
-			if(working_cell->Fcost < (*(open_list + j))->Fcost){
-				j--;
-				break;
-			}
-			else{
-				__NOP();
-			}
-		}
-		/* Now, there are 2 cases:
-		 * 1.1) The H cost is the same, in which case the current open list element will be first
-		 * 1.2) The H cost is lower than compare element, and the working cell will be put before the compare element  */
-		// 1.1 Case: Same H cost, so, the first will be the original open list element
-		if(working_cell->Hcost == (*(open_list + j))->Hcost){
-			j++;
-			// Copy original
-			Cell_map_t *ptrCopy =  (*(open_list + j));
-			// Change of place the element
-			*(open_list+j) = working_cell;
-			// Save the next
-			Cell_map_t *ptrAux = *(open_list + j + 1);
-			j++;
-			while((*(open_list + j + 2))->typeOfCell != 'e'){
-				*(open_list + j) = ptrCopy;
-				ptrCopy = *(open_list + j + 1)
-				*(open_list + j + 1) = ptrAux;
-				ptrAux = *(open_list + j + 2);
-				j++;
-			}
-			// Actions to avoid lose information
-			*(open_list + j + 1) = ptrCopy;		// Save second to last real element
-			ptrCopy = *(open_list + j + 2);		// Save the empty cell
-			*(open_list + j + 2) = ptrAux;		// Last real element
-			*(open_list + j + 3) = ptrCopy;		// Now, this is the end od the array (empty cell)
-		}
-		// 1.2 Case: The H cost is lower than compare element
-		else{
-
-		}
-		while();
-	}
-    // Escribir código...
+	// Sum 1 to the open list index
 	open_list_index++;
+
+	// Order the open list
+	order_open_list(open_list_index);
 }
 
 /** Entrega el puntero al elemento mas arriba de la lista open_list */
@@ -431,14 +417,14 @@ Cell_map_t* get_next_item(void){
     return *open_list;
 }
 
-/** Esta función identifica cuantos elementos activos hay en la lista open_list */
+/** Esta función identifica cuantos elementos activos hay en la lista open_list sin contar el elemento vacío del final */
 uint8_t get_count_item_open_list(void) {
 	Cell_map_t *ptr_element = *open_list;
 	uint8_t counter = 0;
 	while(ptr_element->typeOfCell != 'e'){
 		counter++;
 		// Sum 1 to the pointer to displace at the next element
-		ptr_element++;
+		ptr_element = *(open_list + counter);
 	}
 	return counter;
 }
@@ -446,8 +432,8 @@ uint8_t get_count_item_open_list(void) {
 void removeFrom_open_list(Cell_map_t *working_cell){
 	Cell_map_t *ptr_element = *open_list;
 	uint8_t i = 0;
-	while((ptr_element->typeOfCell != 'e')&&(ptr_element == working_cell)){
-		//*(open_list+i) = *(open_list+i+1);
+	// As long as the ptr element is different from the final empty cell or is not the element being searched for
+	while((ptr_element->typeOfCell != 'e')&&(ptr_element != working_cell)){
 		i++;
 		ptr_element = *(open_list+i);
 	}
@@ -457,19 +443,19 @@ void removeFrom_open_list(Cell_map_t *working_cell){
 			i++;
 			ptr_element = *(open_list+i);
 		}
+		*(open_list+i) = NULL;
 	}
 	else{
+		//printf("Error: The parameter indicated in 'removeFrom_open_list' function doesn't exists.\n");
 		writeMsg(&usartCmd, "Error: The parameter indicated in 'removeFrom_open_list' function doesn't exists.\n");
 	}
 }
 
-/*
- * Agrega el elemento pasado como parámetro (puntero) en la lista de elementos cerrados
- * */
+/** Agrega el elemento pasado como parámetro (puntero) en la lista de elementos cerrados */
 void addTo_closed_list(Cell_map_t *working_cell){
-
-    // Escribir código...
-
+	working_cell->typeOfCell = 'c';
+	closed_list[closed_list_index] = working_cell;
+	closed_list_index++;
 }
 
 /**
@@ -481,6 +467,7 @@ void addTo_closed_list(Cell_map_t *working_cell){
  * */
 void init_empty_openlist(Cell_map_t* empty_cell){
 	open_list[0] = empty_cell;
+	open_list_index++;
 }
 
 /**
@@ -490,9 +477,35 @@ void init_empty_openlist(Cell_map_t* empty_cell){
  * Esta función es "llamada" desde la función "addTo_open_list(...)"
  * */
 void order_open_list(uint8_t index_last){
-
-    // Escribir código...
-
+	Cell_map_t *ptrAux = *(open_list);
+	Cell_map_t *ptrCopy = NULL;
+	for(uint8_t i = 0; i < index_last; i++){
+		if (ptrAux->Fcost > (*(open_list + i + 1))->Fcost){
+			ptrCopy = *(open_list+ i + 1);
+			*(open_list + i + 1) = ptrAux;
+			*(open_list + i) = ptrCopy;
+		}
+		else if (ptrAux->Fcost == (*(open_list + i + 1))->Fcost){
+			uint8_t k = 0;
+			while(ptrAux->Fcost == (*(open_list + i + k + 1))->Fcost){
+				// If the H cost is greater or equal, then, swap the pointer's position
+				if (ptrAux->Hcost >= (*(open_list + i + k + 1))->Hcost){
+					ptrCopy = *(open_list+ i + k + 1);
+					*(open_list + i + k + 1) = ptrAux;
+					*(open_list + i + k) = ptrCopy;
+				}
+				// Otherwise, H cost is lower, so it goes first, and there is nothing to do, for that reason, the loop is break
+				else{
+					break;
+				}
+				k++;
+			}
+		}
+		// Then, there is nothing to do and is time to break the loop to finish with it
+		else{
+			break;
+		}
+	}
 }
 
 /**

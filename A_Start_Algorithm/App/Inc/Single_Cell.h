@@ -34,7 +34,8 @@ typedef struct Cell_map_t
 	uint8_t identifier[2];					// The identifier is an array with 2 elements, the column letter and row number
 	float coordinateX;						// X coordinate in the map
 	float coordinateY;						// Y coordinate in the map
-	char typeOfCell;						// Type of Cell, S = start, G = goal, . = empty walkable cell, # = obstacle, o = Open, c = Closed, e = empty no walkable cell
+	char typeOfCell;						/* Type of Cell, S = start, G = goal, . = empty walkable cell, # = obstacle, o = Open, c = Closed,
+											e = empty no walkable cell, * = path walkable cell */
 	float Gcost;							// Displacement distance from the start point to the cell itself
 	float Hcost;							// Distance between the particular cell and the target
 	float Fcost;							// Sum of G cost and H cost, F = G + H

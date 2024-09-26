@@ -87,7 +87,7 @@ void removeFrom_open_list(Cell_map_t *working_cell);											// Ready
 Cell_map_t* get_next_item(void);																// Ready
 void addTo_closed_list(Cell_map_t *working_cell);												// Wrote but not checked
 void print_path(Cell_map_t *working_cell);														// Wrote but not checked
-void A_star_algorithm(void);
+int A_star_algorithm(void);
 
 // Related with peripherals
 void initSystem(void);
@@ -119,11 +119,11 @@ int main(void) {
 	 * */
 	populate_grid(". . . . . G . . . . ", 0, grid_map_cells);
 	populate_grid(". . . . . . . . . . ", 1, grid_map_cells);
-	populate_grid(". . . # # # # # . . ", 2, grid_map_cells);
+	populate_grid(". . # # # # # # . . ", 2, grid_map_cells);
 	populate_grid(". # # . . . . # # . ", 3, grid_map_cells);
-	populate_grid(". # . . . . . . # . ", 4, grid_map_cells);
+	populate_grid("# # . . . . . . # # ", 4, grid_map_cells);
 	populate_grid(". . . . . . . . . . ", 5, grid_map_cells);
-	populate_grid(". . . . # . . . . . ", 6, grid_map_cells);
+	populate_grid(". . . . . . . . . . ", 6, grid_map_cells);
 	populate_grid(". . . . S . . . . . ", 7, grid_map_cells);
 
 	// Imprime la informacion más simple de todas las celdas del grid
@@ -135,18 +135,19 @@ int main(void) {
 	 * fue correctamente recibido
 	 * */
 	/* YA FUNCIONA ESTA FUNCIÓN */
+	ptr_goal_cell = get_cell_goal(grid_map_cells, grid_cols, grid_rows);
+	ptr_start_cell = ptr_current_cell = get_cell_start(grid_map_cells, grid_cols, grid_rows);
 	print_map(grid_cols, grid_rows, grid_map_cells);
 
 
 	/* 4. Preparativos previos al A*, son:
-	 * 	- Definir los punteros de la meta y el punto de inicio.
 	 * 	- Agregar el puntero a la celda de inicio a la Open List
-	 * 	- Definir el H cost en cada una de las celdas del mapa ya que esta medida si es absoluta */
-	ptr_goal_cell = get_cell_goal(grid_map_cells, grid_cols, grid_rows);
-	ptr_start_cell = ptr_current_cell = get_cell_start(grid_map_cells, grid_cols, grid_rows);
-	addTo_open_list(ptr_start_cell);
+	 * 	- Definir el H cost en cada una de las celdas del mapa ya que esta medida si es absoluta
+	 * 	- En el mismo ciclo de definir el H cost, identificar a los vecinos */
+	addTo_open_list(ptr_current_cell);
 	for(uint8_t k = 0; k < MAP_CELLS_COUNT; k++){
 		update_H_cost(ptr_goal_cell, (grid_map_cells + k));
+		identify_cell_neighbours(grid_map_cells, (grid_map_cells+k));
 	}
 
 	/* 5. Ejecución del algoritmo A*
@@ -155,9 +156,11 @@ int main(void) {
 	 * */
 	A_star_algorithm();
 
+	print_map(grid_cols, grid_rows, grid_map_cells);
+
 /* == Espacio para pruebas simples... == */
 //	/* Incluye la celda "Start" en la lista open_list, utilizando para esto al puntero "current_cell" */
-	print_single_cell_info(ptr_current_cell);
+//	print_single_cell_info(ptr_current_cell);
 //	identify_cell_neighbours(grid_map_cells, &grid_map_cells[65]);
 //	update_H_cost(ptr_goal_cell, &grid_map_cells[57]);
 //	update_G_cost(ptr_current_cell, &grid_map_cells[57]);
@@ -716,6 +719,8 @@ void print_cells_info(Cell_map_t *cellArray){
  * e imprimir los elementos (columnas) de cada fila
  * */
 void print_map(int8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray) {
+	ptr_goal_cell->typeOfCell = 'G';
+	ptr_start_cell->typeOfCell = 'S';
 	for(uint8_t j = 0; j < gridCols*gridRows; j++){
 		if((j%(gridCols)) == 0){
 			//printf("\n");
@@ -739,9 +744,18 @@ void print_map(int8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray) {
  * ya deben estar en el arreglo closed_list, se debe poder buscar la ruta y presentarla en pantalla */
 void print_path(Cell_map_t *working_cell){
 	Cell_map_t *ptr_backward_path = working_cell;
-	printf("The path in backward is:\n");
+//	printf("The path in backward is:\n");
+	writeMsg(&usartCmd, "The path in backward is:\n");
 	while(ptr_backward_path != NULL){
-		printf("%c%hu,", ptr_backward_path->identifier[0], ptr_backward_path->identifier[1]);
+		if ((ptr_backward_path->typeOfCell != 'G')&&(ptr_backward_path->typeOfCell != 'S')){
+			ptr_backward_path->typeOfCell = '*';
+		}
+		else{
+			__NOP();
+		}
+//		printf("\n%c%hu-> ,", ptr_backward_path->identifier[0], ptr_backward_path->identifier[1]);
+		sprintf(bufferMsg,"%c%hu->", ptr_backward_path->identifier[0], ptr_backward_path->identifier[1]);
+		writeMsg(&usartCmd, bufferMsg);
 		ptr_backward_path = ptr_backward_path->ptr_parent;
 	}
 }
@@ -753,9 +767,51 @@ void print_path(Cell_map_t *working_cell){
  *
  * Esta función es la descripción literal del pseudocodigo...
   * */
-void A_star_algorithm(void){
+int A_star_algorithm(void){
+	while(1){
+		// Check if the current cell pointer is the empty cell, it would mean that there is no walkable path to the goal
+		if (ptr_current_cell->typeOfCell == 'e'){
+//			printf("\nThere's no possible walkable path.\n")
+			writeMsg(&usartCmd, "There's no possible walkable path.\n");
+			return -1;
+		}
+		// Check if the goal has been reached to finish A* algorithm
+		else if (ptr_current_cell == ptr_goal_cell){
+//			printf("\nThe path has been found");
+			writeMsg(&usartCmd, "\nThe path has been found.\n");
+			print_path(ptr_current_cell);
+			return 0;
+		}
+		// Do the actions of exam neighbours and select the best candidate
+		else{
+			Cell_map_t *ptrNeighbour = NULL;
+			// Iterate neighbours
+			for(uint8_t j = 0; j < MAX_NEIGHBOURS; j++){
+				ptrNeighbour = ptr_current_cell->neighbours[j];
+				// Check if the neighbor isn't an obstacle or if isn't in the Closed List, furthermore, the new G cost is lower than the current one
+				if ((ptrNeighbour != NULL)&&(ptrNeighbour->typeOfCell != '#')&&(ptrNeighbour->typeOfCell != 'c')&&(get_G_cost(ptr_current_cell, ptrNeighbour) < ptrNeighbour->Gcost)){
+					update_G_cost(ptr_current_cell, ptrNeighbour);
+					update_F_cost(ptrNeighbour);
+					// Verify if the neighbour isn't in the Open List
+					if(ptrNeighbour->typeOfCell != 'o'){
+						addTo_open_list(ptrNeighbour);
+					}
+					else{
+						__NOP();
+					}
+				}
+				else{
+					__NOP();
+				}
+			}
 
-// Escribir código...
+			// With the best neighbour, is time to remove the current cell from the open list, and add it to the closed list
+			removeFrom_open_list(ptr_current_cell);
+			addTo_closed_list(ptr_current_cell);
+			// So, now the best neighbour selected, will be the currrent cell pointer and will be add to the open list.
+			ptr_current_cell = get_next_item();
+		}
+	}
 }
 
 

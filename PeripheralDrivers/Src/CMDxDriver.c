@@ -49,14 +49,15 @@ void commandConfig(uint8_t USARTport, uint8_t baudrate){
 		GPIO_Config(&handlerPinRX);
 
 		/* Configuración de la comunicación serial */
-		usartCmd.ptrUSARTx							= USART1;
-		usartCmd.USART_Config.USART_baudrate 		= baudrate;
-		usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-		usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
-		usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-		usartCmd.USART_Config.USART_mode			= USART_MODE_RXTX;
-		usartCmd.USART_Config.USART_enableIntRX		= USART_RX_INTERRUP_ENABLE;
-		usartCmd.USART_Config.USART_enableIntTX		= USART_TX_INTERRUP_DISABLE;
+		usartCmd.ptrUSARTx								= USART1;
+		usartCmd.USART_Config.USART_baudrate 			= baudrate;
+		usartCmd.USART_Config.USART_datasize			= USART_DATASIZE_8BIT;
+		usartCmd.USART_Config.USART_parity				= USART_PARITY_NONE;
+		usartCmd.USART_Config.USART_stopbits			= USART_STOPBIT_1;
+		usartCmd.USART_Config.USART_mode				= USART_MODE_RXTX;
+		usartCmd.USART_Config.USART_enableIntRX			= USART_RX_INTERRUP_ENABLE;
+		usartCmd.USART_Config.USART_enableIntTX			= USART_TX_INTERRUP_DISABLE;
+		usartCmd.USART_Config.USART_priorityInterrupt	= 6;
 		USART_Config(&usartCmd);
 	}
 
@@ -82,14 +83,15 @@ void commandConfig(uint8_t USARTport, uint8_t baudrate){
 		GPIO_Config(&handlerPinRX);
 
 		/* Configuración de la comunicación serial */
-		usartCmd.ptrUSARTx							= USART2;
-		usartCmd.USART_Config.USART_baudrate 		= baudrate;
-		usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-		usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
-		usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-		usartCmd.USART_Config.USART_mode			= USART_MODE_RXTX;
-		usartCmd.USART_Config.USART_enableIntRX		= USART_RX_INTERRUP_ENABLE;
-		usartCmd.USART_Config.USART_enableIntTX		= USART_TX_INTERRUP_DISABLE;
+		usartCmd.ptrUSARTx								= USART2;
+		usartCmd.USART_Config.USART_baudrate 			= baudrate;
+		usartCmd.USART_Config.USART_datasize			= USART_DATASIZE_8BIT;
+		usartCmd.USART_Config.USART_parity				= USART_PARITY_NONE;
+		usartCmd.USART_Config.USART_stopbits			= USART_STOPBIT_1;
+		usartCmd.USART_Config.USART_mode				= USART_MODE_RXTX;
+		usartCmd.USART_Config.USART_enableIntRX			= USART_RX_INTERRUP_ENABLE;
+		usartCmd.USART_Config.USART_enableIntTX			= USART_TX_INTERRUP_DISABLE;
+		usartCmd.USART_Config.USART_priorityInterrupt	= 6;
 		USART_Config(&usartCmd);
 	}
 
@@ -114,14 +116,15 @@ void commandConfig(uint8_t USARTport, uint8_t baudrate){
 		GPIO_Config(&handlerPinRX);
 
 		/* Configuración de la comunicación serial */
-		usartCmd.ptrUSARTx							= USART6;
-		usartCmd.USART_Config.USART_baudrate 		= baudrate;
-		usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-		usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
-		usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-		usartCmd.USART_Config.USART_mode			= USART_MODE_RXTX;
-		usartCmd.USART_Config.USART_enableIntRX		= USART_RX_INTERRUP_ENABLE;
-		usartCmd.USART_Config.USART_enableIntTX		= USART_TX_INTERRUP_DISABLE;
+		usartCmd.ptrUSARTx								= USART6;
+		usartCmd.USART_Config.USART_baudrate 			= baudrate;
+		usartCmd.USART_Config.USART_datasize			= USART_DATASIZE_8BIT;
+		usartCmd.USART_Config.USART_parity				= USART_PARITY_NONE;
+		usartCmd.USART_Config.USART_stopbits			= USART_STOPBIT_1;
+		usartCmd.USART_Config.USART_mode				= USART_MODE_RXTX;
+		usartCmd.USART_Config.USART_enableIntRX			= USART_RX_INTERRUP_ENABLE;
+		usartCmd.USART_Config.USART_enableIntTX			= USART_TX_INTERRUP_DISABLE;
+		usartCmd.USART_Config.USART_priorityInterrupt	= 6;
 		USART_Config(&usartCmd);
 	}
 
@@ -240,9 +243,10 @@ void commandBuild(bool use){
 			writeMsg(&usartCmd, "\nWrong command \n");
 		}
 		// Limpiamos los párametros
-		stringComplete = 0;
-		firstParameter = 0;
-		secondParameter = 0;
+		stringComplete = false;
+		firstParameter = 0.0f;
+		secondParameter = 0.0f;
+		thirdParameter = 0.0f;
 	}
 
 
@@ -371,6 +375,7 @@ void commandBuild(bool use){
 		stringComplete = false;
 		firstParameter = 0.0f;
 		secondParameter = 0.0f;
+		thirdParameter = 0.0f;
 	}
 
 	else{

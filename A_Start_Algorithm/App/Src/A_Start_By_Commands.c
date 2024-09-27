@@ -1,10 +1,9 @@
 /*
  ============================================================================
- Name        : A_star_pathfinding.c
- Author      : namontoy
- Version     :
- Copyright   : Programming to learn A*
- Description : Learning how to write my first A*...
+ Name        : A_Star_By_Commands.c
+ Author      : MillerQuintero2001
+ Version     : 2.0
+ Description : A* algorithm with map send by USART commands
  ============================================================================
  */
 
@@ -23,20 +22,8 @@
 #include "GPIOxDriver.h"
 #include "BasicTimer.h"
 #include "USARTxDriver.h"
+#include "MotorDriver.h"
 
-
-/* Definición de los handlers necesarios de los periféricos del MCU */
-
-// Elementos para el Blinky LED
-GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
-BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
-
-// Elementos para hacer la comunicación serial
-GPIO_Handler_t handlerPinTX = {0};				// Pin de transmisión de datos
-GPIO_Handler_t handlerPinRX = {0};				// Pin de recepción de datos
-USART_Handler_t usartCmd =  {0};				// Comunicación serial
-uint8_t usartData = 0; 						// Variable en la que se guarda el dato transmitido
-char bufferMsg[64] = {0}; 						// Buffer de datos como un arreglo de caracteres
 
 #define MAP_GRID_ROWS		8
 #define MAP_GRID_COLS		10
@@ -44,7 +31,25 @@ char bufferMsg[64] = {0}; 						// Buffer de datos como un arreglo de caracteres
 #define ROW_MAP_DATA_LEN	20
 #define MAX_NEIGHBOURS		8
 
-/* Elementos del sistema */
+#define STRAIGHT_LENGTH		FLOOR_TILE_SIZE
+#define DIAGONAL_LENGTH		359
+
+/* Definición de los handlers necesarios de los periféricos del MCU */
+// Elementos para el Blinky LED
+GPIO_Handler_t handlerBlinkyPin = 			{0}; // LED de estado del Pin A5
+BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
+
+// Elementos para hacer la comunicación serial
+GPIO_Handler_t handlerPinTX = {0};										// Pin de transmisión de datos
+GPIO_Handler_t handlerPinRX = {0};										// Pin de recepción de datos
+USART_Handler_t usartCmd =  {0};										// Comunicación serial
+uint8_t usartData = 0; 													// Variable en la que se guarda el dato transmitido
+char bufferMsg[64] = {0}; 												// Buffer de datos como un arreglo de caracteres
+char bufferReception[MAP_GRID_ROWS][ROW_MAP_DATA_LEN + 1] = {0};		// Buffer para guardar caracteres ingresados para el mapa
+uint8_t counterReception = 0;											// Contador de carácteres para la recepción
+
+
+/* Variables y elementos para A* */
 uint8_t grid_rows = MAP_GRID_ROWS;
 uint8_t grid_cols = MAP_GRID_COLS;
 
@@ -60,9 +65,13 @@ uint8_t open_list_index = 0;
 Cell_map_t* closed_list[MAP_CELLS_COUNT];
 uint8_t closed_list_index = 0;
 
-char* map_string[MAP_GRID_ROWS];
+char map_string[MAP_GRID_ROWS][ROW_MAP_DATA_LEN + 1];
+bool flagMap = false;
+uint8_t line = 0;
 
-/* Prototipos de las funciones del main */
+int8_t oppyIndicator = -1;
+
+/* Functions Proto-types */
 
 // Related with A* pathfinding
 void init_empty_grid_map(uint8_t gridCols, uint8_t gridRows, Cell_map_t *cellArray);			// Ready
@@ -80,139 +89,96 @@ float get_G_cost(Cell_map_t *neighbour_cell, Cell_map_t *working_cell);							//
 void update_G_cost(Cell_map_t *parent_cell, Cell_map_t *working_cell);							// Ready
 float get_F_cost(Cell_map_t *working_cell);														// Ready
 void update_F_cost(Cell_map_t *working_cell);													// Ready
-void order_open_list(uint8_t index_last);														// Need more harder and extreme test
+void order_open_list(uint8_t index_last);														// Need more harder and extreme
 void init_empty_openlist(Cell_map_t* empty_cell);												// Ready
 uint8_t get_count_item_open_list(void);															// Ready
 void removeFrom_open_list(Cell_map_t *working_cell);											// Ready
 Cell_map_t* get_next_item(void);																// Ready
-void addTo_closed_list(Cell_map_t *working_cell);												// Ready
-void print_path(Cell_map_t *working_cell);														// Ready
-int A_star_algorithm(void);																		// Need more harder and extreme test
+void addTo_closed_list(Cell_map_t *working_cell);												// Wrote but not checked
+void print_path(Cell_map_t *working_cell);														// Wrote but not checked
+int8_t A_star_algorithm(void);
 
 // Related with peripherals
 void initSystem(void);
+void catchMap(void);
+void oppyPath(void);
+
 
 /** Función que ejecuta paso a paso el algoritmo A* */
 int main(void) {
 
 	initSystem();
-	/* prints !!!Hello World!!! */
-	//printf("!!!Hello World!!!\n");
-	writeMsg(&usartCmd, "!!!Hello World!!!\n");
 
-	//printf("A* pathfinding\n");
-	writeMsg(&usartCmd, "A* pathfinding\n");
+	while(1){
+		catchMap();
 
-	/* 1. Crea todas las celdas vacias */
-	init_empty_grid_map(grid_cols, grid_rows, grid_map_cells);
+		if(flagMap){
 
-	/* Estoy creando un "objeto" tipo cell_amp, el cual estará siempre vacio, para pruebas */
-	empty_cell = create_cell(11,11);
+			//printf("A* pathfinding\n");
+			writeMsg(&usartCmd, "\nA* pathfinding.\n");
 
-	/* Inicializo todo el arreglo de punteros del open_list apuntando a la empty_cell */
-	init_empty_openlist(&empty_cell);
+			/* 1. Crea todas las celdas vacias */
+			init_empty_grid_map(grid_cols, grid_rows, grid_map_cells);
 
+			/* Estoy creando un "objeto" tipo cell_amp, el cual estará siempre vacio, para pruebas */
+			empty_cell = create_cell(11,11);
 
-	/* 2. Llena el mapa con la descripcion para el ejercicio
-	 * En el caso del MCU, el string se debe recibir por el puerto serial,
-	 * al igual que la indicación de a qué fila del mapa corresponde
-	 * */
-	populate_grid(". . . . . . . . . . ", 0, grid_map_cells);
-	populate_grid(". . . . . . . . . . ", 1, grid_map_cells);
-	populate_grid(". . . G . . . . . . ", 2, grid_map_cells);
-	populate_grid(". . # # # # . . . . ", 3, grid_map_cells);
-	populate_grid(". . . . . . . . . . ", 4, grid_map_cells);
-	populate_grid(". . . . . S . . . . ", 5, grid_map_cells);
-	populate_grid(". . . . . . . . . . ", 6, grid_map_cells);
-	populate_grid(". . . . . . . . . . ", 7, grid_map_cells);
-
-	// Imprime la informacion más simple de todas las celdas del grid
-	/* YA FUNCIONA ESTA FUNCIÓN */
-	//print_cells_info(grid_map_cells);
-
-	/* 3. Imprime en pantalla el mapa que se envió a por los comandos del USART,
-	 * para verificar que en efecto el sistema tiene el mapa correcto, o que el mapa
-	 * fue correctamente recibido
-	 * */
-	/* YA FUNCIONA ESTA FUNCIÓN */
-	ptr_goal_cell = get_cell_goal(grid_map_cells, grid_cols, grid_rows);
-	ptr_start_cell = ptr_current_cell = get_cell_start(grid_map_cells, grid_cols, grid_rows);
-	print_map(grid_cols, grid_rows, grid_map_cells);
+			/* Inicializo todo el arreglo de punteros del open_list apuntando a la empty_cell */
+			init_empty_openlist(&empty_cell);
 
 
-	/* 4. Preparativos previos al A*, son:
-	 * 	- Agregar el puntero a la celda de inicio a la Open List
-	 * 	- Definir el H cost en cada una de las celdas del mapa ya que esta medida si es absoluta
-	 * 	- En el mismo ciclo de definir el H cost, identificar a los vecinos */
-	addTo_open_list(ptr_current_cell);
-	for(uint8_t k = 0; k < MAP_CELLS_COUNT; k++){
-		update_H_cost(ptr_goal_cell, (grid_map_cells + k));
-		identify_cell_neighbours(grid_map_cells, (grid_map_cells+k));
+			/* 2. Llena el mapa con la descripcion para el ejercicio
+			 * En el caso del MCU, el string se debe recibir por el puerto serial,
+			 * al igual que la indicación de a qué fila del mapa corresponde
+			 * */
+			for(uint8_t j = 0; j < MAP_GRID_ROWS; j++){
+				populate_grid(map_string[j], j, grid_map_cells);
+			}
+
+			/* 3. Imprime en pantalla el mapa que se envió a por los comandos del USART,
+			 * para verificar que en efecto el sistema tiene el mapa correcto, o que el mapa
+			 * fue correctamente recibido */
+			ptr_goal_cell = get_cell_goal(grid_map_cells, grid_cols, grid_rows);
+			ptr_start_cell = ptr_current_cell = get_cell_start(grid_map_cells, grid_cols, grid_rows);
+			print_map(grid_cols, grid_rows, grid_map_cells);
+
+			/* 4. Preparativos previos al A*, son:
+			 * 	- Agregar el puntero a la celda de inicio a la Open List
+			 * 	- Definir el H cost en cada una de las celdas del mapa ya que esta medida si es absoluta
+			 * 	- En el mismo ciclo de definir el H cost, identificar a los vecinos */
+			addTo_open_list(ptr_current_cell);
+			for(uint8_t k = 0; k < MAP_CELLS_COUNT; k++){
+				update_H_cost(ptr_goal_cell, (grid_map_cells + k));
+				identify_cell_neighbours(grid_map_cells, (grid_map_cells+k));
+			}
+
+			/* 5. Ejecución del algoritmo A*
+			 * Al llamar esta funcion, que basicamente ejecuta el pseudocodigo, se debe
+			 * obtener al final la solución para la ruta.
+			 * */
+			oppyIndicator = A_star_algorithm();
+
+			print_map(grid_cols, grid_rows, grid_map_cells);
+
+		//	printf("END\n");
+			writeMsg(&usartCmd, "\nEND\n");
+			flagMap = false;
+		}
+
+
+		else{
+			__NOP();
+		}
+
+		if(oppyIndicator == -1){
+			writeMsg(&usartCmd, "\nThere's no path found, then, the Oppy remains still.\n");
+		}
+		else{
+			oppyPath();
+			oppyIndicator = -1;
+		}
+
 	}
-
-	/* 5. Ejecución del algoritmo A*
-	 * Al llamar esta funcion, que basicamente ejecuta el pseudocodigo, se debe
-	 * obtener al final la solución para la ruta.
-	 * */
-	A_star_algorithm();
-
-	print_map(grid_cols, grid_rows, grid_map_cells);
-
-/* == Espacio para pruebas simples... == */
-//	/* Incluye la celda "Start" en la lista open_list, utilizando para esto al puntero "current_cell" */
-//	print_single_cell_info(ptr_current_cell);
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[65]);
-//	update_H_cost(ptr_goal_cell, &grid_map_cells[57]);
-//	update_G_cost(ptr_current_cell, &grid_map_cells[57]);
-//	update_F_cost(&grid_map_cells[57]);
-//	update_H_cost(ptr_goal_cell, &grid_map_cells[58]);
-//	update_G_cost(ptr_current_cell, &grid_map_cells[58]);
-//	update_F_cost(&grid_map_cells[58]);
-//	update_H_cost(ptr_goal_cell, &grid_map_cells[56]);
-//	update_G_cost(ptr_current_cell, &grid_map_cells[56]);
-//	update_F_cost(&grid_map_cells[56]);
-//	update_H_cost(ptr_goal_cell, &grid_map_cells[22]);
-//	update_G_cost(ptr_current_cell, &grid_map_cells[22]);
-//	update_F_cost(&grid_map_cells[22]);
-//
-//	/* Test to check if the border cell's neighbours were well identified */
-//	// Corners:
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[0]);
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[9]);
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[70]);
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[79]);
-//
-//	// TODO: Generic borders
-//	// Up border
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[5]);
-//	// Left Border
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[20]);
-//	// Right border
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[39]);
-//	// Down border
-//	identify_cell_neighbours(grid_map_cells, &grid_map_cells[73]);
-
-
-//	addTo_open_list(&grid_map_cells[57]);
-//	//printf("The number of elements in the open list is %hu.\n", get_count_item_open_list());
-//	sprintf(bufferMsg, "The number of elements in the open list is %hu.\n", get_count_item_open_list());
-//	writeMsg(&usartCmd, bufferMsg);
-//
-//	//printf("The pointer's address is %u.\n",  (uintptr_t)get_next_item());
-//	sprintf(bufferMsg, "The pointer's address is %u.\n",  (uintptr_t)get_next_item());
-//	writeMsg(&usartCmd, bufferMsg);
-
-//	removeFrom_open_list(ptr_current_cell);
-//	addTo_open_list(&grid_map_cells[56]);
-//	addTo_open_list(&grid_map_cells[58]);
-//	addTo_open_list(&grid_map_cells[22]);
-//	removeFrom_open_list(&grid_map_cells[57]);
-//	removeFrom_open_list(*open_list);
-/* == Final de las pruebas simples... == */
-
-//	printf("END\n");
-	writeMsg(&usartCmd, "\nEND\n");
-
 	return 0;
 }
 
@@ -615,7 +581,7 @@ void identify_cell_neighbours(Cell_map_t *grid_map, Cell_map_t *cell_to_check){
 void populate_grid(char *row_data, uint8_t grid_row, Cell_map_t *grid_map){
 	uint8_t k = 0;
 	uint8_t index = 0;
-	while(k < (MAP_GRID_COLS*2)){
+	while(k < ROW_MAP_DATA_LEN){
 		if(*(row_data + k) != ' '){
 			(grid_map + index + grid_row*MAP_GRID_COLS)->typeOfCell = *(row_data + k);
 			index++;
@@ -766,7 +732,7 @@ void print_path(Cell_map_t *working_cell){
  *
  * Esta función es la descripción literal del pseudocodigo...
   * */
-int A_star_algorithm(void){
+int8_t A_star_algorithm(void){
 	while(1){
 		// Check if the current cell pointer is the empty cell, it would mean that there is no walkable path to the goal
 		if (ptr_current_cell->typeOfCell == 'e'){
@@ -787,7 +753,7 @@ int A_star_algorithm(void){
 			// Iterate neighbours
 			for(uint8_t j = 0; j < MAX_NEIGHBOURS; j++){
 				ptrNeighbour = ptr_current_cell->neighbours[j];
-				// Check if the neighbor isn't an obstacle or if isn't in the Closed List, furthermore, the new G cost is lower than the current one
+				// Check if the neighbor is valid and isn't an obstacle or if isn't in the Closed List, furthermore, the new G cost is lower than the current one
 				if ((ptrNeighbour != NULL)&&(ptrNeighbour->typeOfCell != '#')&&(ptrNeighbour->typeOfCell != 'c')&&(get_G_cost(ptr_current_cell, ptrNeighbour) < ptrNeighbour->Gcost)){
 					update_G_cost(ptr_current_cell, ptrNeighbour);
 					update_F_cost(ptrNeighbour);
@@ -817,7 +783,7 @@ int A_star_algorithm(void){
 
 /* ---			Funciones de los periféricos del MCU			--- */
 
-/** Función encargada de iniciar hardware */
+/** Function responsible for starting the hardware */
 void initSystem(void){
 
 	configPLL(100);
@@ -836,11 +802,12 @@ void initSystem(void){
 	// Pongo estado en alto
 	GPIO_WritePin(&handlerBlinkyPin, SET);
 	// Atributos para el Timer 2 del LED de estado
-	handlerBlinkyTimer.ptrTIMx								= TIM2;
+	handlerBlinkyTimer.ptrTIMx								= TIM4;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
+	handlerBlinkyTimer.TIMx_Config.TIMx_priorityInterrupt	= 6;
 	BasicTimer_Config(&handlerBlinkyTimer);
 	startBasicTimer(&handlerBlinkyTimer);
 	/* Fin del GPIO y Timer del LED de estado
@@ -863,20 +830,190 @@ void initSystem(void){
 	GPIO_Config(&handlerPinRX);
 
 	/* Configuración de la comunicación serial */
-	usartCmd.ptrUSARTx							= USART2;
-	usartCmd.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
-	usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-	usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
-	usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-	usartCmd.USART_Config.USART_mode			= USART_MODE_RXTX;
-	usartCmd.USART_Config.USART_enableIntRX		= USART_RX_INTERRUP_ENABLE;
-	usartCmd.USART_Config.USART_enableIntTX		= USART_TX_INTERRUP_DISABLE;
+	usartCmd.ptrUSARTx								= USART2;
+	usartCmd.USART_Config.USART_baudrate 			= USART_BAUDRATE_115200;
+	usartCmd.USART_Config.USART_datasize			= USART_DATASIZE_8BIT;
+	usartCmd.USART_Config.USART_parity				= USART_PARITY_NONE;
+	usartCmd.USART_Config.USART_stopbits			= USART_STOPBIT_1;
+	usartCmd.USART_Config.USART_mode				= USART_MODE_RXTX;
+	usartCmd.USART_Config.USART_enableIntRX			= USART_RX_INTERRUP_ENABLE;
+	usartCmd.USART_Config.USART_enableIntTX			= USART_TX_INTERRUP_DISABLE;
+	usartCmd.USART_Config.USART_priorityInterrupt	= 6;
 	USART_Config(&usartCmd);
+
+	configMotors();
 }
 
 
+/** Function to enter the map via serial port */
+void catchMap(void){
+	while(!flagMap){
+		if(usartData != '\0'){
+			bufferReception[line][counterReception] = usartData;
+			counterReception++;
+
+			// Aqui hacemmos la instrucción que detine la recepción del comando
+			if(usartData == '@'){
+				writeChar(&usartCmd, '\n');
+				//Sustituyo el último caracter de \r por un null
+				bufferReception[line][counterReception - 1] = '\0';
+				for(uint8_t n = 0; n < (ROW_MAP_DATA_LEN + 1); n++){
+					map_string[line][n] = bufferReception[line][n];
+				}
+				line++;
+				counterReception = 0;
+			}
+			else{
+				__NOP();
+			}
+
+			// Para borrar lo que se haya digitado en la terminal
+			if(usartData == '\b'){
+				counterReception--;
+				counterReception--;
+			}
+			else{
+				__NOP();
+			}
+
+			// Volvemos a null para terminar
+			usartData = '\0';
+			flagMap = (line == MAP_GRID_ROWS)? (true):(false);
+			line = (line == MAP_GRID_ROWS)? (0):(line);
+		}
+		else{
+			__NOP();
+		}
+	}
+}
+
+
+/** Function responsible for manage Oppy movement according to A* Algorithm */
+void oppyPath(void){
+
+	// In this block, we count how many cells are in the path founded
+	Cell_map_t *ptrAux = ptr_goal_cell;
+	uint8_t numberOfCells = 1;
+	while(ptrAux->ptr_parent != NULL){
+		numberOfCells++;
+		ptrAux = ptrAux->ptr_parent;
+	}
+	sprintf(bufferMsg, "The number of path cells is: %hu", numberOfCells);
+	writeMsg(&usartCmd, bufferMsg);
+
+	// Now, we create and array or pointers, to save the reference to each path cell, this process is saving in reverse, from the end to the begin.
+	Cell_map_t *ptrArray[numberOfCells];
+	ptrAux = ptr_goal_cell;
+	for(uint8_t i = numberOfCells; i > 0; i--){
+		ptrArray[i-1] = ptrAux;
+		ptrAux = ptrAux->ptr_parent;
+	}
+
+
+	Cell_map_t *ptrNext = NULL;
+
+	uint8_t dirIndicator = 0;
+
+	int16_t globalAngle = 0;
+	int16_t differentialAngle = 0;
+	differentialAngle++;
+
+	// Loop to move through the path, in begins in 1, because start cell doesn't count
+	for(uint8_t path = 1; path < numberOfCells; path++){
+		// Update the pointers
+		ptrAux = ptrArray[path-1];
+		ptrNext = ptrArray[path];
+
+		// This loop is to get the direction indicator
+		for(uint j = 0; j < MAX_NEIGHBOURS; j++){
+			if(ptrAux->neighbours[j] == ptrNext){
+				dirIndicator = j;
+				break;
+			}
+			else{
+				__NOP();
+			}
+		}
+
+		// Switch-case block to do the movement according to the direction indicator
+		switch (dirIndicator) {
+			// 0. Diagonal left above
+			case 0: {
+				differentialAngle = (abs(45 - globalAngle) > 180) ? ((45 - globalAngle) + 360):(45 - globalAngle);
+				//rotateOppy(differentialAngle);
+				globalAngle = 45;
+				//pathSegment(DIAGONAL_LENGTH);
+				break;
+			}
+			// 1. Above
+			case 1: {
+				differentialAngle = (abs(0 - globalAngle) > 180) ? ((0 - globalAngle) + 360):(0 - globalAngle);
+				//rotateOppy(differentialAngle);
+				globalAngle = 0;
+				//pathSegment(STRAIGHT_LENGTH);
+				break;
+			}
+			// 2. Diagonal right above
+			case 2: {
+				differentialAngle = (abs(-45 - globalAngle) > 180) ? ((-45 - globalAngle) + 360):(-45 - globalAngle);
+				//rotateOppy(differentialAngle);
+				globalAngle = -45;
+				//pathSegment(DIAGONAL_LENGTH);
+				break;
+			}
+			// 3. Left
+			case 3: {
+				differentialAngle = (abs(90 - globalAngle) > 180) ? ((90 - globalAngle) + 360):(90 - globalAngle);
+				//rotateOppy(differentialAngle);
+				globalAngle = 90;
+				//pathSegment(STRAIGHT_LENGTH);
+				break;
+			}
+			// 4. Right
+			case 4: {
+				differentialAngle = (abs(-90 - globalAngle) > 180) ? ((-90 - globalAngle) + 360):(-90 - globalAngle);
+				//rotateOppy(differentialAngle);
+				globalAngle = -90;
+				//pathSegment(STRAIGHT_LENGTH);
+				break;
+			}
+			// 5. Diagonal left below
+			case 5: {
+				differentialAngle = (abs(135 - globalAngle) > 180) ? ((135 - globalAngle) + 360):(135 - globalAngle);
+				//rotateOppy(differentialAngle);
+				globalAngle = 135;
+				//pathSegment(DIAGONAL_LENGTH);
+				break;
+			}
+			// 6. Below
+			case 6: {
+				differentialAngle = (globalAngle < 0) ? (-180 - globalAngle):(180 - globalAngle);
+				//rotateOppy(differentialAngle);
+				globalAngle = 180;
+				//pathSegment(STRAIGHT_LENGTH);
+				break;
+			}
+			// 7. Diagonal right below
+			case 7: {
+				differentialAngle = (abs(-135 - globalAngle) > 180) ? ((-135 - globalAngle) + 360):(-135 - globalAngle);
+				//rotateOppy(differentialAngle);
+				globalAngle = -135;
+				//pathSegment(DIAGONAL_LENGTH);
+				break;
+			}
+			default:{
+				__NOP();
+				break;
+			}
+		}
+	}
+
+	// Finally, on the gol, Oppy rotates -globalAngle to set up itself to default orientation
+	//rotateOppy(-globalAngle);
+}
+
 /** Interrupción del timer blinky LED*/
-void BasicTimer2_Callback(void){
+void BasicTimer4_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin);
 }
 

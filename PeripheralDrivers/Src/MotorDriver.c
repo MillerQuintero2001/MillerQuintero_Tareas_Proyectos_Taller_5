@@ -6,7 +6,6 @@
  */
 
 #include "MotorDriver.h"
-#include "CMDxDriver.h"
 #include "SysTickDriver.h"
 
 /* Inicializo variables y elementos propios del driver */
@@ -147,8 +146,9 @@ void configMotors(void){
 	handlerPinIntRight.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
 	GPIO_Config(&handlerPinIntRight);
 
-	handlerIntRight.edgeType     	= EXTERNAL_INTERRUPT_BOTH_EDGE;
-	handlerIntRight.pGPIOHandler 	= &handlerPinIntRight;
+	handlerIntRight.edgeType     		= EXTERNAL_INTERRUPT_BOTH_EDGE;
+	handlerIntRight.priorityInterrupt	= 6;
+	handlerIntRight.pGPIOHandler 		= &handlerPinIntRight;
 	extInt_Config(&handlerIntRight);
 
 	// Encoder izquierda (azul)
@@ -159,8 +159,9 @@ void configMotors(void){
 	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
 	GPIO_Config(&handlerPinIntLeft);
 
-	handlerIntLeft.edgeType     	= EXTERNAL_INTERRUPT_BOTH_EDGE;
-	handlerIntLeft.pGPIOHandler 	= &handlerPinIntLeft;
+	handlerIntLeft.edgeType     		= EXTERNAL_INTERRUPT_BOTH_EDGE;
+	handlerIntLeft.priorityInterrupt	= 6;
+	handlerIntLeft.pGPIOHandler 		= &handlerPinIntLeft;
 	extInt_Config(&handlerIntLeft);
 
 	// Sensor de distancia infrarrrojo
@@ -170,8 +171,9 @@ void configMotors(void){
 	handlerPinIntDistance.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
 	GPIO_Config(&handlerPinIntDistance);
 
-	handlerIntDistance.edgeType		= EXTERNAL_INTERRUPT_RISING_EDGE;
-	handlerIntDistance.pGPIOHandler	= &handlerPinIntDistance;
+	handlerIntDistance.edgeType				= EXTERNAL_INTERRUPT_RISING_EDGE;
+	handlerIntDistance.priorityInterrupt	= 6;
+	handlerIntDistance.pGPIOHandler			= &handlerPinIntDistance;
 	extInt_Config(&handlerIntDistance);
 }
 
@@ -231,6 +233,19 @@ void stopMove(void){
 	counterIntLeft = 0;
 }
 
+/** FUnción para desplazar el Oppy en un segmento indicado para el A* pathfinding */
+void pathSegment(uint16_t distance_in_mm){
+	defaultMove();
+	uint32_t goalInterrupts = interruptsRev*((float)(distance_in_mm)/wheelPerimeter);
+	counterIntRight = 0;
+	counterIntLeft = 0;
+	startMove();
+	while((counterIntRight < goalInterrupts)&&(counterIntLeft < goalInterrupts)&&(flagMove)){
+		__NOP();
+	}
+	stopMove();
+}
+
 /** Función para realizar un recorrido en linea recta con control */
 void straightLine(uint16_t distance_in_mm){
 	defaultMove();
@@ -276,7 +291,7 @@ void straightLine(uint16_t distance_in_mm){
 		delay_ms(20);
 	}
 	if(flagMove == false){
-		writeMsg(&usartCmd, "Oppy forced to stop!\n");
+		//writeMsg(&usartCmd, "Oppy forced to stop!\n");
 		stopMove();
 	}
 	else{
@@ -284,6 +299,35 @@ void straightLine(uint16_t distance_in_mm){
 	}
 	updateDuttyCycle(&handlerPwmRight, dutty);
 	updateDuttyCycle(&handlerPwmLeft, dutty);
+}
+
+/** Función para rotar sin indicar dirección */
+void rotateOppy(int16_t degrees){
+	stopMove();
+	defaultMove();
+	if(degrees < 0){
+		// Cambiamos la polaridad del motor del lado derecho (amarillo)
+		setPolarity(&handlerPwmRight,PWM_POLARITY_ACTIVE_LOW);
+		GPIO_WritePin(&handlerDirRight, MOTOR_BACK);
+	}
+	else if(degrees > 0){
+		// Cambiamos la polaridad del motor del lado izquierdo (azul)
+		setPolarity(&handlerPwmLeft,PWM_POLARITY_ACTIVE_LOW);
+		GPIO_WritePin(&handlerDirLeft, MOTOR_BACK);
+	}
+	else{
+		__NOP();
+	}
+	// Calculamos la cantidad de interrupciones para conseguir la rotación
+	uint16_t goalInterrupts = (uint16_t)(((float)interruptsRev)*(((float)(degrees))/360.0f)*(distanceAxis/wheelDiameter));
+	counterIntRight = 0;
+	counterIntLeft = 0;
+	startMove();
+	// Hacemos un ciclo que no haga nada hasta alcanzar las interrupciones
+	while((counterIntRight < goalInterrupts)&&(counterIntLeft < goalInterrupts)){
+		__NOP();
+	}
+	stopMove();
 }
 
 /** Función para rotar */

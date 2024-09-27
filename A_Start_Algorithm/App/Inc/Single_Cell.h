@@ -18,7 +18,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define FLOOR_TILE_SIZE 254		// Dimensions of the square floor tile, in milimeters
+#define FLOOR_TILE_SIZE 	253					// Dimensions of the square floor tile, in milimeters
+#define STRAIGHT_LENGTH		FLOOR_TILE_SIZE		// Distance in straight line between cells
+#define DIAGONAL_LENGTH		358					// Distance in diagonal line between cells
 
 /* Esta estructura "describe" todos los elementos y caracteristicas de una celda X,Y
  * del mapa, como por ejemplo:

@@ -101,7 +101,7 @@ void configMotors(void){
 	handlerPwmLeft.PWMx_Config.PWMx_Channel	   		= PWM_CHANNEL_2;
 	handlerPwmLeft.PWMx_Config.PWMx_Prescaler		= BTIMER_PLL_100MHz_SPEED_1us;
 	handlerPwmLeft.PWMx_Config.PWMx_Period	    	= period;
-	handlerPwmLeft.PWMx_Config.PWMx_DuttyCicle		= dutty;
+	handlerPwmLeft.PWMx_Config.PWMx_DuttyCicle		= dutty + 900;
 	handlerPwmLeft.PWMx_Config.PWMx_Polarity		= PWM_POLARITY_ACTIVE_HIGH;
 	pwm_Config(&handlerPwmLeft);
 
@@ -319,7 +319,7 @@ void rotateOppy(int16_t degrees){
 		__NOP();
 	}
 	// Calculamos la cantidad de interrupciones para conseguir la rotación
-	uint16_t goalInterrupts = (uint16_t)(((float)interruptsRev)*(((float)(degrees))/360.0f)*(distanceAxis/wheelDiameter));
+	uint16_t goalInterrupts = (uint16_t)(((float)interruptsRev)*(((float)(abs((int)degrees)))/360.0f)*(distanceAxis/wheelDiameter));
 	counterIntRight = 0;
 	counterIntLeft = 0;
 	startMove();

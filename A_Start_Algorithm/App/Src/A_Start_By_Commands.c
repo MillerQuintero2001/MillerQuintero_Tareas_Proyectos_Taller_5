@@ -205,7 +205,8 @@ float get_H_cost(Cell_map_t *goal_cell, Cell_map_t *working_cell){
 	}
 
 	else{
-		printf("Error updating the H cost.\n");
+		//printf("Error updating the H cost.\n");
+		writeMsg(&usartCmd, "Error updating the H cost.\n");
 		return 0.00f;
 	}
 }
@@ -242,7 +243,8 @@ float get_G_cost(Cell_map_t *neighbour_cell, Cell_map_t *working_cell){
 		return aux_result;
 	}
 	else{
-		printf("Error updating the G cost.\n");
+		//printf("Error updating the G cost.\n");
+		writeMsg(&usartCmd, "Error updating the G cost.\n");
 		return 0.00f;
 	}
 }

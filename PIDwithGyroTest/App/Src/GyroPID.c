@@ -25,7 +25,6 @@
 #include "PLLDriver.h"
 #include "ExtiDriver.h"
 #include "I2CDriver.h"
-#include "SysTickDriver.h"
 
 #include "CMDxDriver.h"
 #include "MotorDriver.h"
@@ -63,7 +62,7 @@ float currentDistanceX = 0.0f;
 float currentDistanceY = 0.0f;
 
 float duttyBaseRight = 12000.00f;
-float duttyBaseLeft = 12700.00f;
+float duttyBaseLeft = 12800.00f;
 uint8_t sideIndicator = 0;
 uint8_t sideGoal = 0;
 uint8_t direction = 0; // Variable to specify if the the square direction will be clock wise = 0, or counter clock wise = 1;
@@ -214,8 +213,8 @@ void initSystem(void){
 	commandConfig(CMD_USART1, USART_BAUDRATE_19200);
 
 	configMotors();
-	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
-	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
+//	updateDuttyCycle(&handlerPwmRight, (uint16_t)duttyBaseRight);
+//	updateDuttyCycle(&handlerPwmLeft, (uint16_t)duttyBaseLeft);
 
 	configMPU6050();
 
@@ -389,8 +388,7 @@ void commandx3(void){
 }
 
 void commandx4(void){
-	sprintf(bufferMandar, "%.3f\t%.3f\n",sinf(firstParameter*M_PI/180.0f),cosf(secondParameter*M_PI/180.0f));
-	writeMsg(&usartCmd, bufferMandar);
+	stopMove();
 }
 
 void commandx5(void){

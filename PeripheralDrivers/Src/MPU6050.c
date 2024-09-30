@@ -14,6 +14,12 @@ I2C_Handler_t handlerAccelerometer = {0};
 uint8_t i2cBuffer = 0;
 uint8_t arraySaveData[2] = {0};
 
+// Elementos de muestreo para calcular un offset
+BasicTimer_Handler_t handlerSampleTimer = {0};
+uint16_t counterSamples = 0;
+float sumAngularVelocity = 0.0f;
+bool flagTakeOffset = false;
+bool flagData = false;
 
 /** Función que inicializa el hardware del MPU6050 */
 void configMPU6050(void){
@@ -49,6 +55,13 @@ void configMPU6050(void){
 
 	// Hacemos un primer reset del sensor para asegurar que funcione a la primera
 	i2c_writeSingleRegister(&handlerAccelerometer, PWR_MGMT_1, 0x00);
+
+	handlerSampleTimer.ptrTIMx								= TIM4;
+	handlerSampleTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
+	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
+	handlerSampleTimer.TIMx_Config.TIMx_period				= 200;
+	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
+	BasicTimer_Config(&handlerSampleTimer);
 }
 
 
@@ -70,11 +83,39 @@ float getGyroscopeData(void){
 
 /** Función que calcula el offset para calibrar los datos del giroscopio */
 float getGyroscopeOffset(uint32_t samples){
-	double sum = 0.0f;
-	uint32_t counter = 0;
-	while(counter < samples){
-		sum += getGyroscopeData();
-		counter++;
+	flagTakeOffset = true;
+	float offsetAngularVelocity = 0.0f;
+	startBasicTimer(&handlerSampleTimer);
+	while(!(counterSamples >= samples)){
+		__NOP();
 	}
-	return sum/((float)counter);
+	offsetAngularVelocity = sumAngularVelocity/((float)counterSamples);
+	// We verify if the offset is not appropiate
+	if((fabs(offsetAngularVelocity) >= 0.85f)&&(fabs(offsetAngularVelocity) <= 0.65f)){
+		// Then, We repeat the process again
+		counterSamples = 0;
+		sumAngularVelocity = 0.0f;
+		getGyroscopeOffset(samples);
+	}
+	else{
+		// The offset angle is correct
+		stopBasicTimer(&handlerSampleTimer);
+		counterSamples = 0;
+		sumAngularVelocity = 0.0f;
+		flagTakeOffset = false;
+	}
+	return offsetAngularVelocity;
+}
+
+
+/* Timer Callback for Samples */
+void BasicTimer4_Callback(void){
+	if(flagTakeOffset){
+		counterSamples++;
+		// Gyroscope data is in °/s
+		sumAngularVelocity += getGyroscopeData();
+	}
+	else{
+		flagData = true;
+	}
 }

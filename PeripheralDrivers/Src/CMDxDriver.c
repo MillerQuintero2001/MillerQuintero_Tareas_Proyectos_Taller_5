@@ -335,7 +335,7 @@ void commandBuild(bool use){
 			writeMsg(&usartCmd, "\nCMD: Line \n");
 			if((1 <= (uint16_t)firstParameter)&&((uint16_t)firstParameter <= 65535)){
 				writeMsg(&usartCmd, "Oppy is doing a straight line \n");
-				straightLine((uint16_t)firstParameter);
+				pathSegment((uint16_t)firstParameter);
 			}
 			else{
 				writeMsg(&usartCmd, "Wrong distance, remember, only positive integers between 1 and 65535 \n");

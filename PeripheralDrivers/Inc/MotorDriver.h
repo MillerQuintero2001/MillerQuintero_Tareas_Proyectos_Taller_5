@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <stm32f4xx.h>
 
@@ -19,8 +20,6 @@
 #include "BasicTimer.h"
 #include "ExtiDriver.h"
 #include "PwmDriver.h"
-#include "SysTickDriver.h"
-#include "math.h"
 
 /* Macrodefiniciones para las configuraciones */
 #define MOTOR_ON		0		// Debido a que los optoacopladores tienen resistencia Pull-Up la señal se invierte para el enable
@@ -47,10 +46,10 @@ void defaultMove(void);
 void startMove(void);
 void stopMove(void);
 void pathSegment(uint16_t distance_in_mm);
-void straightLine(uint16_t distance_in_mm);
+void configPID(float kp, float ti, float td, float ts);
+void straightLinePID(uint16_t distance_in_mm);
 void rotateOppy(int16_t degrees);
 void rotation(uint8_t direction, uint16_t degrees);
 void square(uint8_t direction, uint16_t side_in_mm);
-uint16_t constraint(uint16_t duttyInput);
 
 #endif /* MOTORDRIVER_H_ */

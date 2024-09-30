@@ -10,10 +10,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <math.h>
 
 #include <stm32f4xx.h>
 
 #include "GPIOxDriver.h"
+#include "BasicTimer.h"
 #include "I2CDriver.h"
 
 /* Macrodefinicion para los registros */
@@ -32,6 +35,11 @@
 #define GYRO_ZOUT_L		71 // 0X48
 #define PWR_MGMT_1		107
 #define WHO_AM_I		117
+
+/* Important Global Variables */
+extern BasicTimer_Handler_t handlerSampleTimer;
+extern bool flagTakeOffset;
+extern bool flagData;
 
 /* Prototipos de las funciones */
 void configMPU6050(void);

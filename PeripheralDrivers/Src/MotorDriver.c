@@ -6,7 +6,7 @@
  */
 
 #include "MotorDriver.h"
-#include "SysTickDriver.h"
+#include "MPU6050.h"
 
 /* Inicializo variables y elementos propios del driver */
 
@@ -30,21 +30,33 @@ GPIO_Handler_t handlerPinIntLeft   	= {0};
 EXTI_Config_t handlerIntDistance 		= {0};
 GPIO_Handler_t handlerPinIntDistance 	= {0};
 
-// Variables generales
+// Variables generales del Oppy
 bool flagMove = false;
 uint32_t counterIntRight = 0;
 uint32_t counterIntLeft = 0;
 uint16_t period = 40000;
-uint16_t dutty = 12000;
+uint16_t duttyBaseRight = 12000;
+uint16_t duttyBaseLeft = 12925;
 uint8_t interruptsRev = 120;			// Interrupciones por revolución del encoder (Depende de las aberturas del encoder y los flancos)
-float duttyChange = 100.00f;
-//float duttyChangeRight = 10.00;		// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
-//float duttyChangeLeft = 2.00;			// Cambio porcentual de dutty mínimo, (en este caso sería 2%)
 float wheelDiameter = 51.725f;			// Diámetro promedio de las ruedas
 float wheelPerimeter = M_PI*51.725f;	// Perímetro con promedio diámetro de las ruedas en milímetros
 float distanceAxis = 108.00f;			// Distance entre ruedas (eje) (anteriormente era 109 mm)
 float duttyWheels[2] = {0};
 
+// Variables relacionadas con el PID
+float q0 = 0.0f;					// Constante de PID discreto
+float q1 = 0.0f;					// Constante de PID discreto
+float q2 = 0.0f;					// Constante de PID discreto
+float u_control = 0.0f; 			// Acción de control actual
+float u_1_control = 0.0f;			// Accioń de control previadutty
+float error = 0.0f;					// Error actual
+float error_1 = 0.0f;				// Error una muestra antes
+float error_2 = 0.0f;				// Error dos muestras antes
+float timeSample = 0.020f;			// Tiempo de muestreo [s]
+
+/* Private functions prototypes */
+void constraintControlPID(float* uControl, float maxChange);
+void controlActionPID(void);
 
 /** Función de hacer una configuración por defecto, esta es con motores en off, frecuencia 25Hz y Dutty de 20% */
 void configMotors(void){
@@ -59,7 +71,7 @@ void configMotors(void){
 	handlerPwmRight.PWMx_Config.PWMx_Channel	    = PWM_CHANNEL_1;
 	handlerPwmRight.PWMx_Config.PWMx_Prescaler 		= BTIMER_PLL_100MHz_SPEED_1us;
 	handlerPwmRight.PWMx_Config.PWMx_Period	   		= period;
-	handlerPwmRight.PWMx_Config.PWMx_DuttyCicle		= dutty;
+	handlerPwmRight.PWMx_Config.PWMx_DuttyCicle		= duttyBaseRight;
 	handlerPwmRight.PWMx_Config.PWMx_Polarity		= PWM_POLARITY_ACTIVE_HIGH;
 	pwm_Config(&handlerPwmRight);
 
@@ -101,7 +113,7 @@ void configMotors(void){
 	handlerPwmLeft.PWMx_Config.PWMx_Channel	   		= PWM_CHANNEL_2;
 	handlerPwmLeft.PWMx_Config.PWMx_Prescaler		= BTIMER_PLL_100MHz_SPEED_1us;
 	handlerPwmLeft.PWMx_Config.PWMx_Period	    	= period;
-	handlerPwmLeft.PWMx_Config.PWMx_DuttyCicle		= dutty + 900;
+	handlerPwmLeft.PWMx_Config.PWMx_DuttyCicle		= duttyBaseLeft;
 	handlerPwmLeft.PWMx_Config.PWMx_Polarity		= PWM_POLARITY_ACTIVE_HIGH;
 	pwm_Config(&handlerPwmLeft);
 
@@ -181,12 +193,12 @@ void configMotors(void){
 /** Función encargada de modificar la frecuencia y %duttyCycle de ambos motores */
 void setSignals(uint8_t freqHz, uint8_t duttyPer){
 	period = (uint16_t)(1000000.00f*(1.00f/((float)freqHz)));
-	dutty = (uint16_t)(period*(((float)duttyPer)/100.00f));
-	duttyChange = ((float)period)*0.0025f;
+	duttyBaseRight = (uint16_t)(period*(((float)duttyPer)/100.00f));
+	duttyBaseLeft = (uint16_t)(period*(((float)duttyPer)/100.00f));
 	updatePeriod(&handlerPwmRight, period);
 	updatePeriod(&handlerPwmLeft, period);
-	updateDuttyCycle(&handlerPwmRight, dutty);
-	updateDuttyCycle(&handlerPwmLeft, dutty);
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 }
 
 /** Función encargada de establecer la velocidad de cada rueda en mm/s */
@@ -233,7 +245,8 @@ void stopMove(void){
 	counterIntLeft = 0;
 }
 
-/** FUnción para desplazar el Oppy en un segmento indicado para el A* pathfinding */
+
+/** Función para desplazar el Oppy en un segmento indicado para el A* pathfinding */
 void pathSegment(uint16_t distance_in_mm){
 	defaultMove();
 	uint32_t goalInterrupts = interruptsRev*((float)(distance_in_mm)/wheelPerimeter);
@@ -246,60 +259,81 @@ void pathSegment(uint16_t distance_in_mm){
 	stopMove();
 }
 
-/** Función para realizar un recorrido en linea recta con control */
-void straightLine(uint16_t distance_in_mm){
-	defaultMove();
+/** Function that configures PID with proportional constant 'kp', Integrative Time 'ti', Derivative Time 'ti' and Time Sample 'ts' */
+void configPID(float kp, float ti, float td, float ts){
+	timeSample = ts;
+	q0 = kp*(1.0f+(ts/(2.0f*ti))+(td/ts));
+	q1 = -kp*(1.0f-(ts/(2.0f*ti))+((2.0f*td)/ts));
+	q2 = (kp*td)/ts;
+	handlerSampleTimer.TIMx_Config.TIMx_period = ts;
+	BasicTimer_Config(&handlerSampleTimer);
+}
+
+/* Function to do a straight line with PID angle*/
+void straightLinePID(uint16_t distance_in_mm){
+	// First, initialize the varibles employeed
 	uint32_t goalInterrupts = interruptsRev*((float)(distance_in_mm)/wheelPerimeter);
-	uint32_t ticksRight = 0;
-	uint32_t ticksLeft = 0;
-	uint32_t differenceRight = 0;
-	uint32_t differenceLeft = 0;
+	float dataAngle = 0.00f;
+	float previousDataAngle = 0.00f;
+	float offsetAngularVelocity = getGyroscopeOffset(200);
+	float totalCurrentAngle = 0.00f;
+	float differentialCurrentAngle = 0.00f;
+	uint32_t counterPreviousRight = 0;
+	uint32_t counterPreviousLeft = 0;
+	float differentialDistance = 0.00f;
+	float currentDistanceX = 0.00f;
+	float currentDistanceY = 0.00f;
 	counterIntRight = 0;
 	counterIntLeft = 0;
-	uint16_t duttyRight = dutty;
-	uint16_t duttyLeft = dutty;
-	uint32_t previousTicksRight = counterIntRight;
-	uint32_t previousTicksLeft = counterIntLeft;
+
+	// Initial set-up
+	resetMPU6050();
+	defaultMove();
+	startBasicTimer(&handlerSampleTimer);
 	startMove();
+
 	while((counterIntRight < goalInterrupts)&&(counterIntLeft < goalInterrupts)&&(flagMove)){
-		// A la frecuencia que ocurre el ciclo while se muestrean las interrupciones
-		ticksRight = counterIntRight;
-		ticksLeft = counterIntLeft;
+		if(flagData){
+			// Take angular velocity in the time sample and multiply it by time sample to get the angle in that time
+			dataAngle = (getGyroscopeData() - offsetAngularVelocity)*timeSample;
+			// Sum with totalCurrentAngle to update the real current angle of the Oppy
+			totalCurrentAngle += dataAngle;
 
-		updateDuttyCycle(&handlerPwmRight, constraint(duttyRight));
-		updateDuttyCycle(&handlerPwmLeft, constraint(duttyLeft));
+			// Take the difference between previous and current data angle to get the differential angle and can calculate X and Y
+			differentialCurrentAngle = previousDataAngle + dataAngle;
 
-		differenceRight = ticksRight - previousTicksRight;
-		differenceLeft = ticksLeft - previousTicksLeft;
+			differentialDistance = (((counterIntLeft - counterPreviousLeft)+(counterIntRight - counterPreviousRight))/2.0f)*(M_PI*51.725f/120.0f);
+			currentDistanceX += differentialDistance*cosf(differentialCurrentAngle*M_PI/180.0f);
+			currentDistanceY += differentialDistance*sinf(differentialCurrentAngle*M_PI/180.0f);
 
-		previousTicksRight = ticksRight;
-		previousTicksLeft = ticksLeft;
+			previousDataAngle = dataAngle;
 
-		if(differenceLeft > differenceRight){
-			duttyRight += (uint16_t)(duttyChange+(float)period*0.00013f);
-			duttyLeft  -= (uint16_t)(duttyChange+(float)period*0.0006f);
-//			duttyRight += (uint16_t)duttyChangeRight;
-//			duttyLeft -= (uint16_t)duttyChangeLeft;
+			counterPreviousRight = counterIntRight;
+			counterPreviousLeft = counterIntLeft;
+
+			// Calculate the error for input PID, is like this because the setPointAngle is equal to zero
+			error = -totalCurrentAngle;
+			controlActionPID();
+			flagData = false;
 		}
-		if(differenceRight > differenceLeft){
-			duttyRight -= (uint16_t)(duttyChange+(float)period*0.00025f);
-			duttyLeft  += (uint16_t)(duttyChange-(float)period*0.0005f);;
-//			duttyRight -= (uint16_t)duttyChangeRight;
-//			duttyLeft += (uint16_t)duttyChangeLeft;
-
+		else{
+			__NOP();
 		}
-		delay_ms(20);
+
 	}
-	if(flagMove == false){
-		//writeMsg(&usartCmd, "Oppy forced to stop!\n");
-		stopMove();
-	}
-	else{
-		stopMove();
-	}
-	updateDuttyCycle(&handlerPwmRight, dutty);
-	updateDuttyCycle(&handlerPwmLeft, dutty);
+	// Return to the initial state
+	stopMove();
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
+	stopBasicTimer(&handlerSampleTimer);
+	flagData = false;
+	u_control = 0.0f;
+	u_1_control = 0.0f;
+	error = 0.0f;
+	error_1 = 0.0f;
+	error_2 = 0.0f;
 }
+
 
 /** Función para rotar sin indicar dirección */
 void rotateOppy(int16_t degrees){
@@ -361,28 +395,77 @@ void rotation(uint8_t direction, uint16_t degrees){
 
 /** Función para realizar el cuadrado en la dirección y con la medida indicada */
 void square(uint8_t direction, uint16_t side_in_mm){
-	straightLine(side_in_mm);
+	// Here re-calculating the offset is just a way to wait until the inertia of the movement ends
+	straightLinePID(side_in_mm);
+	getGyroscopeOffset(50);
 	rotation(direction, 90);
-	straightLine(side_in_mm);
+
+	straightLinePID(side_in_mm);
+	getGyroscopeOffset(50);
 	rotation(direction, 90);
-	straightLine(side_in_mm);
+
+	straightLinePID(side_in_mm);
+	getGyroscopeOffset(50);
 	rotation(direction, 90);
-	straightLine(side_in_mm);
+
+	straightLinePID(side_in_mm);
+	getGyroscopeOffset(50);
 	rotation(direction, 90);
 }
 
 /** Función para limitar el cambio de dutty*/
-uint16_t constraint(uint16_t duttyInput){
-	if(duttyInput > (uint16_t)((float)dutty+(((float)period)*0.02f))){
-		duttyInput = (uint16_t)((float)dutty+(((float)period)*0.02f));
+void constraintControlPID(float* uControl, float maxChange){
+	if(*uControl >= maxChange){
+		*uControl = maxChange;
 	}
-	else if(duttyInput < (uint16_t)((float)dutty-(((float)period)*0.02f))){
-		duttyInput = (uint16_t)((float)dutty-(((float)period)*0.02f));
+	else if(*uControl <= -maxChange){
+		*uControl = -maxChange;
 	}
 	else{
 		__NOP();
 	}
-	return duttyInput;
+}
+
+/** Función para calcular la acción de control */
+void controlActionPID(void){
+
+	u_control = (u_1_control)+(q0*error)+(q1*error_1)+(q2*error_2);
+	// Control action is limited to a change of 10% Dutty Cycle
+	constraintControlPID(&u_control, 4000.00f);
+
+//	// Control of print data
+//	if(counter >= 10){
+//		sprintf(bufferMandar, "%.3f\t%.3f\n",totalCurrentAngle, currentDistanceY);
+//		writeMsg(&usartCmd, bufferMandar);
+//		counter = 0;
+//	}
+//	else{
+//		__NOP();
+//	}
+	updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft - u_control));
+	updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight + u_control));
+
+//	// If the error is less than zero, then the Oppy is going to the left side
+//	if(error < 0){
+//		updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft + u_control));
+//		updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight - u_control));
+//	}
+//
+//	// Else if the error is greater than zero, then the Oppy is going to the right side
+//	else if(error > 0){
+//		updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft - u_control));
+//		updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight + u_control));
+//	}
+//
+//	// Else, is straight!
+//	else{
+//		__NOP();
+//	}
+
+	// Update the values
+	u_1_control = u_control;
+	error_2 = error_1;
+	error_1 = error;
 }
 
 void callback_extInt0 (void){

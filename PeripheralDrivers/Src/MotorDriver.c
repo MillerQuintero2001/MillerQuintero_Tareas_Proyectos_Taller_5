@@ -201,19 +201,14 @@ void setSignals(uint8_t freqHz, uint8_t duttyPer){
 	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 }
 
-/** Función encargada de establecer la velocidad de cada rueda en mm/s */
-void setVelocity(uint8_t velocity){
-	float duttyCycleRight = ((float)velocity-40.10f)/254.00f;  // Ya en porcentajes (m*100)
-	float duttyCycleLeft = ((float)velocity-36.50f)/263.00f;
-	updateDuttyCycle(&handlerPwmRight, (uint16_t)((float)period*duttyCycleRight));
-	updateDuttyCycle(&handlerPwmLeft, (uint16_t)((float)period*duttyCycleLeft));
+/** Function that changes dutty base value for each wheel */
+void changeBaseDutty(uint16_t duttyRight, uint16_t duttyLeft){
+	duttyBaseRight = duttyRight;
+	duttyBaseLeft = duttyLeft;
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 }
 
-/** Función encargada de retornar el %DuttyCycle según la velocidad */
-void getDutty(uint8_t velocity){
-	duttyWheels[0] = ((float)velocity-40.10f)/2.54f;
-	duttyWheels[1] = ((float)velocity-36.50f)/2.63f;
-}
 
 /** Función que restaura la configuración a un estado conocido, dirección para linea recta y polaridad activa-alta */
 void defaultMove(void){
@@ -259,7 +254,7 @@ void pathSegment(uint16_t distance_in_mm){
 	stopMove();
 }
 
-/** Function that configures PID with proportional constant 'kp', Integrative Time 'ti', Derivative Time 'ti' and Time Sample 'ts' */
+/** Function that configures PID with proportional constant 'kp', Integrative Time 'ti', Derivative Time 'ti' and Time Sample 'ts' in seconds */
 void configPID(float kp, float ti, float td, float ts){
 	timeSample = ts;
 	q0 = kp*(1.0f+(ts/(2.0f*ti))+(td/ts));
@@ -339,6 +334,8 @@ void straightLinePID(uint16_t distance_in_mm){
 void rotateOppy(int16_t degrees){
 	stopMove();
 	defaultMove();
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 	if(degrees < 0){
 		// Cambiamos la polaridad del motor del lado derecho (amarillo)
 		setPolarity(&handlerPwmRight,PWM_POLARITY_ACTIVE_LOW);
@@ -368,6 +365,8 @@ void rotateOppy(int16_t degrees){
 void rotation(uint8_t direction, uint16_t degrees){
 	stopMove();
 	defaultMove();
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 	if(direction == MOVEMENT_CW){
 		// Cambiamos la polaridad del motor del lado derecho (amarillo)
 		setPolarity(&handlerPwmRight,PWM_POLARITY_ACTIVE_LOW);
@@ -395,22 +394,12 @@ void rotation(uint8_t direction, uint16_t degrees){
 
 /** Función para realizar el cuadrado en la dirección y con la medida indicada */
 void square(uint8_t direction, uint16_t side_in_mm){
-	// Here re-calculating the offset is just a way to wait until the inertia of the movement ends
-	straightLinePID(side_in_mm);
-	getGyroscopeOffset(50);
-	rotation(direction, 90);
-
-	straightLinePID(side_in_mm);
-	getGyroscopeOffset(50);
-	rotation(direction, 90);
-
-	straightLinePID(side_in_mm);
-	getGyroscopeOffset(50);
-	rotation(direction, 90);
-
-	straightLinePID(side_in_mm);
-	getGyroscopeOffset(50);
-	rotation(direction, 90);
+	for(uint8_t side = 0; side < 4; side++){
+		straightLinePID(side_in_mm);
+		// Here re-calculating the offset is just a way to wait until the inertia of the movement ends
+		getGyroscopeOffset(50);
+		rotation(direction, 90);
+	}
 }
 
 /** Función para limitar el cambio de dutty*/
@@ -479,5 +468,3 @@ void callback_extInt1 (void){
 void callback_extInt3 (void){
 	counterIntLeft++;
 }
-
-

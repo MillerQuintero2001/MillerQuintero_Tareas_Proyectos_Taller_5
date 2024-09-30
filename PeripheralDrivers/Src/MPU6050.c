@@ -61,6 +61,7 @@ void configMPU6050(void){
 	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerSampleTimer.TIMx_Config.TIMx_period				= 200;
 	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
+	handlerSampleTimer.TIMx_Config.TIMx_priorityInterrupt	= 6;
 	BasicTimer_Config(&handlerSampleTimer);
 }
 
@@ -91,7 +92,7 @@ float getGyroscopeOffset(uint32_t samples){
 	}
 	offsetAngularVelocity = sumAngularVelocity/((float)counterSamples);
 	// We verify if the offset is not appropiate
-	if((fabs(offsetAngularVelocity) >= 0.85f)&&(fabs(offsetAngularVelocity) <= 0.65f)){
+	if((fabs(offsetAngularVelocity) >= 0.85f)||(fabs(offsetAngularVelocity) <= 0.50f)){
 		// Then, We repeat the process again
 		counterSamples = 0;
 		sumAngularVelocity = 0.0f;

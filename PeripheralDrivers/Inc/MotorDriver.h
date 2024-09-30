@@ -35,13 +35,11 @@ extern uint32_t counterIntLeft;		// Variable que guarda el número de interrupci
 extern bool flagMove;				// Variable bandera para controlar el movimiento
 extern PWM_Handler_t handlerPwmRight;
 extern PWM_Handler_t handlerPwmLeft;
-extern float duttyWheels[2];
 
 /* Prototipos de las funciones */
 void configMotors(void);
 void setSignals(uint8_t freqHz, uint8_t dutty);
-void setVelocity(uint8_t velocity);
-void getDutty(uint8_t velocity);
+void changeBaseDutty(uint16_t duttyRight, uint16_t duttyLeft);
 void defaultMove(void);
 void startMove(void);
 void stopMove(void);

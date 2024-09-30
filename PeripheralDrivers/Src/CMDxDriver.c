@@ -296,19 +296,6 @@ void commandBuild(bool use){
 			}
 		}
 
-		// "SetVelocity" configura la velocidad de los motores
-		else if(strcmp(cmd, "SetVelocity") == 0){
-			writeMsg(&usartCmd, "\nCMD: SetVelocity \n");
-			if((88 <= (uint8_t)firstParameter)&&((uint8_t)firstParameter <= 140)){
-				setVelocity((uint8_t)firstParameter);
-				getDutty((uint8_t)firstParameter);
-				writeMsg(&usartCmd, "Configuration succesfull \n");
-			}
-			else{
-				writeMsg(&usartCmd, "Wrong velocity, remember, only positive integers between 88 and 140 \n");
-			}
-		}
-
 		// "DefaultMove" establece la configuración por defecto de las polaridades y las direcciones
 		else if(strcmp(cmd, "Default") == 0){
 			writeMsg(&usartCmd, "\nCMD: Default \n");

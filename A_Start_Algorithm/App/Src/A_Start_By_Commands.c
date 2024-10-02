@@ -89,13 +89,13 @@ float get_G_cost(Cell_map_t *neighbour_cell, Cell_map_t *working_cell);							//
 void update_G_cost(Cell_map_t *parent_cell, Cell_map_t *working_cell);							// Ready
 float get_F_cost(Cell_map_t *working_cell);														// Ready
 void update_F_cost(Cell_map_t *working_cell);													// Ready
-void order_open_list(uint8_t index_last);														// Need more harder and extreme
+void order_open_list(uint8_t index_last);														// Need more harder and extreme tests
 void init_empty_openlist(Cell_map_t* empty_cell);												// Ready
 uint8_t get_count_item_open_list(void);															// Ready
 void removeFrom_open_list(Cell_map_t *working_cell);											// Ready
 Cell_map_t* get_next_item(void);																// Ready
 void addTo_closed_list(Cell_map_t *working_cell);												// Wrote but not checked
-void print_path(Cell_map_t *working_cell);														// Wrote but not checked
+void print_path(Cell_map_t *working_cell);														// Ready
 int8_t A_star_algorithm(void);
 
 // Related with peripherals
@@ -804,7 +804,7 @@ void initSystem(void){
 	// Pongo estado en alto
 	GPIO_WritePin(&handlerBlinkyPin, SET);
 	// Atributos para el Timer 2 del LED de estado
-	handlerBlinkyTimer.ptrTIMx								= TIM4;
+	handlerBlinkyTimer.ptrTIMx								= TIM3;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
@@ -1015,7 +1015,7 @@ void oppyPath(void){
 }
 
 /** Interrupción del timer blinky LED*/
-void BasicTimer4_Callback(void){
+void BasicTimer3_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin);
 }
 

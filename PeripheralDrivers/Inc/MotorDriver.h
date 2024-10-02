@@ -29,6 +29,12 @@
 #define MOVEMENT_CW		0		// Para usar con la función square que realiza un cuadrado, con este argumento en sentido anti-horario
 #define MOVEMENT_CCW	1		// Para usar con la funcion square que realiza un cuadrado, con este argumento en sentido horario
 
+/* Valores tomados con las baterias Lition ION a 3.519V y 3.545V voltios MCU, y LiPo 7.6V totales, 1c = 3.81v y 2c = 3.82V para motores */
+#define DUTTY_RIGHT_BASE 		12000
+#define DUTTY_LEFT_BASE			12725
+#define DUTTY_RIGHT_ROTATION	12000
+#define DUTTY_LEFT_ROTATION		12725
+
 /* Variables importantes */
 extern uint32_t counterIntRight;	// Variable que guarda el número de interrupciones del encoder en la rueda derecha (Motor Amarillo)
 extern uint32_t counterIntLeft;		// Variable que guarda el número de interrupciones del encoder en la rueda izquierda (Motor Azul)
@@ -45,7 +51,7 @@ void startMove(void);
 void stopMove(void);
 void pathSegment(uint16_t distance_in_mm);
 void configPID(float kp, float ti, float td, float ts);
-void straightLinePID(uint16_t distance_in_mm);
+float straightLinePID(uint16_t distance_in_mm);
 void rotateOppy(int16_t degrees);
 void rotation(uint8_t direction, uint16_t degrees);
 void square(uint8_t direction, uint16_t side_in_mm);

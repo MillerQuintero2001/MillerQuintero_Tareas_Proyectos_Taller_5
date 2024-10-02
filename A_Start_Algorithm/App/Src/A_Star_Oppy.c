@@ -808,7 +808,7 @@ void initSystem(void){
 	// Pongo estado en alto
 	GPIO_WritePin(&handlerBlinkyPin, SET);
 	// Atributos para el Timer 2 del LED de estado
-	handlerBlinkyTimer.ptrTIMx								= TIM4;
+	handlerBlinkyTimer.ptrTIMx								= TIM3;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
@@ -1021,7 +1021,7 @@ void oppyPath(void){
 }
 
 /** Interrupción del timer blinky LED*/
-void BasicTimer4_Callback(void){
+void BasicTimer3_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin);
 }
 

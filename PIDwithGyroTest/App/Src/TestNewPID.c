@@ -39,6 +39,7 @@ BasicTimer_Handler_t handlerBlinkyTimer = 	{0}; // Timer del LED de estado
 uint16_t counter = 0;
 char bufferMandar[64] = {0};
 float offsetGyro = 0.00f;
+bool flagConfigPID = false;
 
 
 /* Definición de las cabeceras de funciones del main */
@@ -75,7 +76,7 @@ void initSystem(void){
 	SCB->CPACR |= (0XF << 20);
 
 	/* GPIO y Timer del Blinky Led de Estado */
-	handlerBlinkyPin.pGPIOx								= GPIOA;
+	handlerBlinkyPin.pGPIOx								= GPIOC;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_5;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_OUT;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed 		= GPIO_OSPEED_FAST;
@@ -133,7 +134,12 @@ void commandx2(void){
 }
 
 void commandx3(void){
-	square(firstParameter, secondParameter);
+	if (flagConfigPID){
+		square(firstParameter, secondParameter);
+	}
+	else{
+		writeMsg(&usartCmd, "Please, config PID first.\n");
+	}
 }
 
 void commandx4(void){
@@ -142,6 +148,7 @@ void commandx4(void){
 
 void commandx5(void){
 	changeBaseDutty((uint16_t)firstParameter, (uint16_t)secondParameter);
+	writeMsg(&usartCmd, "Duttys changed.\n");
 }
 
 void commandx6(void){
@@ -152,6 +159,7 @@ void commandx6(void){
 
 void commandx7(void){
 	configPID(firstParameter, secondParameter, thirdParameter, 0.020f);
-	sprintf(bufferMandar,"Kp = %.6f,ti = %.6f,td = %.6f\n",firstParameter, secondParameter, thirdParameter);
+	sprintf(bufferMandar,"PID parameters are: Kp = %.6f,ti = %.6f,td = %.6f\n",firstParameter, secondParameter, thirdParameter);
 	writeMsg(&usartCmd, bufferMandar);
+	flagConfigPID = true;
 }

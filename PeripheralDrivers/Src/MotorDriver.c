@@ -36,12 +36,11 @@ uint32_t counterIntRight = 0;
 uint32_t counterIntLeft = 0;
 uint16_t period = 40000;
 uint16_t duttyBaseRight = 12000;
-uint16_t duttyBaseLeft = 12925;
+uint16_t duttyBaseLeft = 12725;
 uint8_t interruptsRev = 120;			// Interrupciones por revolución del encoder (Depende de las aberturas del encoder y los flancos)
 float wheelDiameter = 51.725f;			// Diámetro promedio de las ruedas
 float wheelPerimeter = M_PI*51.725f;	// Perímetro con promedio diámetro de las ruedas en milímetros
-float distanceAxis = 108.00f;			// Distance entre ruedas (eje) (anteriormente era 109 mm)
-float duttyWheels[2] = {0};
+float distanceAxis = 106.50f;			// Distance entre ruedas (eje) (anteriormente era 109 mm)
 
 // Variables relacionadas con el PID
 float q0 = 0.0f;					// Constante de PID discreto
@@ -187,6 +186,8 @@ void configMotors(void){
 	handlerIntDistance.priorityInterrupt	= 6;
 	handlerIntDistance.pGPIOHandler			= &handlerPinIntDistance;
 	extInt_Config(&handlerIntDistance);
+
+	configMPU6050();
 }
 
 
@@ -257,17 +258,18 @@ void pathSegment(uint16_t distance_in_mm){
 /** Function that configures PID with proportional constant 'kp', Integrative Time 'ti', Derivative Time 'ti' and Time Sample 'ts' in seconds */
 void configPID(float kp, float ti, float td, float ts){
 	timeSample = ts;
-	q0 = kp*(1.0f+(ts/(2.0f*ti))+(td/ts));
-	q1 = -kp*(1.0f-(ts/(2.0f*ti))+((2.0f*td)/ts));
+	q0 = kp*(1.00f+(ts/(2.00f*ti))+(td/ts));
+	q1 = -kp*(1.00f-(ts/(2.00f*ti))+((2.00f*td)/ts));
 	q2 = (kp*td)/ts;
-	handlerSampleTimer.TIMx_Config.TIMx_period = ts;
+	handlerSampleTimer.TIMx_Config.TIMx_period = (uint32_t)(ts*10000.00f);
 	BasicTimer_Config(&handlerSampleTimer);
 }
 
 /* Function to do a straight line with PID angle*/
-void straightLinePID(uint16_t distance_in_mm){
+float straightLinePID(uint16_t distance_in_mm){
 	// First, initialize the varibles employeed
-	uint32_t goalInterrupts = interruptsRev*((float)(distance_in_mm)/wheelPerimeter);
+	//uint32_t goalInterrupts = interruptsRev*((float)(distance_in_mm)/wheelPerimeter);
+	resetMPU6050();
 	float dataAngle = 0.00f;
 	float previousDataAngle = 0.00f;
 	float offsetAngularVelocity = getGyroscopeOffset(200);
@@ -277,17 +279,18 @@ void straightLinePID(uint16_t distance_in_mm){
 	uint32_t counterPreviousLeft = 0;
 	float differentialDistance = 0.00f;
 	float currentDistanceX = 0.00f;
-	float currentDistanceY = 0.00f;
 	counterIntRight = 0;
 	counterIntLeft = 0;
+	uint32_t saveCounterIntRight = 0;
+	uint32_t saveCounterIntLeft = 0;
 
 	// Initial set-up
-	resetMPU6050();
 	defaultMove();
+
 	startBasicTimer(&handlerSampleTimer);
 	startMove();
 
-	while((counterIntRight < goalInterrupts)&&(counterIntLeft < goalInterrupts)&&(flagMove)){
+	while((currentDistanceX < distance_in_mm)&&(flagMove)){
 		if(flagData){
 			// Take angular velocity in the time sample and multiply it by time sample to get the angle in that time
 			dataAngle = (getGyroscopeData() - offsetAngularVelocity)*timeSample;
@@ -299,7 +302,6 @@ void straightLinePID(uint16_t distance_in_mm){
 
 			differentialDistance = (((counterIntLeft - counterPreviousLeft)+(counterIntRight - counterPreviousRight))/2.0f)*(M_PI*51.725f/120.0f);
 			currentDistanceX += differentialDistance*cosf(differentialCurrentAngle*M_PI/180.0f);
-			currentDistanceY += differentialDistance*sinf(differentialCurrentAngle*M_PI/180.0f);
 
 			previousDataAngle = dataAngle;
 
@@ -308,8 +310,34 @@ void straightLinePID(uint16_t distance_in_mm){
 
 			// Calculate the error for input PID, is like this because the setPointAngle is equal to zero
 			error = -totalCurrentAngle;
-			controlActionPID();
-			flagData = false;
+			if(fabsf(error) >= 10){
+				saveCounterIntRight = counterIntRight;
+				saveCounterIntLeft = counterIntLeft;
+				flagData = false;
+				stopBasicTimer(&handlerSampleTimer);
+				stopMove();
+				getGyroscopeOffset(50);
+				rotation((error < 0) ? (MOVEMENT_CCW):(MOVEMENT_CW), (uint16_t)(fabsf(totalCurrentAngle)));
+				resetMPU6050();
+				totalCurrentAngle = 0.00f;
+				offsetAngularVelocity = getGyroscopeOffset(200);
+				defaultMove();
+				updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+				updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
+				startBasicTimer(&handlerSampleTimer);
+				startMove();
+				counterIntRight = saveCounterIntRight;
+				counterIntLeft = saveCounterIntLeft;
+				u_control = 0.0f;
+				u_1_control = 0.0f;
+				error = 0.0f;
+				error_1 = 0.0f;
+				error_2 = 0.0f;
+			}
+			else{
+				controlActionPID();
+				flagData = false;
+			}
 		}
 		else{
 			__NOP();
@@ -327,6 +355,7 @@ void straightLinePID(uint16_t distance_in_mm){
 	error = 0.0f;
 	error_1 = 0.0f;
 	error_2 = 0.0f;
+	return totalCurrentAngle;
 }
 
 
@@ -394,11 +423,13 @@ void rotation(uint8_t direction, uint16_t degrees){
 
 /** Función para realizar el cuadrado en la dirección y con la medida indicada */
 void square(uint8_t direction, uint16_t side_in_mm){
+	float angleCorrection = 0.00f;
 	for(uint8_t side = 0; side < 4; side++){
-		straightLinePID(side_in_mm);
+		angleCorrection = straightLinePID(side_in_mm);
+		angleCorrection = (direction == MOVEMENT_CW) ? (angleCorrection):(-angleCorrection);
 		// Here re-calculating the offset is just a way to wait until the inertia of the movement ends
-		getGyroscopeOffset(50);
-		rotation(direction, 90);
+		getGyroscopeOffset(100);
+		rotation(direction, (uint16_t)(90.00f + angleCorrection));
 	}
 }
 
@@ -422,34 +453,8 @@ void controlActionPID(void){
 	// Control action is limited to a change of 10% Dutty Cycle
 	constraintControlPID(&u_control, 4000.00f);
 
-//	// Control of print data
-//	if(counter >= 10){
-//		sprintf(bufferMandar, "%.3f\t%.3f\n",totalCurrentAngle, currentDistanceY);
-//		writeMsg(&usartCmd, bufferMandar);
-//		counter = 0;
-//	}
-//	else{
-//		__NOP();
-//	}
-	updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft - u_control));
 	updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight + u_control));
-
-//	// If the error is less than zero, then the Oppy is going to the left side
-//	if(error < 0){
-//		updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft + u_control));
-//		updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight - u_control));
-//	}
-//
-//	// Else if the error is greater than zero, then the Oppy is going to the right side
-//	else if(error > 0){
-//		updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft - u_control));
-//		updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight + u_control));
-//	}
-//
-//	// Else, is straight!
-//	else{
-//		__NOP();
-//	}
+	updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft - u_control));
 
 	// Update the values
 	u_1_control = u_control;

@@ -56,13 +56,13 @@ void configMPU6050(void){
 	// Hacemos un primer reset del sensor para asegurar que funcione a la primera
 	i2c_writeSingleRegister(&handlerAccelerometer, PWR_MGMT_1, 0x00);
 
-//	handlerSampleTimer.ptrTIMx								= TIM4;
-//	handlerSampleTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
-//	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
-//	handlerSampleTimer.TIMx_Config.TIMx_period				= 200;
-//	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
-//	handlerSampleTimer.TIMx_Config.TIMx_priorityInterrupt	= 6;
-//	BasicTimer_Config(&handlerSampleTimer);
+	handlerSampleTimer.ptrTIMx								= TIM3;
+	handlerSampleTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
+	handlerSampleTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
+	handlerSampleTimer.TIMx_Config.TIMx_period				= 200;
+	handlerSampleTimer.TIMx_Config.TIMx_interruptEnable		= BTIMER_INTERRUP_ENABLE;
+	handlerSampleTimer.TIMx_Config.TIMx_priorityInterrupt	= 6;
+	BasicTimer_Config(&handlerSampleTimer);
 }
 
 
@@ -110,14 +110,14 @@ float getGyroscopeOffset(uint32_t samples){
 }
 
 
-///* Timer Callback for Samples */
-//void BasicTimer4_Callback(void){
-//	if(flagTakeOffset){
-//		counterSamples++;
-//		// Gyroscope data is in °/s
-//		sumAngularVelocity += getGyroscopeData();
-//	}
-//	else{
-//		flagData = true;
-//	}
-//}
+/* Timer Callback for Samples */
+void BasicTimer3_Callback(void){
+	if(flagTakeOffset){
+		counterSamples++;
+		// Gyroscope data is in °/s
+		sumAngularVelocity += getGyroscopeData();
+	}
+	else{
+		flagData = true;
+	}
+}

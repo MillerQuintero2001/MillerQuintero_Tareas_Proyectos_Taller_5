@@ -44,9 +44,6 @@ bool flagConfigPID = false;
 
 /* Definición de las cabeceras de funciones del main */
 void initSystem(void); 										// Función que inicializa los periféricos básicos
-void controlActionPID(void);								// Función que retorna el valor de la acción de control
-void constraintControl(float* uControl, float maxChange);	// Función que limita el valor de la acción de control
-void calculateOffsetGyro(uint16_t samples);					// Function that calculates the offset by averages in the MPU6050
 
 /** Función principal del programa
  * ¡Esta función es el corazón del programa! */
@@ -91,6 +88,7 @@ void initSystem(void){
 	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
+	handlerBlinkyTimer.TIMx_Config.TIMx_priorityInterrupt	= 6;
 	BasicTimer_Config(&handlerBlinkyTimer);
 	startBasicTimer(&handlerBlinkyTimer);
 	/* Fin del GPIO y Timer del LED de estado

@@ -243,9 +243,11 @@ void stopMove(void){
 
 
 /** Función para desplazar el Oppy en un segmento indicado para el A* pathfinding */
-void pathSegment(uint16_t distance_in_mm){
+void pathSegment(float distance_in_mm){
 	defaultMove();
-	uint32_t goalInterrupts = interruptsRev*((float)(distance_in_mm)/wheelPerimeter);
+	updateDuttyCycle(&handlerPwmRight, DUTTY_RIGHT_BASE);
+	updateDuttyCycle(&handlerPwmLeft, DUTTY_LEFT_BASE);
+	uint32_t goalInterrupts = (uint32_t)(((float)interruptsRev)*(distance_in_mm/wheelPerimeter));
 	counterIntRight = 0;
 	counterIntLeft = 0;
 	startMove();
@@ -286,7 +288,8 @@ float straightLinePID(uint16_t distance_in_mm){
 
 	// Initial set-up
 	defaultMove();
-
+	updateDuttyCycle(&handlerPwmRight, DUTTY_RIGHT_BASE);
+	updateDuttyCycle(&handlerPwmLeft, DUTTY_LEFT_BASE);
 	startBasicTimer(&handlerSampleTimer);
 	startMove();
 
@@ -346,8 +349,6 @@ float straightLinePID(uint16_t distance_in_mm){
 	}
 	// Return to the initial state
 	stopMove();
-	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
-	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 	stopBasicTimer(&handlerSampleTimer);
 	flagData = false;
 	u_control = 0.0f;
@@ -363,8 +364,8 @@ float straightLinePID(uint16_t distance_in_mm){
 void rotateOppy(int16_t degrees){
 	stopMove();
 	defaultMove();
-	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
-	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
+	updateDuttyCycle(&handlerPwmRight, DUTTY_RIGHT_ROTATION);
+	updateDuttyCycle(&handlerPwmLeft, DUTTY_LEFT_ROTATION);
 	if(degrees < 0){
 		// Cambiamos la polaridad del motor del lado derecho (amarillo)
 		setPolarity(&handlerPwmRight,PWM_POLARITY_ACTIVE_LOW);
@@ -394,8 +395,8 @@ void rotateOppy(int16_t degrees){
 void rotation(uint8_t direction, uint16_t degrees){
 	stopMove();
 	defaultMove();
-	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
-	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
+	updateDuttyCycle(&handlerPwmRight, DUTTY_RIGHT_ROTATION);
+	updateDuttyCycle(&handlerPwmLeft, DUTTY_LEFT_ROTATION);
 	if(direction == MOVEMENT_CW){
 		// Cambiamos la polaridad del motor del lado derecho (amarillo)
 		setPolarity(&handlerPwmRight,PWM_POLARITY_ACTIVE_LOW);
@@ -448,7 +449,6 @@ void constraintControlPID(float* uControl, float maxChange){
 
 /** Función para calcular la acción de control */
 void controlActionPID(void){
-
 	u_control = (u_1_control)+(q0*error)+(q1*error_1)+(q2*error_2);
 	// Control action is limited to a change of 10% Dutty Cycle
 	constraintControlPID(&u_control, 4000.00f);

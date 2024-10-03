@@ -49,7 +49,7 @@ void changeBaseDutty(uint16_t duttyRight, uint16_t duttyLeft);
 void defaultMove(void);
 void startMove(void);
 void stopMove(void);
-void pathSegment(uint16_t distance_in_mm);
+void pathSegment(float distance_in_mm);
 void configPID(float kp, float ti, float td, float ts);
 float straightLinePID(uint16_t distance_in_mm);
 void rotateOppy(int16_t degrees);

@@ -205,6 +205,7 @@ void initSystem(void){
 	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
+	handlerBlinkyTimer.TIMx_Config.TIMx_priorityInterrupt	= 6;
 	BasicTimer_Config(&handlerBlinkyTimer);
 	startBasicTimer(&handlerBlinkyTimer);
 	/* Fin del GPIO y Timer del LED de estado
@@ -231,6 +232,7 @@ void initSystem(void){
 	handlerSampleTimers.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerSampleTimers.TIMx_Config.TIMx_period				= 200;
 	handlerSampleTimers.TIMx_Config.TIMx_interruptEnable	= BTIMER_INTERRUP_ENABLE;
+	handlerSampleTimers.TIMx_Config.TIMx_priorityInterrupt	= 6;
 	BasicTimer_Config(&handlerSampleTimers);
 
 }

@@ -838,11 +838,12 @@ void initSystem(void){
 	// Pongo estado en alto
 	GPIO_WritePin(&handlerBlinkyPin, SET);
 	// Atributos para el Timer 2 del LED de estado
-	handlerBlinkyTimer.ptrTIMx								= TIM2;
+	handlerBlinkyTimer.ptrTIMx								= TIM5;
 	handlerBlinkyTimer.TIMx_Config.TIMx_mode				= BTIMER_MODE_UP;
 	handlerBlinkyTimer.TIMx_Config.TIMx_speed				= BTIMER_PLL_100MHz_SPEED_100us;
 	handlerBlinkyTimer.TIMx_Config.TIMx_period				= 2500;
 	handlerBlinkyTimer.TIMx_Config.TIMx_interruptEnable 	= BTIMER_INTERRUP_ENABLE;
+	handlerBlinkyTimer.TIMx_Config.TIMx_priorityInterrupt	= 6;
 	BasicTimer_Config(&handlerBlinkyTimer);
 	startBasicTimer(&handlerBlinkyTimer);
 	/* Fin del GPIO y Timer del LED de estado
@@ -865,20 +866,21 @@ void initSystem(void){
 	GPIO_Config(&handlerPinRX);
 
 	/* Configuración de la comunicación serial */
-	usartCmd.ptrUSARTx							= USART2;
-	usartCmd.USART_Config.USART_baudrate 		= USART_BAUDRATE_115200;
-	usartCmd.USART_Config.USART_datasize		= USART_DATASIZE_8BIT;
-	usartCmd.USART_Config.USART_parity			= USART_PARITY_NONE;
-	usartCmd.USART_Config.USART_stopbits		= USART_STOPBIT_1;
-	usartCmd.USART_Config.USART_mode			= USART_MODE_RXTX;
-	usartCmd.USART_Config.USART_enableIntRX		= USART_RX_INTERRUP_ENABLE;
-	usartCmd.USART_Config.USART_enableIntTX		= USART_TX_INTERRUP_DISABLE;
+	usartCmd.ptrUSARTx								= USART2;
+	usartCmd.USART_Config.USART_baudrate 			= USART_BAUDRATE_115200;
+	usartCmd.USART_Config.USART_datasize			= USART_DATASIZE_8BIT;
+	usartCmd.USART_Config.USART_parity				= USART_PARITY_NONE;
+	usartCmd.USART_Config.USART_stopbits			= USART_STOPBIT_1;
+	usartCmd.USART_Config.USART_mode				= USART_MODE_RXTX;
+	usartCmd.USART_Config.USART_enableIntRX			= USART_RX_INTERRUP_ENABLE;
+	usartCmd.USART_Config.USART_enableIntTX			= USART_TX_INTERRUP_DISABLE;
+	usartCmd.USART_Config.USART_priorityInterrupt	= 6;
 	USART_Config(&usartCmd);
 }
 
 
 /** Interrupción del timer blinky LED*/
-void BasicTimer2_Callback(void){
+void BasicTimer5_Callback(void){
 	GPIOxTooglePin(&handlerBlinkyPin);
 }
 

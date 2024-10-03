@@ -62,7 +62,7 @@ float currentDistanceX = 0.0f;
 float currentDistanceY = 0.0f;
 
 float duttyBaseRights = 12000.00f;
-float duttyBaseLefts = 12800.00f;
+float duttyBaseLefts = 12710.00f;
 uint8_t sideIndicator = 0;
 uint8_t sideGoal = 0;
 uint8_t direction = 0; // Variable to specify if the the square direction will be clock wise = 0, or counter clock wise = 1;

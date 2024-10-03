@@ -31,9 +31,9 @@
 
 /* Valores tomados con las baterias Lition ION a 3.519V y 3.545V voltios MCU, y LiPo 7.6V totales, 1c = 3.81v y 2c = 3.82V para motores */
 #define DUTTY_RIGHT_BASE 		12000
-#define DUTTY_LEFT_BASE			12725
+#define DUTTY_LEFT_BASE			12710
 #define DUTTY_RIGHT_ROTATION	12000
-#define DUTTY_LEFT_ROTATION		12725
+#define DUTTY_LEFT_ROTATION		12710
 
 /* Variables importantes */
 extern uint32_t counterIntRight;	// Variable que guarda el número de interrupciones del encoder en la rueda derecha (Motor Amarillo)
@@ -54,6 +54,7 @@ void configPID(float kp, float ti, float td, float ts);
 float straightLinePID(uint16_t distance_in_mm);
 void rotateOppy(int16_t degrees);
 void rotation(uint8_t direction, uint16_t degrees);
+void rotationMPU(int16_t degrees);
 void square(uint8_t direction, uint16_t side_in_mm);
 
 #endif /* MOTORDRIVER_H_ */

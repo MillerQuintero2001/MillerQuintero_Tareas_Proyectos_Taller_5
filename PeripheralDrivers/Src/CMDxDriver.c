@@ -238,6 +238,18 @@ void commandBuild(bool use){
 			commandx7();
 		}
 
+		// "Commandx8"
+		else if(strcmp(cmd, "Commandx8") == 0){
+			writeMsg(&usartCmd, "\nCMD: Commandx8 \n");
+			commandx8();
+		}
+
+		// "Commandx9"
+		else if(strcmp(cmd, "Commandx9") == 0){
+			writeMsg(&usartCmd, "\nCMD: Commandx9 \n");
+			commandx9();
+		}
+
 		// En cualquier otro caso, indicamos que el comando es incorrecto
 		else{
 			writeMsg(&usartCmd, "\nWrong command \n");
@@ -391,6 +403,12 @@ __attribute__ ((weak)) void commandx6(void){
 	__NOP();
 }
 __attribute__ ((weak)) void commandx7(void){
+	__NOP();
+}
+__attribute__ ((weak)) void commandx8(void){
+	__NOP();
+}
+__attribute__ ((weak)) void commandx9(void){
 	__NOP();
 }
 

@@ -35,12 +35,12 @@ bool flagMove = false;
 uint32_t counterIntRight = 0;
 uint32_t counterIntLeft = 0;
 uint16_t period = 40000;
-uint16_t duttyBaseRight = 12000;
-uint16_t duttyBaseLeft = 12725;
+uint16_t duttyBaseRight = DUTTY_RIGHT_BASE;
+uint16_t duttyBaseLeft = DUTTY_LEFT_BASE;
 uint8_t interruptsRev = 120;			// Interrupciones por revolución del encoder (Depende de las aberturas del encoder y los flancos)
 float wheelDiameter = 51.725f;			// Diámetro promedio de las ruedas
 float wheelPerimeter = M_PI*51.725f;	// Perímetro con promedio diámetro de las ruedas en milímetros
-float distanceAxis = 106.50f;			// Distance entre ruedas (eje) (anteriormente era 109 mm)
+float distanceAxis = 105.20f;			// Distance entre ruedas (eje) (anteriormente era 109 mm)
 
 // Variables relacionadas con el PID
 float q0 = 0.0f;					// Constante de PID discreto
@@ -70,7 +70,7 @@ void configMotors(void){
 	handlerPwmRight.PWMx_Config.PWMx_Channel	    = PWM_CHANNEL_1;
 	handlerPwmRight.PWMx_Config.PWMx_Prescaler 		= BTIMER_PLL_100MHz_SPEED_1us;
 	handlerPwmRight.PWMx_Config.PWMx_Period	   		= period;
-	handlerPwmRight.PWMx_Config.PWMx_DuttyCicle		= duttyBaseRight;
+	handlerPwmRight.PWMx_Config.PWMx_DuttyCicle		= DUTTY_RIGHT_BASE;
 	handlerPwmRight.PWMx_Config.PWMx_Polarity		= PWM_POLARITY_ACTIVE_HIGH;
 	pwm_Config(&handlerPwmRight);
 
@@ -112,7 +112,7 @@ void configMotors(void){
 	handlerPwmLeft.PWMx_Config.PWMx_Channel	   		= PWM_CHANNEL_2;
 	handlerPwmLeft.PWMx_Config.PWMx_Prescaler		= BTIMER_PLL_100MHz_SPEED_1us;
 	handlerPwmLeft.PWMx_Config.PWMx_Period	    	= period;
-	handlerPwmLeft.PWMx_Config.PWMx_DuttyCicle		= duttyBaseLeft;
+	handlerPwmLeft.PWMx_Config.PWMx_DuttyCicle		= DUTTY_LEFT_BASE;
 	handlerPwmLeft.PWMx_Config.PWMx_Polarity		= PWM_POLARITY_ACTIVE_HIGH;
 	pwm_Config(&handlerPwmLeft);
 
@@ -288,8 +288,8 @@ float straightLinePID(uint16_t distance_in_mm){
 
 	// Initial set-up
 	defaultMove();
-	updateDuttyCycle(&handlerPwmRight, DUTTY_RIGHT_BASE);
-	updateDuttyCycle(&handlerPwmLeft, DUTTY_LEFT_BASE);
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 	startBasicTimer(&handlerSampleTimer);
 	startMove();
 
@@ -350,6 +350,8 @@ float straightLinePID(uint16_t distance_in_mm){
 	// Return to the initial state
 	stopMove();
 	stopBasicTimer(&handlerSampleTimer);
+	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
+	updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 	flagData = false;
 	u_control = 0.0f;
 	u_1_control = 0.0f;
@@ -420,6 +422,49 @@ void rotation(uint8_t direction, uint16_t degrees){
 		__NOP();
 	}
 	stopMove();
+}
+
+
+/** Function to do the rotation with MPU6050 Gyroscope Data */
+void rotationMPU(int16_t degrees){
+	if(degrees != 0){
+		stopMove();
+		defaultMove();
+		updateDuttyCycle(&handlerPwmRight, DUTTY_RIGHT_ROTATION);
+		updateDuttyCycle(&handlerPwmLeft, DUTTY_LEFT_ROTATION);
+		if(degrees < 0){
+			// Cambiamos la polaridad del motor del lado derecho (amarillo)
+			setPolarity(&handlerPwmRight,PWM_POLARITY_ACTIVE_LOW);
+			GPIO_WritePin(&handlerDirRight, MOTOR_BACK);
+		}
+		else if(degrees > 0){
+			// Cambiamos la polaridad del motor del lado izquierdo (azul)
+			setPolarity(&handlerPwmLeft,PWM_POLARITY_ACTIVE_LOW);
+			GPIO_WritePin(&handlerDirLeft, MOTOR_BACK);
+		}
+		else{
+			__NOP();
+		}
+		float goalDegrees = fabsf(degrees);
+		float offset = getGyroscopeOffset(200);
+		float currentAngle = 0.00f;
+		flagTakeOffset = false;
+		startBasicTimer(&handlerSampleTimer);
+		startMove();
+		while(currentAngle < goalDegrees){
+			if(flagData){
+				currentAngle += fabsf((getGyroscopeData() - offset)*timeSample);
+			}
+			else{
+				__NOP();
+			}
+		}
+		stopMove();
+	}
+	// Otherwise, the angle is
+	else{
+		__NOP();
+	}
 }
 
 /** Función para realizar el cuadrado en la dirección y con la medida indicada */

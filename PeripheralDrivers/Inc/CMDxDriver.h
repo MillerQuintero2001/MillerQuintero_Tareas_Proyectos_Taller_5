@@ -42,6 +42,8 @@ void commandx4(void);
 void commandx5(void);
 void commandx6(void);
 void commandx7(void);
+void commandx8(void);
+void commandx9(void);
 
 
 #endif /* CMDXDRIVER_H_ */

@@ -145,7 +145,8 @@ void commandx4(void){
 }
 
 void commandx5(void){
-	changeBaseDutty((uint16_t)firstParameter, (uint16_t)secondParameter);
+	updateDuttyCycle(&handlerPwmRight, (uint16_t)firstParameter);
+	updateDuttyCycle(&handlerPwmLeft, (uint16_t)secondParameter);
 	writeMsg(&usartCmd, "Duttys changed.\n");
 }
 
@@ -160,4 +161,12 @@ void commandx7(void){
 	sprintf(bufferMandar,"PID parameters are: Kp = %.6f,ti = %.6f,td = %.6f\n",firstParameter, secondParameter, thirdParameter);
 	writeMsg(&usartCmd, bufferMandar);
 	flagConfigPID = true;
+}
+
+void commandx8(void){
+	rotateOppy((int16_t)firstParameter);
+}
+
+void commandx9(void){
+	changeBaseDutty((uint16_t)firstParameter, (uint16_t)secondParameter);
 }

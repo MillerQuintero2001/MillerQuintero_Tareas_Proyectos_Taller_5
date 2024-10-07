@@ -67,7 +67,7 @@ uint8_t i2cBuffer = 0;
 #define GYRO_YOUT_H		69 // 0X45
 #define GYRO_YOUT_L		70 // 0X46
 #define GYRO_ZOUT_H		71 // 0X47
-#define GYRO_ZOUT_L		71 // 0X48
+#define GYRO_ZOUT_L		72 // 0X48
 
 uint8_t arraySaveData[6] = {0};
 
@@ -133,7 +133,7 @@ int main(void){
 				uint8_t AccelX_high = arraySaveData[0];
 				uint8_t AccelX_low = arraySaveData[1];
 				int16_t AccelX = AccelX_high << 8 | AccelX_low; // Aquí lo que se hace es básicamente concatenar los valores
-				sprintf(bufferData, "AccelX = %.3f \n", (9.78f*(float)AccelX)/16384.00f);
+				sprintf(bufferData, "AccelX = %.3f \n", (9.7761f*(float)AccelX)/16384.00f);
 				writeMsg(&usart2Comm, bufferData);
 				usart2RxData = '\0';
 			}
@@ -146,7 +146,7 @@ int main(void){
 				uint8_t AccelY_high = arraySaveData[2];
 				uint8_t AccelY_low = arraySaveData[3];
 				int16_t AccelY = AccelY_high << 8 | AccelY_low; // Aquí lo que se hace es básicamente concatenar los valores
-				sprintf(bufferData, "AccelY = %.3f \n", (9.78f*(float)AccelY)/16384.00f);
+				sprintf(bufferData, "AccelY = %.3f \n", (9.7761f*(float)AccelY)/16384.00f);
 				writeMsg(&usart2Comm, bufferData);
 				usart2RxData = '\0';
 			}
@@ -159,7 +159,7 @@ int main(void){
 				uint8_t AccelZ_high = arraySaveData[4];
 				uint8_t AccelZ_low = arraySaveData[5];
 				int16_t AccelZ = AccelZ_high << 8 | AccelZ_low; // Aquí lo que se hace es básicamente concatenar los valores
-				sprintf(bufferData, "AccelZ = %.3f \n", (9.78f*(float)AccelZ)/16384.00f);
+				sprintf(bufferData, "AccelZ = %.3f \n", (9.7761f*(float)AccelZ)/16384.00f);
 				writeMsg(&usart2Comm, bufferData);
 				usart2RxData = '\0';
 			}

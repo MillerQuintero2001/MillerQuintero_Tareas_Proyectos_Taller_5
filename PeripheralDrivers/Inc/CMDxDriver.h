@@ -18,7 +18,6 @@
 
 #include "USARTxDriver.h"
 #include "GPIOxDriver.h"
-#include "MotorDriver.h"
 
 #define CMD_USART1	1
 #define CMD_USART2	2

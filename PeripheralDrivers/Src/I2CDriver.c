@@ -11,7 +11,7 @@
 #include "PLLDriver.h"
 
 
-uint64_t freqClock1 = 0;
+uint32_t freqClock1 = 0;
 
 /*
  * Recordar que se debe configurar los pines para el I2C (SDA y SCL),

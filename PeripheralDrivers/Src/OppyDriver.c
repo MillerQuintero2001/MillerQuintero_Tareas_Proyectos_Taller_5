@@ -32,7 +32,7 @@ GPIO_Handler_t handlerPinIntDistance 	= {0};
 bool flagMove = false;
 uint32_t counterIntRight = 0;
 uint32_t counterIntLeft = 0;
-uint16_t period = PERIOD_10KHZ;					// To have a base signal of 5 kHz
+uint16_t period = PERIOD_10KHZ;					// To have a base signal of 10 kHz
 uint16_t duttyBaseRight = DUTTY_RIGHT_BASE;
 uint16_t duttyBaseLeft = DUTTY_LEFT_BASE;
 float interruptsRev = 120.00f;					// Number of encoder's interrupts per revolution
@@ -237,8 +237,8 @@ void configOppy(void){
 /** Function responsible for modifying the frequency and %DuttyCycle of both motors */
 void setSignals(uint8_t freqHz, uint8_t duttyPer){
 	period = (uint16_t)(100000000.00f*(1.00f/((float)freqHz)));
-	duttyBaseRight = (uint16_t)(period*(((float)duttyPer)/100.00f));
-	duttyBaseLeft = (uint16_t)(period*(((float)duttyPer)/100.00f));
+	duttyBaseRight = (uint16_t)((float)period*(((float)duttyPer)/100.00f));
+	duttyBaseLeft = (uint16_t)((float)period*(((float)duttyPer)/100.00f));
 	updatePeriod(&handlerPwmRight, period);
 	updatePeriod(&handlerPwmLeft, period);
 	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
@@ -344,14 +344,20 @@ float straightLinePID(uint16_t distance_in_mm){
 
 			// If the deviation is too much, it is necessary to correct it and reset the PID system
 			if(fabsf(error) >= 10){
+				// Here we save the values of interruptions in encoders
 				saveCounterIntRight = counterIntRight;
 				saveCounterIntLeft = counterIntLeft;
+
 				stopBasicTimer(&handlerSampleTimer);
 				flagData = false;
 				stopMove();
 				getGyroscopeOffset(50);
-//				rotation((error < 0) ? (MOVEMENT_CW):(MOVEMENT_CCW), (uint16_t)(fabsf(totalCurrentAngle)));
+
+				// Rotation to restore orientation a little bit
+				rotationMPU6050((int16_t)error);
+				// Reset to mitigate the "drift"
 				resetMPU6050();
+
 				totalCurrentAngle = 0.00f;
 				offsetAngularVelocity = getGyroscopeOffset(200);
 				defaultMove();
@@ -359,6 +365,8 @@ float straightLinePID(uint16_t distance_in_mm){
 				updateDuttyCycle(&handlerPwmLeft, duttyBaseLeft);
 				startBasicTimer(&handlerSampleTimer);
 				startMove();
+
+				// Restore values
 				counterIntRight = saveCounterIntRight;
 				counterIntLeft = saveCounterIntLeft;
 				u_control = 0.0f;
@@ -391,6 +399,65 @@ float straightLinePID(uint16_t distance_in_mm){
 }
 
 
+/** Function to do a rotation with MPU6050 */
+void rotationMPU6050(int16_t degrees){
+	if(degrees != 0){
+		stopMove();
+		defaultMove();
+		updateDuttyCycle(&handlerPwmRight, DUTTY_RIGHT_ROTATION);
+		updateDuttyCycle(&handlerPwmLeft, DUTTY_LEFT_ROTATION);
+		if(degrees < 0){
+			// Cambiamos la polaridad del motor del lado derecho (amarillo)
+			setPolarity(&handlerPwmRight,PWM_POLARITY_ACTIVE_LOW);
+			GPIO_WritePin(&handlerDirRight, MOTOR_BACK);
+		}
+		else if(degrees > 0){
+			// Cambiamos la polaridad del motor del lado izquierdo (azul)
+			setPolarity(&handlerPwmLeft,PWM_POLARITY_ACTIVE_LOW);
+			GPIO_WritePin(&handlerDirLeft, MOTOR_BACK);
+		}
+		else{
+			__NOP();
+		}
+		float goalDegrees = fabsf((float)degrees);
+		float offset = getGyroscopeOffset(100);
+		float currentAngle = 0.00f;
+		flagTakeOffset = false;
+		startBasicTimer(&handlerSampleTimer);
+		startMove();
+		while(currentAngle < goalDegrees){
+			if(flagData){
+				currentAngle += fabsf((getGyroscopeData(Z_AXIS) - offset)*timeSample);
+			}
+			else{
+				__NOP();
+			}
+		}
+		stopMove();
+	}
+	// Otherwise, the angle is zero
+	else{
+		__NOP();
+	}
+}
+
+
+/** Function to draw a square with Oppy */
+void square(int16_t degrees, uint16_t side_in_mm){
+	straightLinePID(side_in_mm);
+	resetMPU6050();
+	rotationMPU6050(degrees);
+	straightLinePID(side_in_mm);
+	resetMPU6050();
+	rotationMPU6050(degrees);
+	straightLinePID(side_in_mm);
+	resetMPU6050();
+	rotationMPU6050(degrees);
+	straightLinePID(side_in_mm);
+	resetMPU6050();
+	rotationMPU6050(degrees);
+}
+
 /** Sensor reset function */
 void resetMPU6050(void){
 	// First, writing 0x80 we set DEVICE_RESET bit as 1
@@ -401,7 +468,7 @@ void resetMPU6050(void){
 	i2c_writeSingleRegister(&handlerMPU6050, PWR_MGMT_1, 0x00);
 	// Set  PLL with Z axis gyroscope as clock source
 	i2c_writeSingleRegister(&handlerMPU6050, PWR_MGMT_1, 0x03);
-	// Configuration of DLPF, it is with 188 Hz cut-off frequency and MPU6050's sample frequency of 1 kHz
+	// Configuration of DLPF, it is with 188 Hz cut-off frequency and MPU6050's sample frequency of 1 kHz, take care that it introduces a 1.9 ms delay
 	i2c_writeSingleRegister(&handlerMPU6050, CONFIG, 0x01);
 	// Now, with a fs = 1000 Hz, if we want to sample at timeSample , is necessary have an ADC sampling of 10*freqSample
 	uint8_t sampleDiv = (uint8_t)(100.00f*timeSample - 1.00f);

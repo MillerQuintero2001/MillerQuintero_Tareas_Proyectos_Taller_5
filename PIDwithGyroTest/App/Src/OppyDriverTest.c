@@ -133,7 +133,7 @@ void commandx1(void){
 }
 
 void commandx2(void){
-	sprintf(bufferMandar, "Z'axis gyroscope data at scale 250 dps is: %.3f °/s.\n", getGyroscopeData(Z_AXIS));
+	sprintf(bufferMandar, "Z'axis gyroscope data at scale 500 dps is: %.3f °/s.\n", getGyroscopeData(Z_AXIS));
 	writeMsg(&usartCmd, bufferMandar);
 }
 
@@ -153,24 +153,27 @@ void commandx3(void){
 }
 
 void commandx4(void){
-	cos
+	startMove();
 }
 
 void commandx5(void){
+	stopMove();
 }
 
 void commandx6(void){
-
+	straightLinePID((uint16_t)firstParameter);
 }
 
 void commandx7(void){
-
+	rotationMPU6050((int16_t)firstParameter);
+	writeMsg(&usartCmd, "Rotation already done.\n");
 }
 
 void commandx8(void){
-
+	square((int16_t)firstParameter, (uint16_t)secondParameter);
 }
 
 void commandx9(void){
-
+	updateDuttyCycle(&handlerPwmRight, (uint16_t)firstParameter);
+	updateDuttyCycle(&handlerPwmLeft, (uint16_t)secondParameter);
 }

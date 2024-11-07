@@ -36,8 +36,8 @@ typedef struct
 {
 	uint8_t		PWMx_Channel; 		// Canal PWM relacionado con el TIMER
 	uint32_t	PWMx_Prescaler;		// A qué velocidad se incrementa el Timer
-	uint16_t	PWMx_Period;		// Indica el número de veces que el Timer se incrementa, el periodo de la frecuencia viene dado por Time_Fosc * PSC * ARR
-	uint16_t	PWMx_DuttyCicle;	// Valor en porcentaje (%) del tiempo que la señal está en alto
+	uint32_t	PWMx_Period;		// Indica el número de veces que el Timer se incrementa, el periodo de la frecuencia viene dado por Time_Fosc * PSC * ARR
+	uint32_t	PWMx_DuttyCicle;	// Valor en porcentaje (%) del tiempo que la señal está en alto
 	uint8_t 	PWMx_Polarity;		// Establecemos la polaridad deseada para la señal PWM
 }PWM_Config_t;
 
@@ -51,9 +51,9 @@ typedef struct
 /* Prototipos de las funciones */
 void pwm_Config(PWM_Handler_t *ptrPwmHandler);
 void setPeriod(PWM_Handler_t *ptrPwmHandler);
-void updatePeriod(PWM_Handler_t *ptrPwmHandler, uint16_t newPeriod);
+void updatePeriod(PWM_Handler_t *ptrPwmHandler, uint32_t newPeriod);
 void setDuttyCycle(PWM_Handler_t *ptrPwmHandler);
-void updateDuttyCycle(PWM_Handler_t *ptrPwmHandler, uint16_t newDutty);
+void updateDuttyCycle(PWM_Handler_t *ptrPwmHandler, uint32_t newDutty);
 void enableOutput(PWM_Handler_t *ptrPwmHandler);
 void disableOutput(PWM_Handler_t *ptrPwmHandler);
 void startPwmSignal(PWM_Handler_t *ptrPwmHandler);

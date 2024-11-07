@@ -218,7 +218,7 @@ void setPeriod(PWM_Handler_t *ptrPwmHandler){
 
 
 /** Función para actualizar la frecuencia, funciona de la mano con setFrequency */
-void updatePeriod(PWM_Handler_t *ptrPwmHandler, uint16_t newPeriod){
+void updatePeriod(PWM_Handler_t *ptrPwmHandler, uint32_t newPeriod){
 	// Actualizamos el registro que manipula el periodo
 	ptrPwmHandler->PWMx_Config.PWMx_Period = newPeriod;
 
@@ -257,7 +257,7 @@ void setDuttyCycle(PWM_Handler_t *ptrPwmHandler){
 
 
 /** Función para actualizar el Dutty, funciona de la mano con setDuttyCycle */
-void updateDuttyCycle(PWM_Handler_t *ptrPwmHandler, uint16_t newDutty){
+void updateDuttyCycle(PWM_Handler_t *ptrPwmHandler, uint32_t newDutty){
 	// Actualizamos el registro que manipula el dutty
 	ptrPwmHandler->PWMx_Config.PWMx_DuttyCicle = newDutty;
 

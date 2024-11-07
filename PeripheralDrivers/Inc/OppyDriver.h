@@ -27,11 +27,11 @@
 #define MOTOR_OFF		1
 #define MOTOR_FORWARD	0
 #define MOTOR_BACK		1
-#define PERIOD_10KHZ			10000
-#define DUTTY_RIGHT_BASE 		5000
-#define DUTTY_LEFT_BASE			5000
-#define DUTTY_RIGHT_ROTATION	5000
-#define DUTTY_LEFT_ROTATION		5000
+#define PERIOD_1KHZ				100000
+#define DUTTY_RIGHT_BASE 		30000
+#define DUTTY_LEFT_BASE			30000
+#define DUTTY_RIGHT_ROTATION	30000
+#define DUTTY_LEFT_ROTATION		30000
 #define MPU6050_ADDRESS 		0b1101000 			// 0xD0 -> Dirección del sensor Acelerómetro con ADO=0
 
 // Enum for MPU6050's registers
@@ -80,14 +80,14 @@ extern bool flagData;
 /* Public Functions Proto-types */
 void configOppy(void);
 void setSignals(uint8_t freqHz, uint8_t dutty);
-void changeBaseDutty(uint16_t duttyRight, uint16_t duttyLeft);
+void changeBaseDutty(uint32_t duttyRight, uint32_t duttyLeft);
 void defaultMove(void);
 void startMove(void);
 void stopMove(void);
 //void pathSegment(float distance_in_mm);
 void configPID(float kp, float ti, float td, float ts);
 float straightLinePID(uint16_t distance_in_mm);
-//void rotateOppy(int16_t degrees);
+void rotateOppy(int16_t degrees);
 void rotationMPU6050(int16_t degrees);
 void square(int16_t degrees, uint16_t side_in_mm);
 void resetMPU6050(void);

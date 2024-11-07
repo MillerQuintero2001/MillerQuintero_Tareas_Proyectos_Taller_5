@@ -80,7 +80,7 @@ void initSystem(void){
 	SCB->CPACR |= (0XF << 20);
 
 	/* GPIO y Timer del Blinky Led de Estado */
-	handlerBlinkyPin.pGPIOx								= GPIOA;
+	handlerBlinkyPin.pGPIOx								= GPIOC;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinNumber 		= PIN_5;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinMode		= GPIO_MODE_OUT;
 	handlerBlinkyPin.GPIO_PinConfig.GPIO_PinSpeed 		= GPIO_OSPEED_FAST;
@@ -101,7 +101,7 @@ void initSystem(void){
 	/* Fin del GPIO y Timer del LED de estado
 	 * ----------------------------------------*/
 
-	commandConfig(CMD_USART2, USART_BAUDRATE_115200);
+	commandConfig(CMD_USART1, USART_BAUDRATE_19200);
 
 	configOppy();
 }
@@ -113,7 +113,7 @@ void BasicTimer5_Callback(void){
 }
 
 
-void usart2Rx_Callback(void){
+void usart1Rx_Callback(void){
 	usartData = getRxData();
 	writeChar(&usartCmd, usartData);
 	if((flagMove)&&(usartData == 's')){
@@ -165,7 +165,8 @@ void commandx6(void){
 }
 
 void commandx7(void){
-	rotationMPU6050((int16_t)firstParameter);
+	rotateOppy((int16_t)firstParameter);
+	//rotationMPU6050((int16_t)firstParameter);
 	writeMsg(&usartCmd, "Rotation already done.\n");
 }
 
@@ -174,6 +175,6 @@ void commandx8(void){
 }
 
 void commandx9(void){
-	updateDuttyCycle(&handlerPwmRight, (uint16_t)firstParameter);
-	updateDuttyCycle(&handlerPwmLeft, (uint16_t)secondParameter);
+	updateDuttyCycle(&handlerPwmRight, (uint32_t)firstParameter);
+	updateDuttyCycle(&handlerPwmLeft, (uint32_t)secondParameter);
 }

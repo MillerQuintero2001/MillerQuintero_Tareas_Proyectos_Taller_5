@@ -32,9 +32,9 @@ GPIO_Handler_t handlerPinIntDistance 	= {0};
 bool flagMove = false;
 uint32_t counterIntRight = 0;
 uint32_t counterIntLeft = 0;
-uint16_t period = PERIOD_10KHZ;					// To have a base signal of 10 kHz
-uint16_t duttyBaseRight = DUTTY_RIGHT_BASE;
-uint16_t duttyBaseLeft = DUTTY_LEFT_BASE;
+uint32_t period = PERIOD_1KHZ;					// To have a base signal of 10 kHz
+uint32_t duttyBaseRight = DUTTY_RIGHT_BASE;
+uint32_t duttyBaseLeft = DUTTY_LEFT_BASE;
 float interruptsRev = 120.00f;					// Number of encoder's interrupts per revolution
 float wheelDiameter = 51.725f;
 float wheelPerimeter = M_PI*51.725f;
@@ -58,7 +58,7 @@ I2C_Handler_t handlerMPU6050 = {0};
 
 // Variables related with samples to calculate gyroscope offset
 BasicTimer_Handler_t handlerSampleTimer = {0};
-uint16_t counterSamples = 0;
+uint32_t counterSamples = 0;
 float sumAngularVelocity = 0.0f;
 bool flagTakeOffset = false;
 bool flagDataOffset = false;
@@ -79,7 +79,7 @@ void configOppy(void){
 	handlerPwmRight.ptrTIMx			    			= TIM2;
 	handlerPwmRight.PWMx_Config.PWMx_Channel	    = PWM_CHANNEL_1;
 	handlerPwmRight.PWMx_Config.PWMx_Prescaler 		= BTIMER_PLL_100MHz_SPEED_10ns;
-	handlerPwmRight.PWMx_Config.PWMx_Period	   		= PERIOD_10KHZ;
+	handlerPwmRight.PWMx_Config.PWMx_Period	   		= PERIOD_1KHZ;
 	handlerPwmRight.PWMx_Config.PWMx_DuttyCicle		= DUTTY_RIGHT_BASE;
 	handlerPwmRight.PWMx_Config.PWMx_Polarity		= PWM_POLARITY_ACTIVE_HIGH;
 	pwm_Config(&handlerPwmRight);
@@ -120,7 +120,7 @@ void configOppy(void){
 	handlerPwmLeft.ptrTIMx			    			= TIM2;
 	handlerPwmLeft.PWMx_Config.PWMx_Channel	   		= PWM_CHANNEL_2;
 	handlerPwmLeft.PWMx_Config.PWMx_Prescaler		= BTIMER_PLL_100MHz_SPEED_10ns;
-	handlerPwmLeft.PWMx_Config.PWMx_Period	    	= PERIOD_10KHZ;
+	handlerPwmLeft.PWMx_Config.PWMx_Period	    	= PERIOD_1KHZ;
 	handlerPwmLeft.PWMx_Config.PWMx_DuttyCicle		= DUTTY_LEFT_BASE;
 	handlerPwmLeft.PWMx_Config.PWMx_Polarity		= PWM_POLARITY_ACTIVE_HIGH;
 	pwm_Config(&handlerPwmLeft);
@@ -163,7 +163,7 @@ void configOppy(void){
 	handlerPinIntRight.GPIO_PinConfig.GPIO_PinMode       	= GPIO_MODE_IN;
 	handlerPinIntRight.GPIO_PinConfig.GPIO_PinPuPdControl 	= GPIO_PUPDR_PULLUP;
 	handlerPinIntRight.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
-//	GPIO_Config(&handlerPinIntRight);
+	GPIO_Config(&handlerPinIntRight);
 	handlerIntRight.edgeType     		= EXTERNAL_INTERRUPT_BOTH_EDGE;
 	handlerIntRight.priorityInterrupt	= 6;
 	handlerIntRight.pGPIOHandler 		= &handlerPinIntRight;
@@ -175,7 +175,7 @@ void configOppy(void){
 	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinMode        	= GPIO_MODE_IN;
 	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinPuPdControl 	= GPIO_PUPDR_PULLUP;
 	handlerPinIntLeft.GPIO_PinConfig.GPIO_PinSpeed			= GPIO_OSPEED_HIGH;
-//	GPIO_Config(&handlerPinIntLeft);
+	GPIO_Config(&handlerPinIntLeft);
 	handlerIntLeft.edgeType     		= EXTERNAL_INTERRUPT_BOTH_EDGE;
 	handlerIntLeft.priorityInterrupt	= 6;
 	handlerIntLeft.pGPIOHandler 		= &handlerPinIntLeft;
@@ -186,7 +186,7 @@ void configOppy(void){
 	handlerPinIntDistance.GPIO_PinConfig.GPIO_PinNumber			= PIN_0;
 	handlerPinIntDistance.GPIO_PinConfig.GPIO_PinMode			= GPIO_MODE_IN;
 	handlerPinIntDistance.GPIO_PinConfig.GPIO_PinPuPdControl	= GPIO_PUPDR_NOTHING;
-//	GPIO_Config(&handlerPinIntDistance);
+	GPIO_Config(&handlerPinIntDistance);
 	handlerIntDistance.edgeType				= EXTERNAL_INTERRUPT_RISING_EDGE;
 	handlerIntDistance.priorityInterrupt	= 6;
 	handlerIntDistance.pGPIOHandler			= &handlerPinIntDistance;
@@ -236,9 +236,9 @@ void configOppy(void){
 
 /** Function responsible for modifying the frequency and %DuttyCycle of both motors */
 void setSignals(uint8_t freqHz, uint8_t duttyPer){
-	period = (uint16_t)(100000000.00f*(1.00f/((float)freqHz)));
-	duttyBaseRight = (uint16_t)((float)period*(((float)duttyPer)/100.00f));
-	duttyBaseLeft = (uint16_t)((float)period*(((float)duttyPer)/100.00f));
+	period = (uint32_t)(100000000.00f*(1.00f/((float)freqHz)));
+	duttyBaseRight = (uint32_t)((float)period*(((float)duttyPer)/100.00f));
+	duttyBaseLeft = (uint32_t)((float)period*(((float)duttyPer)/100.00f));
 	updatePeriod(&handlerPwmRight, period);
 	updatePeriod(&handlerPwmLeft, period);
 	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
@@ -246,7 +246,7 @@ void setSignals(uint8_t freqHz, uint8_t duttyPer){
 }
 
 /** Function that changes dutty base value for each wheel */
-void changeBaseDutty(uint16_t duttyRight, uint16_t duttyLeft){
+void changeBaseDutty(uint32_t duttyRight, uint32_t duttyLeft){
 	duttyBaseRight = duttyRight;
 	duttyBaseLeft = duttyLeft;
 	updateDuttyCycle(&handlerPwmRight, duttyBaseRight);
@@ -396,6 +396,38 @@ float straightLinePID(uint16_t distance_in_mm){
 	error_1 = 0.0f;
 	error_2 = 0.0f;
 	return totalCurrentAngle;
+}
+
+
+/** Function to rotate with odometry */
+void rotateOppy(int16_t degrees){
+	stopMove();
+	defaultMove();
+	updateDuttyCycle(&handlerPwmRight, DUTTY_RIGHT_ROTATION);
+	updateDuttyCycle(&handlerPwmLeft, DUTTY_LEFT_ROTATION);
+	if(degrees < 0){
+		// Cambiamos la polaridad del motor del lado derecho (amarillo)
+		setPolarity(&handlerPwmRight,PWM_POLARITY_ACTIVE_LOW);
+		GPIO_WritePin(&handlerDirRight, MOTOR_BACK);
+	}
+	else if(degrees > 0){
+		// Cambiamos la polaridad del motor del lado izquierdo (azul)
+		setPolarity(&handlerPwmLeft,PWM_POLARITY_ACTIVE_LOW);
+		GPIO_WritePin(&handlerDirLeft, MOTOR_BACK);
+	}
+	else{
+		__NOP();
+	}
+	// Calculamos la cantidad de interrupciones para conseguir la rotación
+	uint32_t goalInterrupts = (uint32_t)(((float)interruptsRev)*(((float)(abs((int)degrees)))/360.0f)*(wheelBase/wheelDiameter));
+	counterIntRight = 0;
+	counterIntLeft = 0;
+	startMove();
+	// Hacemos un ciclo que no haga nada hasta alcanzar las interrupciones
+	while((counterIntRight < goalInterrupts)&&(counterIntLeft < goalInterrupts)){
+		__NOP();
+	}
+	stopMove();
 }
 
 
@@ -575,8 +607,8 @@ void controlActionPID(void){
 	// Control action is limited to a change of 10% Dutty Cycle
 	constraintControlPID(&u_control, 1000.0f);
 
-	updateDuttyCycle(&handlerPwmRight, (uint16_t)(duttyBaseRight + u_control));
-	updateDuttyCycle(&handlerPwmLeft, (uint16_t)(duttyBaseLeft - u_control));
+	updateDuttyCycle(&handlerPwmRight, (uint32_t)(duttyBaseRight + u_control));
+	updateDuttyCycle(&handlerPwmLeft, (uint32_t)(duttyBaseLeft - u_control));
 
 	// Update the values
 	u_1_control = u_control;
@@ -605,4 +637,16 @@ void BasicTimer3_Callback(void){
 	else{
 		flagData = true;
 	}
+}
+
+void callback_extInt0 (void){
+	stopMove();
+}
+
+void callback_extInt1 (void){
+	counterIntRight++;
+}
+
+void callback_extInt3 (void){
+	counterIntLeft++;
 }
